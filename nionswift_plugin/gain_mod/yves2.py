@@ -114,6 +114,8 @@ class PanelExampleDelegate(object):
 
         #############################################################
         logging.info("test0")
+        logging.info("test01")
+        logging.info("test012")
         #############################################################
         camera=HardwareSourceModule.HardwareSourceManager().hardware_sources[0]
         frame_parameters = camera.get_current_frame_parameters()

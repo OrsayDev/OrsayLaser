@@ -28,40 +28,49 @@ class PanelExampleDelegate(object):
         self.panel_position = "left"
         self.__thread = None
         
-        self.start_wav=560
-        self.finish_wav=600
-        self.step_wav=10
-        self.avg=10
-        self.dwell=10
+        self.start_wav=550
+        self.finish_wav=650
+        self.step_wav=0.1
+        self.avg=1
+        self.dwell=1
         self.now_wav=self.start_wav
         self.status=False
         self.stored=False
         self.pts=int((self.finish_wav-self.start_wav)/self.step_wav+1)
         self.t_pts=int(self.pts*self.avg)
 
+        self.demo_eres = 2.0 #eV
+        self.demo_sig = 0.1 #eV
+        self.demo_gun = 0.3 #eV
+
     
     def create_panel_widget(self, ui, document_controller):
 
         def upt_button_clicked():
-            self.start_wav = int(start_line.text)
-            self.finish_wav = int(finish_line.text)
-            self.step_wav = int(step_line.text)
-            self.pts = int((float(finish_line.text)-float(start_line.text))/float(step_line.text)+1)
-            self.t_pts=int(self.pts*float(avg_line.text))
-            self.avg=int(float(avg_line.text))
-            self.dwell=int(float(dwell_line.text))
+            if (self.stored==False and self.status==False):
+                self.start_wav = float(start_line.text)
+                self.finish_wav = float(finish_line.text)
+                self.step_wav = float(step_line.text)
+                self.pts = int((float(finish_line.text)-float(start_line.text))/float(step_line.text)+1)
+                self.t_pts=int(self.pts*float(avg_line.text))
+                self.avg=int(float(avg_line.text))
+                self.dwell=int(float(dwell_line.text))
+            else:
+                logging.info("There is data stored or thread is running. Please Acquire data if nothing is running...")
 
             label_pts.text = self.pts
             label_t_pts.text = self.t_pts
             label_cur.text = int(self.now_wav)
             label_running.text = str(self.status)
             label_stored.text = str(self.stored)
+
             
             #setting camera
             frame_parameters["integration_count"]=int(self.avg)
             frame_parameters["exposure_ms"]=int(self.dwell)
-            frame_parameters["binning"]=4
+            frame_parameters["binning"]=1
             camera.set_current_frame_parameters(frame_parameters)
+
             
         def editing_finished(text):
             upt_button_clicked()
@@ -69,28 +78,56 @@ class PanelExampleDelegate(object):
 
         def acq_button_clicked():
             upt_button_clicked()
-            self.__thread = threading.Thread(target=acq)
-            self.__thread.start()
+            if (self.stored==False and self.status==False and demo_box.checked==False):
+                self.__thread = threading.Thread(target=acq)
+                self.__thread.start()
+            if (demo_box.checked==True):
+                logging.info("Let's not acquire new data is demo mode is ON. You can try the button Generate in order to have a right-on gain simulation given by demo parameters.")
             
         def gen_button_clicked():
-            if (self.__thread != None and self.__thread.is_alive()==False):
+            if (demo_box.checked):
+                logging.info("Demo plotting...")
+                data_complet = np.random.randn(self.pts, 1024)
+                for i in range(self.pts):
+                    data_complet[i]=plot_gaussian_gain(0, float(demo_gun_line.text), self.start_wav+i*self.step_wav, float(demo_eres_line.text), float(demo_sig_line.text))
+                document_controller.create_data_item_from_data(data_complet, str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(demo_eres_line.text)+"-"+str(demo_sig_line.text)+"-"+str(demo_gun_line.text))
+                logging.info("Finished demo plotting...")
+
+
+
+
+
+            if (self.stored == True and demo_box.checked==False):
                 logging.info("Plotting...")
-                #document_controller.add_data(self.data.data)
+                pixels = (len(self.data[0].data[0]))
+                self.len = pixels
+                data_complet = np.random.randn(self.pts, pixels)
+                
                 for i in range(len(self.data)):
-                    #document_controller.add_data(self.data[i].data, str(self.start_wav+i*self.step_wav))
-                    document_controller.add_data(np.random.randn(10, 10, 128))
-                    #plot_gaussian_gain(np.random.randn(1), 0.3, str(self.start_wav+i*self.step_wav), self.start_wav+i*self.step_wav)
-                self.__thread = None
+                    temp_data=np.sum(self.data[i].data, axis=0)
+                    #if (demo_box.checked):
+                     #   data_complet[i]=plot_gaussian_gain(0, float(demo_gun_line.text), self.start_wav+i*self.step_wav, float(demo_eres_line.text), float(demo_sig_line.text))
+                    #else:
+                    data_complet[i] = temp_data
+                        
+                #if (demo_box.checked):
+                 #   document_controller.create_data_item_from_data(data_complet, str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(demo_eres_line.text)+"-"+str(demo_sig_line.text)+"-"+str(demo_gun_line.text))
+                #else:
+                document_controller.create_data_item_from_data(data_complet, str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav))
+
+
                 self.stored=False ##STORED DATA IS FALSE
-            else:
+            if (self.stored == False and demo_box.checked==False):
                 logging.info("Nothing to Plot boys")
 
-        def plot_gaussian_gain(cen, sig, string, wav):
+        def plot_gaussian_gain(cen, sig, wav, e_res, sig_res):
             g_energy = 1240./wav
-            xx=np.arange(-10, 10, 0.1)
-            datax=np.e**((-(xx-cen)**2) / (2*sig**2) ) + 0.05*np.e**((-(xx-cen-g_energy)**2) / (2*sig**2) ) + 0.05*np.e**((-(xx-cen+g_energy)**2) / (2*sig**2) )
-            document_controller.add_data(datax, string)
-
+            xx=np.linspace(-10, 10, 1024)
+            
+            amp = 1.0*np.e**((-(g_energy-e_res)**2) / (2*(sig_res)**2) ) + 1.0*np.e**((-(g_energy+e_res)**2) / (2*(sig_res)**2) )
+            
+            gau_datax=np.e**((-(xx-cen)**2) / (2*sig**2) ) + amp*np.e**((-(xx-cen-g_energy)**2) / (2*sig**2) ) + amp*np.e**((-(xx-cen+g_energy)**2) / (2*sig**2) )
+            return gau_datax
             
         
         def acq():
@@ -101,7 +138,6 @@ class PanelExampleDelegate(object):
                 self.now_wav=self.start_wav+i*self.step_wav
                 print(self.now_wav)
                 data_metadata.append([])
-                #data_metadata[i]=camera.grab_next_to_start(frame_parameters)[0]
                 data_metadata[i]=camera.grab_next_to_start()[0]
 
             self.data=data_metadata
@@ -111,21 +147,11 @@ class PanelExampleDelegate(object):
             camera.stop_playing()
 
         
-
         #############################################################
-        logging.info("test0")
-        logging.info("test01")
-        logging.info("test012")
+        #logging.info("test0")
         #############################################################
         camera=HardwareSourceModule.HardwareSourceManager().hardware_sources[0]
         frame_parameters = camera.get_current_frame_parameters()
-        
-        datax = document_controller.create_data_item_from_data(np.random.randn(30, 30, 640)).xdata
-        #logging.info(dir(datax))
-        logging.info(datax.dimensional_shape)
-        logging.info(datax.is_sequence)
-        logging.info(datax.collection_dimension_count)
-        logging.info(datax.datum_dimension_count)
 
         column = ui.create_column_widget()
 
@@ -144,7 +170,7 @@ class PanelExampleDelegate(object):
         edit_row.add_stretch()
 
         #############################################################
-        logging.info("test1")
+        #logging.info("test1")
         #############################################################
 
         edit_row2 = ui.create_row_widget()
@@ -162,7 +188,7 @@ class PanelExampleDelegate(object):
         edit_row2.add_stretch()
 
         #############################################################
-        logging.info("test2")
+        #logging.info("test2")
         #############################################################
         
         edit_row3 = ui.create_row_widget()
@@ -180,7 +206,7 @@ class PanelExampleDelegate(object):
         edit_row3.add_stretch()
         
         #############################################################
-        logging.info("test3")
+        #logging.info("test3")
         #############################################################
         
         edit_row4 = ui.create_row_widget()
@@ -199,7 +225,7 @@ class PanelExampleDelegate(object):
         edit_row4.add_stretch()
         
         #############################################################
-        logging.info("test4")
+        #logging.info("test4")
         #############################################################
         
         edit_row5 = ui.create_row_widget()
@@ -218,7 +244,7 @@ class PanelExampleDelegate(object):
         
 
         #############################################################
-        logging.info("test5")
+        #logging.info("test5")
         #############################################################
         
         button_row = ui.create_row_widget()
@@ -238,7 +264,39 @@ class PanelExampleDelegate(object):
         button_row.add(cam_choice_drop)
         button_row.add_stretch()
         
+        #############################################################
+        #logging.info("test6")
+        #############################################################
 
+        demo_row = ui.create_row_widget()
+        demo_box = ui.create_check_box_widget("Demo Mode ")
+        demo_box.checked=True
+        
+        demo_eres_line = ui.create_line_edit_widget(self.demo_eres)
+        demo_eres_line.on_editing_finished = editing_finished
+        demo_sig_line = ui.create_line_edit_widget(self.demo_sig)
+        demo_sig_line.on_editing_finished = editing_finished
+        demo_gun_line = ui.create_line_edit_widget(self.demo_gun)
+        demo_gun_line.on_editing_finished = editing_finished
+        
+        
+        demo_row.add(demo_box)
+        demo_row.add_spacing(12)
+        demo_row.add(ui.create_label_widget(_("E-Res (eV): ")))
+        demo_row.add_spacing(12)
+        demo_row.add(demo_eres_line)
+        demo_row.add_spacing(12)
+        demo_row.add(ui.create_label_widget(_("Sigma-Res (eV): ")))
+        demo_row.add_spacing(12)
+        demo_row.add(demo_sig_line)
+        demo_row.add_spacing(12)
+        demo_row.add(ui.create_label_widget(_("Gun FWHM (eV): ")))
+        demo_row.add_spacing(12)
+        demo_row.add(demo_gun_line)
+
+        #############################################################
+        #logging.info("test7")
+        #############################################################
 
         column.add_spacing(8)
         column.add(edit_row)
@@ -247,6 +305,7 @@ class PanelExampleDelegate(object):
         column.add(edit_row4)
         column.add(edit_row5)
         column.add(button_row)
+        column.add(demo_row)
         column.add_spacing(8)
         column.add_stretch()
 

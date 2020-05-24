@@ -10,7 +10,7 @@ import os
 
 setuptools.setup(
     name="yvorsay-instrumentation",
-    version="2.1.0",
+    version="2.1.1",
     author="Yves Auad, Mathieu Kociak, Marcel Tence",
     description="Gain Control",
     url="https://github.com/yvesauad/yvorsay-instrument",

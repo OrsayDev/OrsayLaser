@@ -88,7 +88,7 @@ class PanelExampleDelegate(object):
             if (demo_box.checked==True):
                 logging.info("Let's not acquire new data is demo mode is ON. You can try the button Generate in order to have a right-on gain simulation given by demo parameters.")
 
-        def label_chrono(data_item):
+        def label_chrono(data_item, index_zero, disp):
             intensity_calibration = data_item.intensity_calibration
             dimensional_calibrations = data_item.dimensional_calibrations
             intensity_calibration.units='counts'
@@ -96,10 +96,16 @@ class PanelExampleDelegate(object):
             dimensional_calibrations[0].offset=self.start_wav
             dimensional_calibrations[0].scale=self.step_wav
             dimensional_calibrations[1].units='eV'
-            if (demo_box.checked):
-                dimensional_calibrations[1].offset=0
-                dimensional_calibrations[1].scale=0.01953
+            dimensional_calibrations[1].scale=disp
+            dimensional_calibrations[1].offset=-disp*index_zero
             data_item.set_intensity_calibration(intensity_calibration)
+            data_item.set_dimensional_calibrations(dimensional_calibrations)
+
+        def label_1d(data_item, st_wav, stp_wav):
+            dimensional_calibrations = data_item.dimensional_calibrations
+            dimensional_calibrations[0].units='nm'
+            dimensional_calibrations[0].offset=st_wav
+            dimensional_calibrations[0].scale=stp_wav
             data_item.set_dimensional_calibrations(dimensional_calibrations)
 
         def align_chrono(eels_data, eels_data_aligned):
@@ -108,14 +114,31 @@ class PanelExampleDelegate(object):
                 ind_max.append(np.where(eels_data[i]==np.max(eels_data[i]))[0])
                 eels_data_aligned[i] = np.roll(eels_data[i], -ind_max[i]+ind_max[0])
 
+            return (ind_max[0][0])
+
+        def res_analyze(eels_data_aligned, zlp, gain, loss, zero_index, disp, zero_fwhm):
+            swi = int(0.5*zero_fwhm / disp) #SEMI WINDOW INDEX
+            if (swi<=4):
+                logging.info("Low pixels in integration. This means FWHM<2*disp. Setting 10 pixels for integration...")
+                swi=5
+            for i in range(len(zlp)):
+                wi = int(1/disp * 1240. / (self.start_wav + i * self.step_wav)) ##wavelength index
+                norm = 2 * swi * np.sum(eels_data_aligned[i][:])
+                zlp[i] = np.sum(eels_data_aligned[i][zero_index-swi:zero_index+swi]) / norm
+                gain[i] = np.sum(eels_data_aligned[i][zero_index-wi-swi:zero_index-wi+swi]) / norm
+                loss[i] = np.sum(eels_data_aligned[i][zero_index+wi-swi:zero_index+wi+swi]) / norm
+
 
             
         def gen_button_clicked():
             if (self.status==False):
-                aligned_data_complet = np.random.randn(self.pts, 1024)
                 if (demo_box.checked):
                     logging.info("Demo plotting...")
                     data_complet = np.random.randn(self.pts, 1024)
+                    aligned_data_complet = np.random.randn(self.pts, 1024)
+                    zlp_adc = np.random.randn(self.pts) #zlp_aligned_data_complet
+                    gain_adc = np.random.randn(self.pts) #gain_aligned_data_complet
+                    loss_adc = np.random.randn(self.pts) #loss_aligned_data_complet
                     if (demo_STEM_choice_drop.current_index==0):
                         self.demo_gun=0.55
                         self.demo_inst=0.35
@@ -128,13 +151,23 @@ class PanelExampleDelegate(object):
 
                     for i in range(self.pts):
                         data_complet[i]=plot_gaussian_gain(0, self.demo_gun, self.start_wav+i*self.step_wav, self.demo_eres, self.demo_sig, self.demo_inst)
-                    align_chrono(data_complet, aligned_data_complet)
+                    
+                    zlp_index = align_chrono(data_complet, aligned_data_complet)
+                    res_analyze(aligned_data_complet, zlp_adc, gain_adc, loss_adc, zlp_index, 0.01953, self.demo_gun)
 
                     demo_data_item = document_controller.create_data_item_from_data(data_complet, "raw_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
+                    
                     aligned_demo_data_item = document_controller.create_data_item_from_data(aligned_data_complet, "aligned_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
-
-                    label_chrono(demo_data_item)
-                    label_chrono(aligned_demo_data_item)
+                    zlp_demo_data_item = document_controller.create_data_item_from_data(zlp_adc, "I_zlp_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
+                    gain_demo_data_item = document_controller.create_data_item_from_data(gain_adc, "I_gain_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
+                    loss_demo_data_item = document_controller.create_data_item_from_data(loss_adc, "I_loss_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
+                    
+                    label_1d(zlp_demo_data_item, self.start_wav, self.step_wav)
+                    label_1d(gain_demo_data_item, self.start_wav, self.step_wav)
+                    label_1d(loss_demo_data_item, self.start_wav, self.step_wav)
+                    
+                    label_chrono(demo_data_item, zlp_index, 0.01953)
+                    label_chrono(aligned_demo_data_item, zlp_index, 0.01953)
 
                     logging.info("Finished demo plotting...")
 
@@ -143,18 +176,19 @@ class PanelExampleDelegate(object):
                     pixels = (len(self.data[0].data[0]))
                     self.len = pixels
                     data_complet = np.random.randn(self.pts, pixels)
+                    aligned_data_complet = np.random.randn(self.pts, pixels)
                     
                     for i in range(len(self.data)):
                         temp_data=np.sum(self.data[i].data, axis=0)
                         data_complet[i] = temp_data
                     
-                    align_chrono(data_complet, aligned_data_complet)
+                    zlp_index = align_chrono(data_complet, aligned_data_complet)
 
                     data_item = document_controller.create_data_item_from_data(data_complet, "raw_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"-"+str(self.dwell)+"-"+str(self.avg))
                     aligned_data_item = document_controller.create_data_item_from_data(aligned_data_complet, "aligned_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"-"+str(self.dwell)+"-"+str(self.avg))
 
-                    label_chrono(data_item)
-                    label_chrono(aligned_data_item)
+                    label_chrono(data_item, zlp_index, 0.01953)
+                    label_chrono(aligned_data_item, zlp_index, 0.01953)
 
                     self.stored=False ##STORED DATA IS FALSE
                     logging.info("Finished plotting...")

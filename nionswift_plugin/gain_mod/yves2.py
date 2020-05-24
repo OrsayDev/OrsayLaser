@@ -28,8 +28,8 @@ class PanelExampleDelegate(object):
         self.panel_position = "left"
         self.__thread = None
         
-        self.start_wav=550
-        self.finish_wav=650
+        self.start_wav=500
+        self.finish_wav=700
         self.step_wav=0.1
         self.avg=1
         self.dwell=1
@@ -40,8 +40,9 @@ class PanelExampleDelegate(object):
         self.t_pts=int(self.pts*self.avg)
 
         self.demo_eres = 2.0 #eV
-        self.demo_sig = 0.1 #eV
+        self.demo_sig = 0.05 #eV
         self.demo_gun = 0.3 #eV
+        self.demo_inst = 0.2
 
     
     def create_panel_widget(self, ui, document_controller):
@@ -55,6 +56,9 @@ class PanelExampleDelegate(object):
                 self.t_pts=int(self.pts*float(avg_line.text))
                 self.avg=int(float(avg_line.text))
                 self.dwell=int(float(dwell_line.text))
+
+                self.demo_eres = float(demo_eres_line.text)
+                self.demo_sig = float(demo_sig_line.text)
             else:
                 logging.info("There is data stored or thread is running. Please Acquire data if nothing is running...")
 
@@ -83,50 +87,88 @@ class PanelExampleDelegate(object):
                 self.__thread.start()
             if (demo_box.checked==True):
                 logging.info("Let's not acquire new data is demo mode is ON. You can try the button Generate in order to have a right-on gain simulation given by demo parameters.")
+
+        def label_chrono(data_item):
+            intensity_calibration = data_item.intensity_calibration
+            dimensional_calibrations = data_item.dimensional_calibrations
+            intensity_calibration.units='counts'
+            dimensional_calibrations[0].units='nm'
+            dimensional_calibrations[0].offset=self.start_wav
+            dimensional_calibrations[0].scale=self.step_wav
+            dimensional_calibrations[1].units='eV'
+            if (demo_box.checked):
+                dimensional_calibrations[1].offset=0
+                dimensional_calibrations[1].scale=0.01953
+            data_item.set_intensity_calibration(intensity_calibration)
+            data_item.set_dimensional_calibrations(dimensional_calibrations)
+
+        def align_chrono(eels_data, eels_data_aligned):
+            ind_max = []
+            for i in range(len(eels_data)):
+                ind_max.append(np.where(eels_data[i]==np.max(eels_data[i]))[0])
+                eels_data_aligned[i] = np.roll(eels_data[i], -ind_max[i]+ind_max[0])
+
+
             
         def gen_button_clicked():
-            if (demo_box.checked):
-                logging.info("Demo plotting...")
-                data_complet = np.random.randn(self.pts, 1024)
-                for i in range(self.pts):
-                    data_complet[i]=plot_gaussian_gain(0, float(demo_gun_line.text), self.start_wav+i*self.step_wav, float(demo_eres_line.text), float(demo_sig_line.text))
-                document_controller.create_data_item_from_data(data_complet, str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(demo_eres_line.text)+"-"+str(demo_sig_line.text)+"-"+str(demo_gun_line.text))
-                logging.info("Finished demo plotting...")
+            if (self.status==False):
+                aligned_data_complet = np.random.randn(self.pts, 1024)
+                if (demo_box.checked):
+                    logging.info("Demo plotting...")
+                    data_complet = np.random.randn(self.pts, 1024)
+                    if (demo_STEM_choice_drop.current_index==0):
+                        self.demo_gun=0.55
+                        self.demo_inst=0.35
+                    if (demo_STEM_choice_drop.current_index==1):
+                        self.demo_gun=0.35
+                        self.demo_inst=0.1
+                    if (demo_STEM_choice_drop.current_index==2):
+                        self.demo_gun=0.03
+                        self.demo_inst=0.03
 
+                    for i in range(self.pts):
+                        data_complet[i]=plot_gaussian_gain(0, self.demo_gun, self.start_wav+i*self.step_wav, self.demo_eres, self.demo_sig, self.demo_inst)
+                    align_chrono(data_complet, aligned_data_complet)
 
+                    demo_data_item = document_controller.create_data_item_from_data(data_complet, "raw_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
+                    aligned_demo_data_item = document_controller.create_data_item_from_data(aligned_data_complet, "aligned_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(self.demo_eres)+"-"+str(self.demo_sig)+"-"+str(demo_STEM_choice_drop.current_item))
 
+                    label_chrono(demo_data_item)
+                    label_chrono(aligned_demo_data_item)
 
+                    logging.info("Finished demo plotting...")
 
-            if (self.stored == True and demo_box.checked==False):
-                logging.info("Plotting...")
-                pixels = (len(self.data[0].data[0]))
-                self.len = pixels
-                data_complet = np.random.randn(self.pts, pixels)
-                
-                for i in range(len(self.data)):
-                    temp_data=np.sum(self.data[i].data, axis=0)
-                    #if (demo_box.checked):
-                     #   data_complet[i]=plot_gaussian_gain(0, float(demo_gun_line.text), self.start_wav+i*self.step_wav, float(demo_eres_line.text), float(demo_sig_line.text))
-                    #else:
-                    data_complet[i] = temp_data
-                        
-                #if (demo_box.checked):
-                 #   document_controller.create_data_item_from_data(data_complet, str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"demo-"+str(demo_eres_line.text)+"-"+str(demo_sig_line.text)+"-"+str(demo_gun_line.text))
-                #else:
-                document_controller.create_data_item_from_data(data_complet, str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav))
+                if (self.stored == True and demo_box.checked==False):
+                    logging.info("Plotting...")
+                    pixels = (len(self.data[0].data[0]))
+                    self.len = pixels
+                    data_complet = np.random.randn(self.pts, pixels)
+                    
+                    for i in range(len(self.data)):
+                        temp_data=np.sum(self.data[i].data, axis=0)
+                        data_complet[i] = temp_data
+                    
+                    align_chrono(data_complet, aligned_data_complet)
 
+                    data_item = document_controller.create_data_item_from_data(data_complet, "raw_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"-"+str(self.dwell)+"-"+str(self.avg))
+                    aligned_data_item = document_controller.create_data_item_from_data(aligned_data_complet, "aligned_"+str(self.start_wav)+"-"+str(self.finish_wav)+"-"+str(self.step_wav)+"-"+str(self.dwell)+"-"+str(self.avg))
 
-                self.stored=False ##STORED DATA IS FALSE
-            if (self.stored == False and demo_box.checked==False):
-                logging.info("Nothing to Plot boys")
+                    label_chrono(data_item)
+                    label_chrono(aligned_data_item)
 
-        def plot_gaussian_gain(cen, sig, wav, e_res, sig_res):
+                    self.stored=False ##STORED DATA IS FALSE
+                    logging.info("Finished plotting...")
+                if (self.stored == False and demo_box.checked==False):
+                    logging.info("Nothing to Plot boys")
+            else:
+                logging.info("Something is running..Please wait or abort it")
+
+        def plot_gaussian_gain(cen, sig, wav, e_res, sig_res, inst):
             g_energy = 1240./wav
+            cen = cen + inst*np.random.randn(1)
             xx=np.linspace(-10, 10, 1024)
-            
-            amp = 1.0*np.e**((-(g_energy-e_res)**2) / (2*(sig_res)**2) ) + 1.0*np.e**((-(g_energy+e_res)**2) / (2*(sig_res)**2) )
-            
-            gau_datax=np.e**((-(xx-cen)**2) / (2*sig**2) ) + amp*np.e**((-(xx-cen-g_energy)**2) / (2*sig**2) ) + amp*np.e**((-(xx-cen+g_energy)**2) / (2*sig**2) )
+            amp = 0.45*np.e**((-(g_energy-e_res)**2) / (2*(sig_res)**2) ) + 0.45*np.e**((-(g_energy+e_res)**2) / (2*(sig_res)**2) )
+            gau_datax=(1-amp)*np.e**((-(xx-cen)**2) / (2*sig**2) ) + amp*np.e**((-(xx-cen-g_energy)**2) / (2*sig**2) ) + amp*np.e**((-(xx-cen+g_energy)**2) / (2*sig**2) )
             return gau_datax
             
         
@@ -276,11 +318,12 @@ class PanelExampleDelegate(object):
         demo_eres_line.on_editing_finished = editing_finished
         demo_sig_line = ui.create_line_edit_widget(self.demo_sig)
         demo_sig_line.on_editing_finished = editing_finished
-        demo_gun_line = ui.create_line_edit_widget(self.demo_gun)
-        demo_gun_line.on_editing_finished = editing_finished
+        demo_STEM_choice_drop = ui.create_combo_box_widget(["VG Lumiere", "VG Cold", "ChromaTEM"])
         
         
         demo_row.add(demo_box)
+        demo_row.add_spacing(12)
+        demo_row.add(demo_STEM_choice_drop)
         demo_row.add_spacing(12)
         demo_row.add(ui.create_label_widget(_("E-Res (eV): ")))
         demo_row.add_spacing(12)
@@ -290,9 +333,6 @@ class PanelExampleDelegate(object):
         demo_row.add_spacing(12)
         demo_row.add(demo_sig_line)
         demo_row.add_spacing(12)
-        demo_row.add(ui.create_label_widget(_("Gun FWHM (eV): ")))
-        demo_row.add_spacing(12)
-        demo_row.add(demo_gun_line)
 
         #############################################################
         #logging.info("test7")

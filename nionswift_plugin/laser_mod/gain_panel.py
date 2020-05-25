@@ -35,7 +35,6 @@ class gainhandler:
 
 
     def init_push(self, widget):
-        #self.instrument.init(2, 6,self.event_loop)
         self.instrument.init()
         self.init_pb.enabled=False
 
@@ -57,7 +56,6 @@ class gainhandler:
                 if isinstance(getattr(self,var),UserInterface.Widget):
                     widg=getattr(self,var)
                     setattr(widg, "enabled", enabled)
-                    logging.info("test")
 
     def prepare_widget_enable(self,value):
         # this message will come from a thread. use event loop to call functions on the main thread.
@@ -79,19 +77,19 @@ class gainView:
 
         
         self.start_label=ui.create_label(text='Start Wavelength (nm): ')
-        self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav)")
+        self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)")
         self.pts_label=ui.create_label(text='E-points: ')
-        self.pts_value_label = ui.create_label(text='pts value')
+        self.pts_value_label = ui.create_label(text="@binding(instrument.pts_f)")
         self.ui_view1 = ui.create_row(self.start_label, self.start_line, ui.create_stretch(), self.pts_label, self.pts_value_label)
         
         self.finish_label=ui.create_label(text='Finish Wavelength (nm): ')
-        self.finish_line = ui.create_line_edit()
+        self.finish_line = ui.create_line_edit(text="@binding(instrument.finish_wav_f)")
         self.tpts_label=ui.create_label(text='Total points: ')
         self.tpts_value_label = ui.create_label(text='Tpts value')
         self.ui_view2 = ui.create_row(self.finish_label, self.finish_line, ui.create_stretch(), self.tpts_label, self.tpts_value_label)
 
         self.step_label=ui.create_label(text='Step Wavelength (nm): ')
-        self.step_line = ui.create_line_edit()
+        self.step_line = ui.create_line_edit(text="@binding(instrument.step_wav_f)")
         self.current_label=ui.create_label(text='Current Wavelength (nm): ')
         self.current_value_label = ui.create_label(text='current value')
         self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(), self.current_label, self.current_value_label)

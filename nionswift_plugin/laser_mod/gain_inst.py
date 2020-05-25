@@ -48,7 +48,7 @@ class gainDevice(Observable.Observable):
         logging.info("init...")
    
     def upt(self):
-        logging.info("UPT BUTTON")
+        logging.info("UPT BUTTON. Current wavelength is: ")
         logging.info(self.__start_wav)
         
     def acq(self):

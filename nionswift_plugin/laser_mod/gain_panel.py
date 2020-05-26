@@ -33,7 +33,6 @@ class gainhandler:
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.busy_event_listener=self.instrument.busy_event.listen(self.prepare_widget_disable)
 
-
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled=False
@@ -77,29 +76,42 @@ class gainView:
 
         
         self.start_label=ui.create_label(text='Start Wavelength (nm): ')
-        self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)")
+        self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")
         self.pts_label=ui.create_label(text='E-points: ')
         self.pts_value_label = ui.create_label(text="@binding(instrument.pts_f)")
-        self.ui_view1 = ui.create_row(self.start_label, self.start_line, ui.create_stretch(), self.pts_label, self.pts_value_label)
+        self.ui_view1 = ui.create_row(self.start_label, self.start_line, ui.create_stretch(), self.pts_label, self.pts_value_label, spacing=12)
         
         self.finish_label=ui.create_label(text='Finish Wavelength (nm): ')
         self.finish_line = ui.create_line_edit(text="@binding(instrument.finish_wav_f)")
         self.tpts_label=ui.create_label(text='Total points: ')
-        self.tpts_value_label = ui.create_label(text='Tpts value')
-        self.ui_view2 = ui.create_row(self.finish_label, self.finish_line, ui.create_stretch(), self.tpts_label, self.tpts_value_label)
+        self.tpts_value_label = ui.create_label(text='@binding(instrument.tpts_f)')
+        self.ui_view2 = ui.create_row(self.finish_label, self.finish_line, ui.create_stretch(), self.tpts_label, self.tpts_value_label, spacing=12)
 
         self.step_label=ui.create_label(text='Step Wavelength (nm): ')
         self.step_line = ui.create_line_edit(text="@binding(instrument.step_wav_f)")
         self.current_label=ui.create_label(text='Current Wavelength (nm): ')
         self.current_value_label = ui.create_label(text='current value')
-        self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(), self.current_label, self.current_value_label)
+        self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(), self.current_label, self.current_value_label, spacing=12)
+        
+        self.avg_label=ui.create_label(text='Averages: ')
+        self.avg_line = ui.create_line_edit(text="@binding(instrument.avg_f)")
+        self.running_label=ui.create_label(text='Is running? ')
+        self.running_value_label = ui.create_label(text='@binding(instrument.thAcq_status)')
+        self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label, self.running_value_label, spacing=12)
+        
+        self.dwell_label=ui.create_label(text='Dwell Time (ms): ')
+        self.dwell_line = ui.create_line_edit(text="@binding(instrument.dwell_f)")
+        self.stored_label=ui.create_label(text='Stored Data? ')
+        self.stored_value_label = ui.create_label(text='N/A')
+        self.ui_view5 = ui.create_row(self.dwell_label, self.dwell_line, ui.create_stretch(), self.stored_label, self.stored_value_label, spacing=12)
         
         self.upt_pb=ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
         self.acq_pb=ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
         self.gen_pb=ui.create_push_button(text="Generate", name="gen_pb", on_clicked="gen_push")
-        self.ui_view4 = ui.create_row(self.upt_pb, self.acq_pb, self.gen_pb)
+        self.abt_pb=ui.create_push_button(text="Abort", name="abt_pb", on_clicked="upt_push")
+        self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.gen_pb, self.abt_pb, spacing=12)
 
-        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4)
+        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, spacing=1)
 
 
         #self.ui_view = ui.create_row(self.init_pb, ui.create_stretch(), self.label, self.start_line)

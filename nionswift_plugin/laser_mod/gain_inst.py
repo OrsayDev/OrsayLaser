@@ -46,18 +46,43 @@ class gainDevice(Observable.Observable):
         self.__finish_wav = 600.
         self.__step_wav = 0.1
         self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
+        self.__avg = 1
+        self.__tpts = int(self.__avg * self.__pts)
+        self.__dwell = 100
+
+        self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
+        self.__frame_parameters=self.__camera.get_current_frame_parameters()
+        self.__frame_parameters["integration_count"]=int(self.__avg)
+        self.__frame_parameters["exposure_ms"]=int(self.__dwell)
+
+        self.__thread = None
+
+
 
     def init(self):
         logging.info("init...")
    
     def upt(self):
-        self.property_changed_event.fire("pts_f") ##THIS FUNC CALLS THE ASYNC ONE AT PANEL BUT ULTIMATELY CALLS THE @PROPERTY (get not setter)
+        self.__camera.set_current_frame_parameters(self.__frame_parameters)
+        self.property_changed_event.fire("pts_f")
+        self.property_changed_event.fire("tpts_f")
+        self.property_changed_event.fire("thAcq_status")
         
     def acq(self):
-        logging.info("ACQ BUTTON")
+        self.__thread = threading.Thread(target=self.acqThread)
+        self.__thread.start()
+        self.upt()
         
     def gen(self):
-        logging.info("GENERATE BUTTON")
+        logging.info("Generate button")
+
+    def acqThread(self):
+        for i in range(10):
+            self.__camera.grab_next_to_start()[0]
+        self.__camera.stop_playing()
+
+
+
 
     @property
     def start_wav_f(self) -> float:
@@ -84,8 +109,38 @@ class gainDevice(Observable.Observable):
         self.__step_wav = value
     
     @property
+    def avg_f(self) -> int:
+        return self.__avg
+
+    @avg_f.setter
+    def avg_f(self, value: int) -> None:
+        self.__avg = value
+        logging.info("Average number updated")
+        self.__frame_parameters["integration_count"]=int(self.__avg)
+
+    @property
+    def dwell_f(self) -> int:
+        return self.__dwell
+
+    @dwell_f.setter
+    def dwell_f(self, value: int) -> None:
+        self.__dwell = value
+        logging.info("Exposure time updated")
+        self.__frame_parameters["exposure_ms"]=int(self.__dwell)
+
+    @property
+    def tpts_f(self) -> int:
+        self.__tpts = int(int(self.__avg) * int(self.__pts))
+        return self.__tpts
+    
+    @property
     def pts_f(self) -> float:
-        logging.info("getting pts...")
         self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav)+1)
         return self.__pts
     
+    @property
+    def thAcq_status(self):
+        if (self.__thread == None):
+            return "False"
+        else:
+            return str(self.__thread.is_alive())

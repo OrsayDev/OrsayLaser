@@ -57,11 +57,11 @@ class gainDevice(Observable.Observable):
         self.__frame_parameters["integration_count"]=int(self.__avg)
         self.__frame_parameters["exposure_ms"]=int(self.__dwell)
 
-        #self.__laser = laser.sendmessagefunc(self.__sendmessage)
-        #self.__laser = laser.SirahCredoLaser(self.__sendmessage)
         self.__laser = laser.SirahCredoLaser()
 
         self.__thread = None
+        self.__status = False
+        self.__stored = False
 
 
 
@@ -70,27 +70,40 @@ class gainDevice(Observable.Observable):
    
     def upt(self):
         self.__camera.set_current_frame_parameters(self.__frame_parameters)
-        self.property_changed_event.fire("pts_f")
+
+        self.property_changed_event.fire("pts_f") #i dont know what makes pts_f be executed here. I thought this func was simple based on able/disable of my widgets. See async def on
         self.property_changed_event.fire("tpts_f")
-        self.property_changed_event.fire("thAcq_status")
+        if (self.__status): #if its running you disable UI after updating our variables
+            self.busy_event.fire("all")
+
         
     def acq(self):
         self.upt()
         self.__thread = threading.Thread(target=self.acqThread)
         self.__thread.start()
-        self.busy_event.fire("all")
         
     def gen(self):
-        logging.info("Generate button")
+        self.__stored = False
+        self.property_changed_event.fire("stored_status")
 
     def abt(self):
-        logging.info("abort button")
-        self.property_changed_event.fire("all")
+        #still thinking how to implement an functional Abort button
+        #self.property_changed_event.fire("all")
+        #logging.info(self.__thread.is_alive())
+        #if (self.__thread.is_alive()):
+        #    self.__thread._stop()
 
     def acqThread(self):
+        self.__status = True #started
+        self.property_changed_event.fire("run_status")
+        self.busy_event.fire("all")
         for i in range(10):
             self.__camera.grab_next_to_start()[0]
         self.__camera.stop_playing()
+        self.__status = False #its over
+        self.__stored = True
+        self.property_changed_event.fire("run_status")
+        self.property_changed_event.fire("stored_status")
 
 
 
@@ -128,7 +141,6 @@ class gainDevice(Observable.Observable):
     @avg_f.setter
     def avg_f(self, value: int) -> None:
         self.__avg = value
-        logging.info("Average number updated")
         self.__frame_parameters["integration_count"]=int(self.__avg)
 
     @property
@@ -138,7 +150,6 @@ class gainDevice(Observable.Observable):
     @dwell_f.setter
     def dwell_f(self, value: int) -> None:
         self.__dwell = value
-        logging.info("Exposure time updated")
         self.__frame_parameters["exposure_ms"]=int(self.__dwell)
 
     @property
@@ -152,8 +163,13 @@ class gainDevice(Observable.Observable):
         return self.__pts
     
     @property
-    def thAcq_status(self):
-        if (self.__thread == None):
+    def run_status(self):
+        if (self.__status == False):
             return "False"
-        else:
-            return str(self.__thread.is_alive())
+        if (self.__status == True):
+            #return str(self.__thread.is_alive())
+            return "True"
+    
+    @property
+    def stored_status(self):
+        return str(self.__stored)

@@ -59,12 +59,13 @@ class gainhandler:
                     widg=getattr(self,var)
                     setattr(widg, "enabled", enabled)
 
-    def prepare_widget_enable(self,value):
-        # this message will come from a thread. use event loop to call functions on the main thread.
-        self.event_loop.create_task(self.do_enable(True,["init_pb"]))
+    def prepare_widget_enable(self, value):
+    #    # this message will come from a thread. use event loop to call functions on the main thread.
+        self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
+
     def prepare_widget_disable(self,value):
-        # this message will come from a thread. use event loop to call functions on the main thread.
-        self.event_loop.create_task(self.do_enable(False,["init_pb"]))
+    #    # this message will come from a thread. use event loop to call functions on the main thread.
+        self.event_loop.create_task(self.do_enable(False, ["init_pb", "upt_pb", "abt_pb"]))
 
 
 
@@ -98,19 +99,19 @@ class gainView:
         self.avg_label=ui.create_label(text='Averages: ')
         self.avg_line = ui.create_line_edit(text="@binding(instrument.avg_f)", name="avg_line")
         self.running_label=ui.create_label(text='Is running? ')
-        self.running_value_label = ui.create_label(text='@binding(instrument.thAcq_status)')
+        self.running_value_label = ui.create_label(text='@binding(instrument.run_status)')
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label, self.running_value_label, spacing=12)
         
         self.dwell_label=ui.create_label(text='Dwell Time (ms): ')
         self.dwell_line = ui.create_line_edit(text="@binding(instrument.dwell_f)", name="dwell_line")
         self.stored_label=ui.create_label(text='Stored Data? ')
-        self.stored_value_label = ui.create_label(text='N/A')
+        self.stored_value_label = ui.create_label(text='@binding(instrument.stored_status)')
         self.ui_view5 = ui.create_row(self.dwell_label, self.dwell_line, ui.create_stretch(), self.stored_label, self.stored_value_label, spacing=12)
         
         self.upt_pb=ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
         self.acq_pb=ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
         self.gen_pb=ui.create_push_button(text="Generate", name="gen_pb", on_clicked="gen_push")
-        self.abt_pb=ui.create_push_button(text="Abort", on_clicked="abt_push")
+        self.abt_pb=ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
         self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.gen_pb, self.abt_pb, spacing=12)
 
         self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, spacing=1)

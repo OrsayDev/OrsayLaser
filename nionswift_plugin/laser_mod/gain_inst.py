@@ -32,6 +32,8 @@ from nion.swift.model import HardwareSource
 import logging
 import time
 
+from . import laser_vi as laser
+
 
 
 class gainDevice(Observable.Observable):
@@ -55,6 +57,10 @@ class gainDevice(Observable.Observable):
         self.__frame_parameters["integration_count"]=int(self.__avg)
         self.__frame_parameters["exposure_ms"]=int(self.__dwell)
 
+        #self.__laser = laser.sendmessagefunc(self.__sendmessage)
+        #self.__laser = laser.SirahCredoLaser(self.__sendmessage)
+        self.__laser = laser.SirahCredoLaser()
+
         self.__thread = None
 
 
@@ -69,12 +75,17 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("thAcq_status")
         
     def acq(self):
+        self.upt()
         self.__thread = threading.Thread(target=self.acqThread)
         self.__thread.start()
-        self.upt()
+        self.busy_event.fire("all")
         
     def gen(self):
         logging.info("Generate button")
+
+    def abt(self):
+        logging.info("abort button")
+        self.property_changed_event.fire("all")
 
     def acqThread(self):
         for i in range(10):
@@ -90,6 +101,8 @@ class gainDevice(Observable.Observable):
 
     @start_wav_f.setter
     def start_wav_f(self, value: float) -> None:
+        self.busy_event.fire("all")
+        self.__laser.setWL(value)
         self.__start_wav = value
     
     @property

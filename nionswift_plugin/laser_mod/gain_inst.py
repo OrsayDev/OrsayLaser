@@ -48,7 +48,7 @@ class gainDevice(Observable.Observable):
         self.__finish_wav = 600.
         self.__step_wav = 1
         self.__cur_wav = self.__start_wav
-        self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
+        self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav)
         self.__avg = 1
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 100
@@ -92,17 +92,17 @@ class gainDevice(Observable.Observable):
     def abt(self):
         #still thinking how to implement an functional Abort button
         self.property_changed_event.fire("all")
-        logging.info(self.__status)
 
     def acqThread(self):
         self.__cur_wav = self.__start_wav
+        self.__cur_pts = 0.0
         self.__status = True #started
         self.property_changed_event.fire("run_status")
         self.busy_event.fire("all")
         for i in range(self.__pts):
             self.__laser.set_1posWL(self.__cur_wav, self.__step_wav)
-            self.__camera.grab_next_to_start()[0]
             self.upt()
+            self.__camera.grab_next_to_start()[0]
         self.__camera.stop_playing()
         self.__status = False #its over
         self.__stored = True
@@ -154,7 +154,7 @@ class gainDevice(Observable.Observable):
     
     @property
     def cur_wav_f(self) -> float:
-        return self.__cur_wav
+        return format(self.__cur_wav, '.3f')
     
     @property
     def avg_f(self) -> int:
@@ -182,7 +182,7 @@ class gainDevice(Observable.Observable):
     
     @property
     def pts_f(self) -> float:
-        self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav)+1)
+        self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav))
         return self.__pts
     
     @property

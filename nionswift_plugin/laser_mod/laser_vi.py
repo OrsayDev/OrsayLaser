@@ -17,11 +17,21 @@ class SirahCredoLaser:
         #logging.info(sendmessage)
         self.sendmessage=sendmessage
 
-    def virtual_thread(self, wavelength: float):
-        logging.info("Sirah Credo Laser Virtual Instrument")
-        time.sleep(2)
-        logging.info("Sirah Credo Laser Virtual Instrument")
-        self.sendmessage(1)
+    def virtual_thread(self, start: float, final: float, stepping: int):
+        latency = abs(float(final) - float(start))*1.0/20.0 + 2.0
+        time.sleep(latency)
+        logging.info(latency)
+        if (stepping == 1):
+            self.sendmessage(3)
+        if (stepping == 0):
+            self.sendmessage(2)
 
-    def setWL(self, wavelength: float):
-        threading.Thread(target=self.virtual_thread, args=(wavelength,)).start()
+    def setWL(self, wavelength: float, current_wavelength: float):
+        if (float(current_wavelength) == float(wavelength)):
+            self.sendmessage(1)
+        else:
+            threading.Thread(target=self.virtual_thread, args=(wavelength, current_wavelength, 0)).start()
+
+    def set_1posWL(self, cur_wavelength: float, step: float):
+        threading.Thread(target=self.virtual_thread, args=(cur_wavelength, float(cur_wavelength)+float(step), 1)).start()
+

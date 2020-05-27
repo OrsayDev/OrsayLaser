@@ -46,7 +46,8 @@ class gainDevice(Observable.Observable):
         
         self.__start_wav = 580.
         self.__finish_wav = 600.
-        self.__step_wav = 0.1
+        self.__step_wav = 1
+        self.__cur_wav = self.__start_wav
         self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
         self.__avg = 1
         self.__tpts = int(self.__avg * self.__pts)
@@ -74,6 +75,7 @@ class gainDevice(Observable.Observable):
 
         self.property_changed_event.fire("pts_f") #i dont know what makes pts_f be executed here. I thought this func was simple based on able/disable of my widgets. See async def on
         self.property_changed_event.fire("tpts_f")
+        self.property_changed_event.fire("cur_wav_f")
         if (self.__status): #if its running you disable UI after updating our variables
             self.busy_event.fire("all")
 
@@ -93,11 +95,14 @@ class gainDevice(Observable.Observable):
         logging.info(self.__status)
 
     def acqThread(self):
+        self.__cur_wav = self.__start_wav
         self.__status = True #started
         self.property_changed_event.fire("run_status")
         self.busy_event.fire("all")
-        for i in range(10):
+        for i in range(self.__pts):
+            self.__laser.set_1posWL(self.__cur_wav, self.__step_wav)
             self.__camera.grab_next_to_start()[0]
+            self.upt()
         self.__camera.stop_playing()
         self.__status = False #its over
         self.__stored = True
@@ -107,9 +112,16 @@ class gainDevice(Observable.Observable):
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
+                logging.info("start WL is current WL")
                 self.property_changed_event.fire("start_wav_f")
-            else:
-                logging.info("maior que 100 rapaz")
+            if message==2:
+                logging.info("WL updated")
+                self.__cur_wav = self.__start_wav
+                self.property_changed_event.fire("pts_f")
+                self.property_changed_event.fire("tpts_f")
+                self.property_changed_event.fire("cur_wav_f")
+            if message==3:
+                self.__cur_wav = float(self.__cur_wav) + float(self.__step_wav)
         return sendMessage
 
     @property
@@ -119,8 +131,8 @@ class gainDevice(Observable.Observable):
     @start_wav_f.setter
     def start_wav_f(self, value: float) -> None:
         self.busy_event.fire("all")
-        self.__laser.setWL(value)
-        self.__start_wav = value
+        self.__laser.setWL(value, self.__cur_wav)
+        self.__start_wav = float(value)
     
     @property
     def finish_wav_f(self) -> float:
@@ -137,6 +149,12 @@ class gainDevice(Observable.Observable):
     @step_wav_f.setter
     def step_wav_f(self, value: float) -> None:
         self.__step_wav = value
+        self.property_changed_event.fire("pts_f") #yves: not sure if this is the best way to do. Note i am calling a property inside another property. It works, however
+        self.property_changed_event.fire("tpts_f")
+    
+    @property
+    def cur_wav_f(self) -> float:
+        return self.__cur_wav
     
     @property
     def avg_f(self) -> int:
@@ -146,6 +164,7 @@ class gainDevice(Observable.Observable):
     def avg_f(self, value: int) -> None:
         self.__avg = value
         self.__frame_parameters["integration_count"]=int(self.__avg)
+        self.property_changed_event.fire("tpts_f")
 
     @property
     def dwell_f(self) -> int:

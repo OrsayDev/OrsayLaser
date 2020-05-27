@@ -93,7 +93,7 @@ class gainView:
         self.step_label=ui.create_label(text='Step Wavelength (nm): ')
         self.step_line = ui.create_line_edit(text="@binding(instrument.step_wav_f)", name="step_line")
         self.current_label=ui.create_label(text='Current Wavelength (nm): ')
-        self.current_value_label = ui.create_label(text='current value')
+        self.current_value_label = ui.create_label(text='@binding(instrument.cur_wav_f)')
         self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(), self.current_label, self.current_value_label, spacing=12)
         
         self.avg_label=ui.create_label(text='Averages: ')
@@ -112,7 +112,7 @@ class gainView:
         self.acq_pb=ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
         self.gen_pb=ui.create_push_button(text="Generate", name="gen_pb", on_clicked="gen_push")
         self.abt_pb=ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
-        self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.gen_pb, self.abt_pb, spacing=12)
+        self.ui_view6 = ui.create_row(self.acq_pb, self.gen_pb, self.abt_pb, spacing=12) #yves: Note that i removed update button. It is useless
 
         self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, spacing=1)
 

@@ -57,12 +57,13 @@ class gainDevice(Observable.Observable):
         self.__frame_parameters["integration_count"]=int(self.__avg)
         self.__frame_parameters["exposure_ms"]=int(self.__dwell)
 
-        self.__laser = laser.SirahCredoLaser()
 
         self.__thread = None
         self.__status = False
         self.__stored = False
 
+        self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__laser = laser.SirahCredoLaser(self.__sendmessage)
 
 
     def init(self):
@@ -88,10 +89,8 @@ class gainDevice(Observable.Observable):
 
     def abt(self):
         #still thinking how to implement an functional Abort button
-        #self.property_changed_event.fire("all")
-        #logging.info(self.__thread.is_alive())
-        #if (self.__thread.is_alive()):
-        #    self.__thread._stop()
+        self.property_changed_event.fire("all")
+        logging.info(self.__status)
 
     def acqThread(self):
         self.__status = True #started
@@ -105,8 +104,13 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("run_status")
         self.property_changed_event.fire("stored_status")
 
-
-
+    def sendMessageFactory(self):
+        def sendMessage(message):
+            if message==1:
+                self.property_changed_event.fire("start_wav_f")
+            else:
+                logging.info("maior que 100 rapaz")
+        return sendMessage
 
     @property
     def start_wav_f(self) -> float:

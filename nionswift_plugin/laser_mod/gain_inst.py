@@ -42,7 +42,7 @@ class gainDevice(Observable.Observable):
         self.__finish_wav = 600.
         self.__step_wav = 1
         self.__cur_wav = self.__start_wav
-        self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav)
+        self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
         self.__avg = 1
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 100
@@ -51,7 +51,6 @@ class gainDevice(Observable.Observable):
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
         self.__frame_parameters["integration_count"]=int(self.__avg)
         self.__frame_parameters["exposure_ms"]=int(self.__dwell)
-
 
         self.__thread = None
         self.__status = False
@@ -84,8 +83,9 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("stored_status")
 
     def abt(self):
-        #still thinking how to implement an functional Abort button
+        logging.info("Abort scanning. We are not updating value anymore")
         self.__abort_force = True
+        self.__laser.change_control()
         self.property_changed_event.fire("all")
 
 
@@ -99,22 +99,18 @@ class gainDevice(Observable.Observable):
         self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts) #THIS IS A THREAD. Start and bye
 
         i=0
-        while(self.__cur_wav != self.__finish_wav and not self.__abort_force):
+        while(self.__cur_wav < self.__finish_wav and not self.__abort_force):
             self.upt()
             data.append([])
             data[i] = self.__camera.grab_next_to_start()[0]
             i+=1
-
-        #for i in range(self.__pts):
-        #    data.append([])
-        #    self.upt()
-        #    data[i] = self.__camera.grab_next_to_start()[0]
         self.__camera.stop_playing()
         logging.info(len(data))
         self.__status = False #its over
-        self.__stored = True
+        self.__stored = True and not self.__abort_force
         self.property_changed_event.fire("run_status")
         self.property_changed_event.fire("stored_status")
+        self.property_changed_event.fire("cur_wav_f")
 
     def sendMessageFactory(self):
         def sendMessage(message):
@@ -130,6 +126,8 @@ class gainDevice(Observable.Observable):
             if message==3:
                 #do not update property because this should be called together with self.upt()
                 self.__cur_wav = float(self.__cur_wav) + float(self.__step_wav)
+            if message==4:
+                self.property_changed_event.fire("cur_wav_f")
         return sendMessage
 
     @property
@@ -148,7 +146,7 @@ class gainDevice(Observable.Observable):
 
     @finish_wav_f.setter
     def finish_wav_f(self, value: float) -> None:
-        self.__finish_wav = value
+        self.__finish_wav = float(value)
         self.property_changed_event.fire("pts_f") 
         self.property_changed_event.fire("tpts_f") 
     
@@ -192,7 +190,7 @@ class gainDevice(Observable.Observable):
     
     @property
     def pts_f(self) -> float:
-        self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav))
+        self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav)+1)
         return self.__pts
     
     @property

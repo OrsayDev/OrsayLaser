@@ -1,9 +1,3 @@
-"""
-A spectrometer device that can be bound to the UI trhough SpectroPanel
-Requires a spectro low_level object
-two are given in the plug_in, one is bound to a dll, the other ("virtual") essentially gives a testing object
-"""
-DEBUG=True
 # standard libraries
 import math
 import numpy
@@ -91,31 +85,30 @@ class gainDevice(Observable.Observable):
 
     def abt(self):
         #still thinking how to implement an functional Abort button
-        #self.property_changed_event.fire("all")
-        for i in range(self.__pts):
-            self.__laser_thread = self.laserStepThread(self.__cur_wav, self.__step_wav, self.__finish_wav)
-
-    def laserStepThread(self, cur, step, final):
-        print(cur, step, final) #yves: isso da pau pois as threads estao muito atrasadas. Nao posso acumular thread desse jeito
-        if (float(final)<=float(cur)):
-            logging.info("Step is over")
-        else:
-            self.__laser.set_1posWL(cur, step)
-        #threading.Thread(target=self.__laser.virtual_thread, args=(self.__cur_wav, float(self.__cur_wav)+float(self.__step_wav), 1)).start()
+        self.__abort_force = True
+        self.property_changed_event.fire("all")
 
 
     def acqThread(self):
         self.__cur_wav = self.__start_wav
-        self.__cur_pts = 0.0
+        self.__abort_force = False
         data = []
         self.__status = True #started
         self.property_changed_event.fire("run_status")
         self.busy_event.fire("all")
-        for i in range(self.__pts):
-            self.laserStepThread(self.__cur_wav, self.__step_wav, self.__finish_wav)
-            data.append([])
+        self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts) #THIS IS A THREAD. Start and bye
+
+        i=0
+        while(self.__cur_wav != self.__finish_wav and not self.__abort_force):
             self.upt()
+            data.append([])
             data[i] = self.__camera.grab_next_to_start()[0]
+            i+=1
+
+        #for i in range(self.__pts):
+        #    data.append([])
+        #    self.upt()
+        #    data[i] = self.__camera.grab_next_to_start()[0]
         self.__camera.stop_playing()
         logging.info(len(data))
         self.__status = False #its over
@@ -135,7 +128,7 @@ class gainDevice(Observable.Observable):
                 self.property_changed_event.fire("tpts_f")
                 self.property_changed_event.fire("cur_wav_f")
             if message==3:
-                logging.info("Single step done..")
+                #do not update property because this should be called together with self.upt()
                 self.__cur_wav = float(self.__cur_wav) + float(self.__step_wav)
         return sendMessage
 
@@ -156,6 +149,8 @@ class gainDevice(Observable.Observable):
     @finish_wav_f.setter
     def finish_wav_f(self, value: float) -> None:
         self.__finish_wav = value
+        self.property_changed_event.fire("pts_f") 
+        self.property_changed_event.fire("tpts_f") 
     
     @property
     def step_wav_f(self) -> float:

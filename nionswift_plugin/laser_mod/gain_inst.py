@@ -91,19 +91,33 @@ class gainDevice(Observable.Observable):
 
     def abt(self):
         #still thinking how to implement an functional Abort button
-        self.property_changed_event.fire("all")
+        #self.property_changed_event.fire("all")
+        for i in range(self.__pts):
+            self.__laser_thread = self.laserStepThread(self.__cur_wav, self.__step_wav, self.__finish_wav)
+
+    def laserStepThread(self, cur, step, final):
+        print(cur, step, final) #yves: isso da pau pois as threads estao muito atrasadas. Nao posso acumular thread desse jeito
+        if (float(final)<=float(cur)):
+            logging.info("Step is over")
+        else:
+            self.__laser.set_1posWL(cur, step)
+        #threading.Thread(target=self.__laser.virtual_thread, args=(self.__cur_wav, float(self.__cur_wav)+float(self.__step_wav), 1)).start()
+
 
     def acqThread(self):
         self.__cur_wav = self.__start_wav
         self.__cur_pts = 0.0
+        data = []
         self.__status = True #started
         self.property_changed_event.fire("run_status")
         self.busy_event.fire("all")
         for i in range(self.__pts):
-            self.__laser.set_1posWL(self.__cur_wav, self.__step_wav)
+            self.laserStepThread(self.__cur_wav, self.__step_wav, self.__finish_wav)
+            data.append([])
             self.upt()
-            self.__camera.grab_next_to_start()[0]
+            data[i] = self.__camera.grab_next_to_start()[0]
         self.__camera.stop_playing()
+        logging.info(len(data))
         self.__status = False #its over
         self.__stored = True
         self.property_changed_event.fire("run_status")
@@ -121,6 +135,7 @@ class gainDevice(Observable.Observable):
                 self.property_changed_event.fire("tpts_f")
                 self.property_changed_event.fire("cur_wav_f")
             if message==3:
+                logging.info("Single step done..")
                 self.__cur_wav = float(self.__cur_wav) + float(self.__step_wav)
         return sendMessage
 

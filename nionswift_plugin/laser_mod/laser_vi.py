@@ -18,7 +18,7 @@ class SirahCredoLaser:
         self.sendmessage=sendmessage
 
     def virtual_thread(self, start: float, final: float, stepping: int):
-        latency = round(abs(float(final) - float(start))*1.0/20.0 + 0.1, 5)
+        latency = round(abs(float(final) - float(start))*1.0/20.0 + 3.0, 5)
         time.sleep(latency)
         logging.info(latency)
         if (stepping == 1):
@@ -33,6 +33,6 @@ class SirahCredoLaser:
             threading.Thread(target=self.virtual_thread, args=(wavelength, current_wavelength, 0)).start()
 
     def set_1posWL(self, cur_wavelength: float, step: float):
-        #threading.Thread(target=self.virtual_thread, args=(cur_wavelength, float(cur_wavelength)+float(step), 1)).start()
-        self.virtual_thread(cur_wavelength, float(cur_wavelength)+float(step), 1)
+        threading.Thread(target=self.virtual_thread, args=(cur_wavelength, float(cur_wavelength)+float(step), 1)).start()
+        #self.virtual_thread(cur_wavelength, float(cur_wavelength)+float(step), 1)
 

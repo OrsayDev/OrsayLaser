@@ -59,15 +59,9 @@ class SirahCredoLaser:
     def setWL_thread(self, i_pts, step):
         if not self.abort_ctrl:
             self.lock.acquire()
-            if (i_pts==0):
-                logging.info("Scan has Begun")
-                latency = round(float(step)*1.0/20.0+0.25, 5)
-                time.sleep(latency)
-                self.sendmessage(5) #measurement of the first WL. You dont upgrade WL as in message 3
-            else:
-                latency = round(float(step)*1.0/20.0+0.25, 5)
-                time.sleep(latency)
-                self.sendmessage(3)
+            latency = round(float(step)*1.0/20.0+0.25, 5)
+            time.sleep(latency)
+            self.sendmessage(3)
             #self.lock.release()
         else:
             with self.lock:
@@ -81,7 +75,8 @@ class SirahCredoLaser:
         pool = ThreadPoolExecutor(1)
         for index in range(pts):
             self.thread = pool.submit(self.setWL_thread, index, step)
-
+        
+        self.setWL_thread_release()
 
 
 

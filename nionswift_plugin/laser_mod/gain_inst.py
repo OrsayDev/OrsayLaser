@@ -93,25 +93,23 @@ class gainDevice(Observable.Observable):
 
     def acqThread(self):
         self.__status = True #started
+        self.__cur_wav = self.__start_wav
         self.upt()
 
-
         self.__abort_force = False
-        self.__cur_wav = self.__start_wav
         self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts) #THIS IS A THREAD. Start and bye
         data = []
         i=0
         while(not self.__laser.setWL_thread_check() and not self.__abort_force):
             data.append([])
-            logging.info(str(self.__cur_wav)+str(self.__laser.setWL_thread_locked()))
             while(  ( not self.__laser.setWL_thread_locked() and not self.__laser.setWL_thread_check())    and not self.__abort_force):
                 data[i].append(self.__camera.grab_next_to_finish()[0])
             i+=1
             if (self.__laser.setWL_thread_locked()):
                 self.__laser.setWL_thread_release() #if you dont release thread does not advance. 
+                self.__cur_wav += self.__step_wav
             self.upt()
         self.__camera.stop_playing()
-        logging.info(len(data))
         self.__stored = True and not self.__abort_force
         self.__status = False #its over
 
@@ -129,9 +127,8 @@ class gainDevice(Observable.Observable):
                 self.property_changed_event.fire("pts_f")
                 self.property_changed_event.fire("tpts_f")
                 self.property_changed_event.fire("cur_wav_f")
-            if message==3:
-                self.__cur_wav += self.__step_wav
-                #self.__laser.setWL_thread_release()
+            #if message==3:
+            #    logging.info("Step over")
             #if message==4:
                 #logging.info("msg 4")
         return sendMessage

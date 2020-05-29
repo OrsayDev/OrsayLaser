@@ -1,9 +1,3 @@
-"""
-A spectrometer device that can be bound to the UI trhough SpectroPanel
-Requires a spectro low_level object
-two are given in the plug_in, one is bound to a dll, the other ("virtual") essentially gives a testing object
-"""
-DEBUG=True
 # standard libraries
 import math
 import numpy
@@ -44,11 +38,11 @@ class gainDevice(Observable.Observable):
         #self.property_changed_event_listener = self.property_changed_event.listen(self.computeCalibration)
         self.busy_event=Event.Event()
         
-        self.__start_wav = 580.
-        self.__finish_wav = 600.
-        self.__step_wav = 1
+        self.__start_wav = 580.0
+        self.__finish_wav = 600.0
+        self.__step_wav = 1.0
         self.__cur_wav = self.__start_wav
-        self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav)
+        self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
         self.__avg = 1
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 100
@@ -56,12 +50,13 @@ class gainDevice(Observable.Observable):
         self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
         self.__frame_parameters["integration_count"]=int(self.__avg)
-        self.__frame_parameters["exposure_ms"]=int(self.__dwell)
-
+        self.__frame_parameters["exposure_ms"]=float(self.__dwell)
+        self.__camera.set_current_frame_parameters(self.__frame_parameters)
 
         self.__thread = None
         self.__status = False
         self.__stored = False
+        self.__abort_force = False
 
         self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__laser = laser.SirahCredoLaser(self.__sendmessage)
@@ -71,17 +66,18 @@ class gainDevice(Observable.Observable):
         logging.info("init...")
    
     def upt(self):
-        self.__camera.set_current_frame_parameters(self.__frame_parameters)
-
-        self.property_changed_event.fire("pts_f") #i dont know what makes pts_f be executed here. I thought this func was simple based on able/disable of my widgets. See async def on
+        self.property_changed_event.fire("pts_f")
         self.property_changed_event.fire("tpts_f")
         self.property_changed_event.fire("cur_wav_f")
-        if (self.__status): #if its running you disable UI after updating our variables
+        self.property_changed_event.fire("run_status")
+        self.property_changed_event.fire("stored_status")
+        if (self.__status):
             self.busy_event.fire("all")
+
 
         
     def acq(self):
-        self.upt()
+        self.__camera.set_current_frame_parameters(self.__frame_parameters)
         self.__thread = threading.Thread(target=self.acqThread)
         self.__thread.start()
         
@@ -90,38 +86,35 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("stored_status")
 
     def abt(self):
-        #still thinking how to implement an functional Abort button
-        #self.property_changed_event.fire("all")
-        for i in range(self.__pts):
-            self.__laser_thread = self.laserStepThread(self.__cur_wav, self.__step_wav, self.__finish_wav)
-
-    def laserStepThread(self, cur, step, final):
-        print(cur, step, final) #yves: isso da pau pois as threads estao muito atrasadas. Nao posso acumular thread desse jeito
-        if (float(final)<=float(cur)):
-            logging.info("Step is over")
-        else:
-            self.__laser.set_1posWL(cur, step)
-        #threading.Thread(target=self.__laser.virtual_thread, args=(self.__cur_wav, float(self.__cur_wav)+float(self.__step_wav), 1)).start()
+        logging.info("Abort scanning. We are not updating value anymore")
+        self.__abort_force = True
+        self.__laser.abort_control()
 
 
     def acqThread(self):
-        self.__cur_wav = self.__start_wav
-        self.__cur_pts = 0.0
-        data = []
         self.__status = True #started
-        self.property_changed_event.fire("run_status")
-        self.busy_event.fire("all")
-        for i in range(self.__pts):
-            self.laserStepThread(self.__cur_wav, self.__step_wav, self.__finish_wav)
+        self.__cur_wav = self.__start_wav
+        self.upt()
+
+        self.__abort_force = False
+        self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts) #THIS IS A THREAD. Start and bye
+        data = []
+        i=0
+        while(not self.__laser.setWL_thread_check() and not self.__abort_force):
             data.append([])
+            while(  ( not self.__laser.setWL_thread_locked() and not self.__laser.setWL_thread_check())    and not self.__abort_force):
+                data[i].append(self.__camera.grab_next_to_finish()[0])
+            i+=1
+            if (self.__laser.setWL_thread_locked()):
+                self.__laser.setWL_thread_release() #if you dont release thread does not advance. 
+                self.__cur_wav += self.__step_wav
             self.upt()
-            data[i] = self.__camera.grab_next_to_start()[0]
         self.__camera.stop_playing()
-        logging.info(len(data))
+        self.__stored = True and not self.__abort_force
         self.__status = False #its over
-        self.__stored = True
-        self.property_changed_event.fire("run_status")
-        self.property_changed_event.fire("stored_status")
+
+        time.sleep(1)
+        self.upt()
 
     def sendMessageFactory(self):
         def sendMessage(message):
@@ -134,9 +127,10 @@ class gainDevice(Observable.Observable):
                 self.property_changed_event.fire("pts_f")
                 self.property_changed_event.fire("tpts_f")
                 self.property_changed_event.fire("cur_wav_f")
-            if message==3:
-                logging.info("Single step done..")
-                self.__cur_wav = float(self.__cur_wav) + float(self.__step_wav)
+            #if message==3:
+            #    logging.info("Step over")
+            #if message==4:
+                #logging.info("msg 4")
         return sendMessage
 
     @property
@@ -155,7 +149,9 @@ class gainDevice(Observable.Observable):
 
     @finish_wav_f.setter
     def finish_wav_f(self, value: float) -> None:
-        self.__finish_wav = value
+        self.__finish_wav = float(value)
+        self.property_changed_event.fire("pts_f") 
+        self.property_changed_event.fire("tpts_f") 
     
     @property
     def step_wav_f(self) -> float:
@@ -163,8 +159,8 @@ class gainDevice(Observable.Observable):
 
     @step_wav_f.setter
     def step_wav_f(self, value: float) -> None:
-        self.__step_wav = value
-        self.property_changed_event.fire("pts_f") #yves: not sure if this is the best way to do. Note i am calling a property inside another property. It works, however
+        self.__step_wav = float(value)
+        self.property_changed_event.fire("pts_f")
         self.property_changed_event.fire("tpts_f")
     
     @property
@@ -177,8 +173,8 @@ class gainDevice(Observable.Observable):
 
     @avg_f.setter
     def avg_f(self, value: int) -> None:
-        self.__avg = value
-        self.__frame_parameters["integration_count"]=int(self.__avg)
+        self.__avg = int(value)
+        self.__frame_parameters["integration_count"]=self.__avg
         self.property_changed_event.fire("tpts_f")
 
     @property
@@ -186,9 +182,9 @@ class gainDevice(Observable.Observable):
         return self.__dwell
 
     @dwell_f.setter
-    def dwell_f(self, value: int) -> None:
-        self.__dwell = value
-        self.__frame_parameters["exposure_ms"]=int(self.__dwell)
+    def dwell_f(self, value: float) -> None:
+        self.__dwell = float(value)
+        self.__frame_parameters["exposure_ms"]=self.__dwell
 
     @property
     def tpts_f(self) -> int:
@@ -197,7 +193,7 @@ class gainDevice(Observable.Observable):
     
     @property
     def pts_f(self) -> float:
-        self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav))
+        self.__pts=int((float(self.__finish_wav)-float(self.__start_wav))/float(self.__step_wav)+1)
         return self.__pts
     
     @property

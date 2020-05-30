@@ -27,6 +27,7 @@ import logging
 import time
 
 from . import laser_vi as laser
+from . import power_vi as power
 
 
 
@@ -34,6 +35,7 @@ class gainDevice(Observable.Observable):
 
     def __init__(self):
         self.property_changed_event = Event.Event()
+        self.property_changed_power_event = Event.Event()
         self.communicating_event = Event.Event()
         #self.property_changed_event_listener = self.property_changed_event.listen(self.computeCalibration)
         self.busy_event=Event.Event()
@@ -46,6 +48,7 @@ class gainDevice(Observable.Observable):
         self.__avg = 1
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 100
+        self.__power=numpy.random.randn(1)[0]
 
         self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
@@ -61,6 +64,9 @@ class gainDevice(Observable.Observable):
         self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__laser = laser.SirahCredoLaser(self.__sendmessage)
 
+        self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
+        self.__pwmeter.pw_random_periodic()
 
     def init(self):
         logging.info("init...")
@@ -71,11 +77,10 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("cur_wav_f")
         self.property_changed_event.fire("run_status")
         self.property_changed_event.fire("stored_status")
+        self.property_changed_event.fire("power_f")
         if (self.__status):
             self.busy_event.fire("all")
 
-
-        
     def acq(self):
         self.__camera.set_current_frame_parameters(self.__frame_parameters)
         self.__thread = threading.Thread(target=self.acqThread)
@@ -86,16 +91,15 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("stored_status")
 
     def abt(self):
-        logging.info("Abort scanning. We are not updating value anymore")
+        logging.info("Abort scanning. Going back to origin...")
         self.__abort_force = True
         self.__laser.abort_control()
 
-
     def acqThread(self):
         self.__status = True #started
-        self.__cur_wav = self.__start_wav
         self.upt()
 
+        self.__laser.setWL(self.__start_wav, self.__cur_wav)
         self.__abort_force = False
         self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts) #THIS IS A THREAD. Start and bye
         data = []
@@ -110,27 +114,28 @@ class gainDevice(Observable.Observable):
                 self.__cur_wav += self.__step_wav
             self.upt()
         self.__camera.stop_playing()
+        self.__laser.setWL(self.__start_wav, self.__cur_wav)
         self.__stored = True and not self.__abort_force
         self.__status = False #its over
 
-        time.sleep(1)
         self.upt()
 
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
                 logging.info("start WL is current WL")
-                self.property_changed_event.fire("start_wav_f")
+                self.upt()
             if message==2:
-                logging.info("WL updated")
+                logging.info("Current WL updated")
                 self.__cur_wav = self.__start_wav
-                self.property_changed_event.fire("pts_f")
-                self.property_changed_event.fire("tpts_f")
-                self.property_changed_event.fire("cur_wav_f")
+                self.upt()
             #if message==3:
             #    logging.info("Step over")
             #if message==4:
                 #logging.info("msg 4")
+            if message==100:
+                self.__power = numpy.random.randn(1)[0]
+                self.upt()
         return sendMessage
 
     @property
@@ -140,8 +145,8 @@ class gainDevice(Observable.Observable):
     @start_wav_f.setter
     def start_wav_f(self, value: float) -> None:
         self.busy_event.fire("all")
-        self.__laser.setWL(value, self.__cur_wav)
         self.__start_wav = float(value)
+        self.__laser.setWL(self.__start_wav, self.__cur_wav)
     
     @property
     def finish_wav_f(self) -> float:
@@ -162,10 +167,6 @@ class gainDevice(Observable.Observable):
         self.__step_wav = float(value)
         self.property_changed_event.fire("pts_f")
         self.property_changed_event.fire("tpts_f")
-    
-    @property
-    def cur_wav_f(self) -> float:
-        return format(self.__cur_wav, '.3f')
     
     @property
     def avg_f(self) -> int:
@@ -197,13 +198,20 @@ class gainDevice(Observable.Observable):
         return self.__pts
     
     @property
+    def cur_wav_f(self) -> float:
+        return format(self.__cur_wav, '.3f')
+    
+    @property
     def run_status(self):
         if (self.__status == False):
             return "False"
         if (self.__status == True):
-            #return str(self.__thread.is_alive())
             return "True"
     
     @property
     def stored_status(self):
         return str(self.__stored)
+    
+    @property
+    def power_f(self):
+        return round(self.__power, 3)

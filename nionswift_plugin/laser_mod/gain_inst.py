@@ -21,6 +21,7 @@ from nion.utils import Geometry
 from nion.utils import Model
 from nion.utils import Observable
 from nion.swift.model import HardwareSource
+from nion.swift.model import ImportExportManager
 
 
 import logging
@@ -66,7 +67,7 @@ class gainDevice(Observable.Observable):
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
-        self.__pwmeter.pw_random_periodic()
+        #self.__pwmeter.pw_random_periodic()
 
     def init(self):
         logging.info("init...")
@@ -88,6 +89,7 @@ class gainDevice(Observable.Observable):
         
     def gen(self):
         self.__stored = False
+        self.displayData()
         self.property_changed_event.fire("stored_status")
 
     def abt(self):
@@ -119,6 +121,15 @@ class gainDevice(Observable.Observable):
         self.__status = False #its over
 
         self.upt()
+
+    def displayData(self):
+        datax = numpy.random.randn(100, 1024)
+        data_element = dict()
+        data_element["data"]=datax
+        data_element["title"]="olaolaola"
+        sum_data_item = ImportExportManager.create_data_item_from_data_element(data_element)
+        logging.info(document_controller)
+        logging.info("plotting...")
 
     def sendMessageFactory(self):
         def sendMessage(message):

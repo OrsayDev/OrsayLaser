@@ -1,5 +1,6 @@
 # standard libraries
 import gettext
+import numpy
 
 # local libraries
 from nion.swift import Panel
@@ -25,9 +26,12 @@ import inspect
 class gainhandler:
 
 
-    def __init__(self,instrument:gain_inst.gainDevice,event_loop):
+    #def __init__(self, instrument:gain_inst.gainDevice, event_loop): #MATHIEU
+    def __init__(self, instrument:gain_inst.gainDevice, document_controller):
 
-        self.event_loop=event_loop
+        #self.event_loop=event_loop #MATHIEU
+        self.event_loop=document_controller.event_loop
+        self.document_controller=document_controller
         self.instrument=instrument
         self.enabled = False
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
@@ -46,14 +50,14 @@ class gainhandler:
 
     def gen_push(self, widget):
         self.instrument.gen()
+        datax = numpy.random.randn(100, 1024)
+        self.document_controller.add_data(datax)
+
 
     def abt_push(self, widget):
         self.instrument.abt()
 
     async def do_enable(self,enabled=True,not_affected_widget_name_list=None):
-        #Pythonic way of finding the widgets
-        #actually a more straigthforward way would be to create a list of widget in the init_handler
-        #then use this list in the present function...
         for var in self.__dict__:
             if var not in not_affected_widget_name_list:
                 if isinstance(getattr(self,var),UserInterface.Widget):
@@ -129,7 +133,8 @@ class gainView:
         
 def create_spectro_panel(document_controller, panel_id, properties):
         instrument = properties["instrument"]
-        ui_handler =gainhandler(instrument, document_controller.event_loop)
+        #ui_handler =gainhandler(instrument, document_controller.event_loop) #MATHIEU
+        ui_handler =gainhandler(instrument, document_controller)
         ui_view=gainView(instrument)
         panel = Panel.Panel(document_controller, panel_id, properties)
 

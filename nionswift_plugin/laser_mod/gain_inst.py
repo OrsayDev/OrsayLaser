@@ -73,7 +73,7 @@ class gainDevice(Observable.Observable):
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
-        self.__pwmeter.pw_random_periodic()
+        self.__pwmeter.pw_random_periodic() #THIS IS RESPONSIBLE FOR A MESSAGE ERROR AT THE END
 
     def init(self):
         logging.info("init...")
@@ -131,7 +131,6 @@ class gainDevice(Observable.Observable):
 
     def displayData(self):
         #datax = numpy.random.randn(100, 1024)
-        #data_element = dict()
         #data_element["data"]=datax
         #data_element["title"]="olaolaola"
         #sum_data_item = ImportExportManager.create_data_item_from_data_element(data_element)

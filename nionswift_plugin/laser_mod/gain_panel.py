@@ -31,6 +31,7 @@ class gainhandler:
         self.instrument=instrument
         self.enabled = False
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
+        self.property_changed_power_event_listener=self.instrument.property_changed_power_event.listen(self.prepare_power_widget_enable)
         self.busy_event_listener=self.instrument.busy_event.listen(self.prepare_widget_disable)
 
     def init_push(self, widget):
@@ -60,12 +61,14 @@ class gainhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-    #    # this message will come from a thread. use event loop to call functions on the main thread.
         self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
 
     def prepare_widget_disable(self,value):
-    #    # this message will come from a thread. use event loop to call functions on the main thread.
         self.event_loop.create_task(self.do_enable(False, ["init_pb", "upt_pb", "abt_pb"]))
+    
+    def prepare_power_widget_enable(self,value): #NOTE THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
+        self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
+    
 
 
 
@@ -112,9 +115,14 @@ class gainView:
         self.acq_pb=ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
         self.gen_pb=ui.create_push_button(text="Generate", name="gen_pb", on_clicked="gen_push")
         self.abt_pb=ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
-        self.ui_view6 = ui.create_row(self.acq_pb, self.gen_pb, self.abt_pb, spacing=12) #yves: Note that i removed update button. It is useless
+        self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.gen_pb, self.abt_pb, spacing=12) #yves: Note that i removed update button. It is useless
 
-        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, spacing=1)
+        self.power_label=ui.create_label(text='Power (uW): ')
+        self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
+        self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), spacing=12)
+
+
+        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, spacing=1)
 
 
 

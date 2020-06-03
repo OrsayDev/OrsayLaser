@@ -23,20 +23,18 @@ class SirahCredoLaser:
         self.lock=threading.Lock()
 
     def set_startWL(self, start: float, final: float):
-        latency = round(abs(float(final) - float(start))*1.0/20.0 + 0.1, 5)
+        latency = round(abs(final - start)*1.0/20.0 + 0.25, 5)
         time.sleep(latency)
-        logging.info(latency)
         self.sendmessage(2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
         if (float(current_wavelength) == float(wavelength)):
             self.sendmessage(1)
         else:
-            threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength)).start()
+            self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
+            self.laser_thread.start()
+            self.laser_thread.join()
 
-    def set_1posWL(self, cur_wavelength: float, step: float):
-        self.laser_thread = threading.Thread(target=self.virtual_thread, args=(cur_wavelength, float(cur_wavelength)+float(step), 1))
-        self.laser_thread.start()
     
     
     

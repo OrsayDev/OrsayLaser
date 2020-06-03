@@ -29,7 +29,7 @@ import time
 
 from . import laser_vi as laser
 
-DEBUG_pw = 0
+DEBUG_pw = 1
 
 if DEBUG_pw:
     from . import power_vi as power

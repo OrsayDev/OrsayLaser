@@ -24,3 +24,9 @@ class TLPowerMeter:
         self.pwthread = threading.Timer(0.5, self.pw_random_periodic) #auto execution
         self.pwthread.start()
         self.sendmessage(100)
+
+    def pw_set_WL(self, cur_WL):
+        return None
+
+    def pw_read(self):
+        return numpy.random.randn(1)[0]

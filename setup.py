@@ -10,10 +10,12 @@ import os
 
 setuptools.setup(
     name="yvorsay-instrumentation_laser",
-    version="1.1.4",
+    version="1.2.0",
     author="Yves Auad",
     description="Laser Control",
     url="https://github.com/yvesauad/yvorsay-instrument",
     packages=["nionswift_plugin.laser_mod"],
     python_requires='~=3.6',
 )
+
+#dependencies = pip install pyvisa and pip install pyvisa-py and pip install pyusb

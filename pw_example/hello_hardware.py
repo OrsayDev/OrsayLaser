@@ -1,19 +1,23 @@
 import sys
 import enum
-sys.path.insert(0, "/home/yvesauad/.local/lib/python2.7/site-packages")
-#print(sys.path)
 import pyvisa
-pyvisa.ResourceManager()
+#sys.path.insert(0, "/home/yvesauad/.local/lib/python2.7/site-packages")
+#print(sys.path)
+#pyvisa.ResourceManager()
 rm = pyvisa.ResourceManager()
+print(rm.list_resources())
 tl = rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
-#print(rm.list_resources())
-#print(tl.query('*IDN?'))
-tl.write('*IDN?')
-print(tl.read())
+print(tl.query('*IDN?'))
+#tl.write('*IDN?')
+#print(tl.read())
 
-#tl.write('CONF:POW')
-#tl.write('INIT')
-#print(tl.query('FETCH?'))
-#print(tl.query('CONFIGURE?'))
-#print(tl.query('SENS:CORR:WAV?'))
+#tl.write('SENS:CORR:COLL:ZERO:INIT') #perform zero adjustment
+tl.write('CONF:POW') # set meas as power
+print(tl.query('SENS:POW:RANG:AUTO?'))
+
+print(tl.query('READ?')) #get measurement
+
+tl.write('SENS:CORR:WAV  540') #set wl
+print(tl.query('SENS:CORR:WAV?')) #see WL
+
 

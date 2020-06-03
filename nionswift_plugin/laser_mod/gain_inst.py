@@ -28,7 +28,13 @@ import logging
 import time
 
 from . import laser_vi as laser
-from . import power_vi as power
+
+DEBUG_pw = 0
+
+if DEBUG_pw:
+    from . import power_vi as power
+else:
+    from . import power as power
 
 
 
@@ -67,7 +73,7 @@ class gainDevice(Observable.Observable):
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
-        #self.__pwmeter.pw_random_periodic()
+        self.__pwmeter.pw_random_periodic()
 
     def init(self):
         logging.info("init...")
@@ -114,6 +120,7 @@ class gainDevice(Observable.Observable):
             if (self.__laser.setWL_thread_locked()):
                 self.__laser.setWL_thread_release() #if you dont release thread does not advance. 
                 self.__cur_wav += self.__step_wav
+                self.__pwmeter.pw_set_WL(self.__cur_wav)
             self.upt()
         self.__camera.stop_playing()
         self.__laser.setWL(self.__start_wav, self.__cur_wav)
@@ -123,12 +130,12 @@ class gainDevice(Observable.Observable):
         self.upt()
 
     def displayData(self):
-        datax = numpy.random.randn(100, 1024)
-        data_element = dict()
-        data_element["data"]=datax
-        data_element["title"]="olaolaola"
-        sum_data_item = ImportExportManager.create_data_item_from_data_element(data_element)
-        logging.info(document_controller)
+        #datax = numpy.random.randn(100, 1024)
+        #data_element = dict()
+        #data_element["data"]=datax
+        #data_element["title"]="olaolaola"
+        #sum_data_item = ImportExportManager.create_data_item_from_data_element(data_element)
+        #logging.info(document_controller)
         logging.info("plotting...")
 
     def sendMessageFactory(self):
@@ -139,13 +146,15 @@ class gainDevice(Observable.Observable):
             if message==2:
                 logging.info("Current WL updated")
                 self.__cur_wav = self.__start_wav
+                self.__pwmeter.pw_set_WL(self.__cur_wav)
                 self.upt()
             #if message==3:
             #    logging.info("Step over")
             #if message==4:
                 #logging.info("msg 4")
             if message==100:
-                self.__power = numpy.random.randn(1)[0]
+                #self.__power = numpy.random.randn(1)[0]
+                self.__power = self.__pwmeter.pw_read()
                 self.upt()
         return sendMessage
 

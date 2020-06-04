@@ -51,10 +51,12 @@ class gainhandler:
 
     def gen_push(self, widget):
         data_item=self.instrument.gen()
-        
-        self.document_controller.document_model.append_data_item(data_item)
-        display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
-        self.document_controller.show_display_item(display_item)
+        if data_item!=None:
+            self.document_controller.document_model.append_data_item(data_item)
+            display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
+            self.document_controller.show_display_item(display_item)
+        else:
+            logging.info("Nothing to generate. Is Stored is True?")
         
         #datax = numpy.random.randn(100, 1024)
         #self.document_controller.add_data(datax)

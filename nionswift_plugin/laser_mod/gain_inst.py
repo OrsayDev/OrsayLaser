@@ -54,14 +54,13 @@ class gainDevice(Observable.Observable):
         self.__step_wav = 5.0
         self.__cur_wav = self.__start_wav
         self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
-        self.__avg = 1
+        self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 100
         self.__power=numpy.random.randn(1)[0]
 
         self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
-        self.__frame_parameters["integration_count"]=int(self.__avg)
         self.__frame_parameters["exposure_ms"]=float(self.__dwell)
         self.__camera.set_current_frame_parameters(self.__frame_parameters)
         self.__data=None
@@ -116,16 +115,18 @@ class gainDevice(Observable.Observable):
             data_item.set_intensity_calibration(int_cal)
             data_item.set_dimensional_calibrations(dim_cal)
 
+            logging.info("Generating our data..")
+            self.property_changed_event.fire("stored_status")
+
             #send data_item back to gain_panel, the one who has control over document_controller. This allows us to display our acquired data in nionswift panel
             return data_item
         else:
             return None
-        self.property_changed_event.fire("stored_status")
 
     def abt(self):
         logging.info("Abort scanning. Going back to origin...")
         self.__abort_force = True
-        self.__laser.abort_control()
+        self.__laser.abort_control() #abort laser thread as well.
 
     def acqThread(self):
         self.__status = True
@@ -133,29 +134,43 @@ class gainDevice(Observable.Observable):
 
         self.__laser.setWL(self.__start_wav, self.__cur_wav)
         self.__abort_force = False
+        
         #Laser thread begins
-        self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+        if self.__laser.set_scan_thread_check():
+            self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+        else:
+            logging.info("Last thread was not done. Some error happened")
         self.__data = []
-        i=0
+        i=0 #e-point counter
+        i_max=self.__pts
+        j=0 #each frame inside an specific e-point
+        j_max=self.__avg #dont put directly self.__avg because it will keep refreshing UI
         #first while means that camera is running while laser thread is on and abort is off
-        while(not self.__laser.setWL_thread_check() and not self.__abort_force):
+        while(not self.__laser.set_scan_thread_check() and not self.__abort_force):
+        #while( i<i_max and not self.__abort_force):
             self.__data.append([])
             #Second while means that camera is running and picking the maximum of frames possible given the parameters. This means that if laser is super slow we are still capturing frames. thread_locked() checks if laser step is done. In short, camera is grabbing frames while laser thread is running, abort is False and laser is not locked (moving, for example). Ideally, you should put camera way slower than laser latency so most of the frame comes from a stationary WL. In this case, you will have a single frame for each wavelength. This can largely be improved
-            while(  ( not self.__laser.setWL_thread_locked() and not self.__laser.setWL_thread_check())    and not self.__abort_force):
+            #while(  ( not self.__laser.set_scan_thread_locked() and not self.__laser.set_scan_thread_check())    and not self.__abort_force):
+            while( j<j_max  and not self.__abort_force):
                 self.__data[i].append(self.__camera.grab_next_to_start()[0])
+                j+=1
+                logging.info(self.__cur_wav)
             i+=1
-            if (self.__laser.setWL_thread_locked()): #check if laser changes have finished and thread step is over
-                self.__laser.setWL_thread_release() #if yes, you can advance
+            if (self.__laser.set_scan_thread_locked()): #check if laser changes have finished and thread step is over
+                self.__laser.set_scan_thread_release() #if yes, you can advance
+                #if i<i_max:
+                j=0
                 self.__cur_wav += self.__step_wav #update wavelength
                 self.__pwmeter.pw_set_WL(self.__cur_wav) #set wavelength on powermeter
+            else:
+                logging.info("Camera settings for each wavelength finished before fully laser set up. This could also mean laser could not further increase WL.")
+                self.__abort_force = True #force abort. This situation makes no sense because there is not camera frames with a static laser WL
             self.upt() #updating mainly current wavelength
         self.__camera.stop_playing() #stop camera
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
         self.__status = False #acquistion is over
         logging.info("Acquistion is over") 
-
-
         self.upt() #here you going to update panel only until setWL is over. This is because this specific thread has a join() at the end.
 
     #this is our callback functions. Messages with 1 digit comes from laser. Messages with 2 digits comes from power meter. Messages with 3 digits comes from data analyses package
@@ -211,7 +226,6 @@ class gainDevice(Observable.Observable):
     @avg_f.setter
     def avg_f(self, value: int) -> None:
         self.__avg = int(value)
-        self.__frame_parameters["integration_count"]=self.__avg
         self.property_changed_event.fire("tpts_f")
 
     @property

@@ -33,7 +33,7 @@ class gainData:
         for i in range(len(rd)):
             for j in range(len(rd[i])):
                 cam_hor = numpy.sum(rd[i][j].data, axis=0)
-                index.append(numpy.where(cam_hor==numpy.max(cam_hor))[0])
+                index.append(numpy.where(cam_hor==numpy.max(cam_hor))[0][0]) #double [0] is because each numpy.where is a array of values. We dont want to have two maximums because aligning will be messy. Remember that we dont expect two maximuns in a ZLP that aren't pixels close together (probably neighbour)
                 cam_hor = numpy.roll(cam_hor, -index[len(index)-1]+index[0])
                 temp_data[i] = temp_data[i] + cam_hor
 

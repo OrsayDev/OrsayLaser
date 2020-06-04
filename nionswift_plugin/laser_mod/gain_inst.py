@@ -22,11 +22,13 @@ from nion.utils import Model
 from nion.utils import Observable
 from nion.swift.model import HardwareSource
 from nion.swift.model import ImportExportManager
+from nion.swift.model import DataItem
 
 
 import logging
 import time
 
+from . import gain_data as gdata
 from . import laser_vi as laser
 
 DEBUG_pw = 1
@@ -49,7 +51,7 @@ class gainDevice(Observable.Observable):
         
         self.__start_wav = 580.0
         self.__finish_wav = 600.0
-        self.__step_wav = 1.0
+        self.__step_wav = 5.0
         self.__cur_wav = self.__start_wav
         self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
         self.__avg = 1
@@ -62,6 +64,7 @@ class gainDevice(Observable.Observable):
         self.__frame_parameters["integration_count"]=int(self.__avg)
         self.__frame_parameters["exposure_ms"]=float(self.__dwell)
         self.__camera.set_current_frame_parameters(self.__frame_parameters)
+        self.__data=None
 
         self.__thread = None
         self.__status = False
@@ -73,7 +76,10 @@ class gainDevice(Observable.Observable):
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
-        self.__pwmeter.pw_random_periodic() #THIS IS RESPONSIBLE FOR A MESSAGE ERROR AT THE END
+        #self.__pwmeter.pw_random_periodic() #THIS IS RESPONSIBLE FOR A MESSAGE ERROR AT THE END
+
+        self.__data_sendmessage = gdata.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__gdata = gdata.gainData(self.__data_sendmessage)
 
     def init(self):
         logging.info("init...")
@@ -94,8 +100,26 @@ class gainDevice(Observable.Observable):
         self.__thread.start()
         
     def gen(self):
-        self.__stored = False
-        self.displayData()
+        if self.__stored:
+            self.__stored = False
+            #As we are going to create a DataItem from scrach, we first pick up this parameter here. We will modify later on
+            intensity_calibration = self.__data[0][0].intensity_calibration
+            dimensional_calibrations = self.__data[0][0].dimensional_calibrations
+            # This aligns and returns the data that will be appended in the data_item
+            sum_data, max_index = self.__gdata.send_raw_MetaData(self.__data) #this aligned and returns data to be appended in a data_item
+            #Creating Data Item
+            data_item = DataItem.DataItem(large_format=True)
+            #Setting data
+            data_item.set_data(sum_data)
+            #Modifying and setting intensity calibration and dimensional calibration. Check gain_data.py for info on how this is done
+            int_cal, dim_cal = self.__gdata.data_item_calibration(intensity_calibration, dimensional_calibrations, self.__start_wav, self.__step_wav, 0.013, max_index)
+            data_item.set_intensity_calibration(int_cal)
+            data_item.set_dimensional_calibrations(dim_cal)
+
+            #send data_item back to gain_panel, the one who has control over document_controller. This allows us to display our acquired data in nionswift panel
+            return data_item
+        else:
+            return None
         self.property_changed_event.fire("stored_status")
 
     def abt(self):
@@ -104,39 +128,37 @@ class gainDevice(Observable.Observable):
         self.__laser.abort_control()
 
     def acqThread(self):
-        self.__status = True #started
+        self.__status = True
         self.upt()
 
         self.__laser.setWL(self.__start_wav, self.__cur_wav)
         self.__abort_force = False
-        self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts) #THIS IS A THREAD. Start and bye
-        data = []
+        #Laser thread begins
+        self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+        self.__data = []
         i=0
+        #first while means that camera is running while laser thread is on and abort is off
         while(not self.__laser.setWL_thread_check() and not self.__abort_force):
-            data.append([])
+            self.__data.append([])
+            #Second while means that camera is running and picking the maximum of frames possible given the parameters. This means that if laser is super slow we are still capturing frames. thread_locked() checks if laser step is done. In short, camera is grabbing frames while laser thread is running, abort is False and laser is not locked (moving, for example). Ideally, you should put camera way slower than laser latency so most of the frame comes from a stationary WL. In this case, you will have a single frame for each wavelength. This can largely be improved
             while(  ( not self.__laser.setWL_thread_locked() and not self.__laser.setWL_thread_check())    and not self.__abort_force):
-                data[i].append(self.__camera.grab_next_to_finish()[0])
+                self.__data[i].append(self.__camera.grab_next_to_start()[0])
             i+=1
-            if (self.__laser.setWL_thread_locked()):
-                self.__laser.setWL_thread_release() #if you dont release thread does not advance. 
-                self.__cur_wav += self.__step_wav
-                self.__pwmeter.pw_set_WL(self.__cur_wav)
-            self.upt()
-        self.__camera.stop_playing()
-        self.__laser.setWL(self.__start_wav, self.__cur_wav)
-        self.__stored = True and not self.__abort_force
-        self.__status = False #its over
+            if (self.__laser.setWL_thread_locked()): #check if laser changes have finished and thread step is over
+                self.__laser.setWL_thread_release() #if yes, you can advance
+                self.__cur_wav += self.__step_wav #update wavelength
+                self.__pwmeter.pw_set_WL(self.__cur_wav) #set wavelength on powermeter
+            self.upt() #updating mainly current wavelength
+        self.__camera.stop_playing() #stop camera
+        self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
+        self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
+        self.__status = False #acquistion is over
+        logging.info("Acquistion is over") 
 
-        self.upt()
 
-    def displayData(self):
-        #datax = numpy.random.randn(100, 1024)
-        #data_element["data"]=datax
-        #data_element["title"]="olaolaola"
-        #sum_data_item = ImportExportManager.create_data_item_from_data_element(data_element)
-        #logging.info(document_controller)
-        logging.info("plotting...")
+        self.upt() #here you going to update panel only until setWL is over. This is because this specific thread has a join() at the end.
 
+    #this is our callback functions. Messages with 1 digit comes from laser. Messages with 2 digits comes from power meter. Messages with 3 digits comes from data analyses package
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
@@ -147,12 +169,7 @@ class gainDevice(Observable.Observable):
                 self.__cur_wav = self.__start_wav
                 self.__pwmeter.pw_set_WL(self.__cur_wav)
                 self.upt()
-            #if message==3:
-            #    logging.info("Step over")
-            #if message==4:
-                #logging.info("msg 4")
             if message==100:
-                #self.__power = numpy.random.randn(1)[0]
                 self.__power = self.__pwmeter.pw_read()
                 self.upt()
         return sendMessage

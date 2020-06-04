@@ -33,7 +33,7 @@ class SirahCredoLaser:
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
-            self.laser_thread.join()
+            self.laser_thread.join() #this thread has a join() which means you wait until it finishes
 
     
     

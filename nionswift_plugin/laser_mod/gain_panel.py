@@ -5,6 +5,7 @@ import numpy
 # local libraries
 from nion.swift import Panel
 from nion.swift import Workspace
+#from nion.swift.Model import DataItem
 from nion.ui import Widgets
 from nion.utils import Binding
 from nion.utils import Converter
@@ -49,9 +50,14 @@ class gainhandler:
         self.instrument.acq()
 
     def gen_push(self, widget):
-        self.instrument.gen()
-        datax = numpy.random.randn(100, 1024)
-        self.document_controller.add_data(datax)
+        data_item=self.instrument.gen()
+        
+        self.document_controller.document_model.append_data_item(data_item)
+        display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
+        self.document_controller.show_display_item(display_item)
+        
+        #datax = numpy.random.randn(100, 1024)
+        #self.document_controller.add_data(datax)
 
 
     def abt_push(self, widget):

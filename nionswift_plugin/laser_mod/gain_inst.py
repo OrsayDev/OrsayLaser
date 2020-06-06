@@ -145,27 +145,27 @@ class gainDevice(Observable.Observable):
         i_max=self.__pts
         j=0 #each frame inside an specific e-point
         j_max=self.__avg #dont put directly self.__avg because it will keep refreshing UI
-        #first while means that camera is running while laser thread is on and abort is off
-        while(not self.__laser.set_scan_thread_check() and not self.__abort_force):
-        #while( i<i_max and not self.__abort_force):
+        while( i<i_max and not self.__abort_force): #i means our laser WL's
             self.__data.append([])
-            #Second while means that camera is running and picking the maximum of frames possible given the parameters. This means that if laser is super slow we are still capturing frames. thread_locked() checks if laser step is done. In short, camera is grabbing frames while laser thread is running, abort is False and laser is not locked (moving, for example). Ideally, you should put camera way slower than laser latency so most of the frame comes from a stationary WL. In this case, you will have a single frame for each wavelength. This can largely be improved
-            #while(  ( not self.__laser.set_scan_thread_locked() and not self.__laser.set_scan_thread_check())    and not self.__abort_force):
-            while( j<j_max  and not self.__abort_force):
+            while( j<j_max  and not self.__abort_force): #j is our averages
                 self.__data[i].append(self.__camera.grab_next_to_start()[0])
                 j+=1
                 logging.info(self.__cur_wav)
             i+=1
-            if (self.__laser.set_scan_thread_locked()): #check if laser changes have finished and thread step is over
+            if (self.__laser.set_scan_thread_hardware_status()==2): #check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release() #if yes, you can advance
-                #if i<i_max:
-                j=0
-                self.__cur_wav += self.__step_wav #update wavelength
-                self.__pwmeter.pw_set_WL(self.__cur_wav) #set wavelength on powermeter
+                if (i<i_max and not self.__abort_force): #if we are not in the last E-point and abort was not called
+                    j=0 #reset average
+                    self.__cur_wav += self.__step_wav #update wavelength
+                    self.__pwmeter.pw_set_WL(self.__cur_wav) #set wavelength on powermeter
             else:
-                logging.info("Camera settings for each wavelength finished before fully laser set up. This could also mean laser could not further increase WL.")
-                self.__abort_force = True #force abort. This situation makes no sense because there is not camera frames with a static laser WL
+                self.abt() #execute our abort routine (laser and acq thread)
             self.upt() #updating mainly current wavelength
+    
+        time.sleep(1) #wait 1 second until all hardward tasks are done after a release fail
+        if self.__laser.set_scan_thread_locked(): #releasing everything if locked
+            self.__laser.set_scan_thread_release()
+
         self.__camera.stop_playing() #stop camera
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
@@ -184,6 +184,8 @@ class gainDevice(Observable.Observable):
                 self.__cur_wav = self.__start_wav
                 self.__pwmeter.pw_set_WL(self.__cur_wav)
                 self.upt()
+            if message==3:
+                logging.info("Laser Motor is moving. You can not change wavelength while last one is still moving. Please increase camera dwell time or # of averages in order to give time to our slow hardware.")
             if message==100:
                 self.__power = self.__pwmeter.pw_read()
                 self.upt()

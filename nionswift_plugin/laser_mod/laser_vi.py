@@ -1,4 +1,5 @@
 import sys
+import numpy
 import logging
 import time
 import threading
@@ -54,21 +55,31 @@ class SirahCredoLaser:
         else:
             return self.thread.done()
 
-    def set_scan_thread(self, i_pts, step):
+    def set_scan_thread_hardware_status(self):
+        if self.lock.locked():
+            return 2 #motor holding. You can advance
+        else:
+            self.sendmessage(3)
+            return 3 #motor moving. Dont advance boys
+
+
+    def set_scan_thread(self, cur, i_pts, step):
         if not self.abort_ctrl:
             self.lock.acquire()
-            latency = round(float(step)*1.0/20.0+0.25, 5)
+            logging.info("thread WL")
+            logging.info(cur+(i_pts-1)*step)
+            latency = round(float(step)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
             time.sleep(latency)
-            self.sendmessage(3)
         else:
             with self.lock:
+                logging.info("Laser abort control function.")
                 self.sendmessage(4)
 
     def set_scan(self, cur, step, pts):
         self.abort_ctrl = False
         pool = ThreadPoolExecutor(1)
         for index in range(pts+1):
-            self.thread = pool.submit(self.set_scan_thread, index, step)
+            self.thread = pool.submit(self.set_scan_thread, cur, index, step)
         
         self.set_scan_thread_release()
 

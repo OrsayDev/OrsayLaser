@@ -31,7 +31,7 @@ import time
 from . import gain_data as gdata
 
 DEBUG_pw = 1
-DEBUG_laser = 1
+DEBUG_laser = 0
 
 if DEBUG_pw:
     from . import power_vi as power
@@ -53,7 +53,7 @@ class gainDevice(Observable.Observable):
         #self.property_changed_event_listener = self.property_changed_event.listen(self.computeCalibration)
         self.busy_event=Event.Event()
         
-        self.__start_wav = 580.0
+        self.__start_wav = 575.0
         self.__finish_wav = 600.0
         self.__step_wav = 5.0
         self.__cur_wav = self.__start_wav
@@ -173,15 +173,21 @@ class gainDevice(Observable.Observable):
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
-                logging.info("start WL is current WL")
+                logging.info("***LASER***: start WL is current WL")
                 self.upt()
             if message==2:
-                logging.info("Current WL updated")
+                logging.info("***LASER***: Current WL updated")
                 self.__cur_wav = self.__start_wav
                 self.__pwmeter.pw_set_WL(self.__cur_wav)
                 self.upt()
             if message==3:
-                logging.info("Laser Motor is moving. You can not change wavelength while last one is still moving. Please increase camera dwell time or # of averages in order to give time to our slow hardware.")
+                logging.info("***LASER***: Laser Motor is moving. You can not change wavelength while last one is still moving. Please increase camera dwell time or # of averages in order to give time to our slow hardware.")
+            if message==5:
+                logging.info("***LASER***: Could not write in laser serial port. Check port.")
+            if message==6:
+                logging.info("***LASER***: Could not write/read in laser serial port. Check port.")
+            if message==7:
+                logging.info("***LASER***: Could not open serial port. Check if connected and port.")
             if message==100:
                 self.__power = self.__pwmeter.pw_read()
                 self.upt()
@@ -247,11 +253,10 @@ class gainDevice(Observable.Observable):
     
     @property
     def cur_wav_f(self) -> float:
-        if self.__laser.set_scan_thread_hardware_cur_wl()==None:
-            self.__pwmeter.pw_set_WL(self.__start_wav)
-            return format(self.__start_wav, '.3f')
+        self.__cur_wav = self.__laser.get_hardware_wl()[0]
+        if (self.__cur_wav==None):
+            return 'Error'
         else:
-            self.__cur_wav = self.__laser.set_scan_thread_hardware_cur_wl()
             self.__pwmeter.pw_set_WL(self.__cur_wav)
             return format(self.__cur_wav, '.3f')
     

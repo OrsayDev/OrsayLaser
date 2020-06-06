@@ -21,8 +21,16 @@ class SirahCredoLaser:
         self.abort_ctrl = False
         self.laser_thread = None
         self.thread = None
-        self.thread_wl = None
+        self.thread_wl = 580.0
         self.lock=threading.Lock()
+
+    def set_hardware_wl(self, wl):
+        self.thread_wl=wl
+        latency = round(float(5)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
+        time.sleep(latency)
+
+    def get_hardware_wl(self):
+        return (self.thread_wl, 0)
 
     def set_startWL(self, wl: float, cur_wl: float):
         self.thread_wl=wl
@@ -37,9 +45,6 @@ class SirahCredoLaser:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
             self.laser_thread.join() #this thread has a join() which means you wait until it finishes
-
-    
-    
     
     
     def abort_control(self):
@@ -64,18 +69,12 @@ class SirahCredoLaser:
             self.sendmessage(3)
             return 3 #motor moving. Dont advance boys
 
-    def set_scan_thread_hardware_move(self, wl):
-        self.thread_wl=wl
-        latency = round(float(5)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
-        time.sleep(latency)
         
-    def set_scan_thread_hardware_cur_wl(self):
-        return self.thread_wl
-
     def set_scan_thread(self, cur, i_pts, step):
         if not self.abort_ctrl:
             self.lock.acquire()
-            self.set_scan_thread_hardware_move(cur+i_pts*step)
+            #self.set_scan_thread_hardware_move(cur+i_pts*step)
+            self.set_hardware_wl(cur+i_pts*step)
         else:
             with self.lock:
                 logging.info("Laser abort control function.")

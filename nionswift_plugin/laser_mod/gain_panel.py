@@ -158,7 +158,7 @@ def create_spectro_panel(document_controller, panel_id, properties):
 
 
 def run(instrument: gain_inst.gainDevice) -> None:
-    panel_id = "LaserScratch"#make sure it is unique, otherwise only one of the panel will be displayed
-    name = _("LaserScratch")
+    panel_id = "Laser"#make sure it is unique, otherwise only one of the panel will be displayed
+    name = _("Laser")
     Workspace.WorkspaceManager().register_panel(create_spectro_panel, panel_id, name, ["left", "right"], "left",
                                                 {"instrument": instrument})

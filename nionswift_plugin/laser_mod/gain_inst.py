@@ -29,15 +29,19 @@ import logging
 import time
 
 from . import gain_data as gdata
-from . import laser_vi as laser
 
 DEBUG_pw = 1
+DEBUG_laser = 1
 
 if DEBUG_pw:
     from . import power_vi as power
 else:
     from . import power as power
 
+if DEBUG_laser:
+    from . import laser_vi as laser
+else:
+    from . import laser as laser
 
 
 class gainDevice(Observable.Observable):
@@ -101,24 +105,19 @@ class gainDevice(Observable.Observable):
     def gen(self):
         if self.__stored:
             self.__stored = False
-            #As we are going to create a DataItem from scrach, we first pick up this parameter here. We will modify later on
-            intensity_calibration = self.__data[0][0].intensity_calibration
+            intensity_calibration = self.__data[0][0].intensity_calibration # we first pick up this parameter here and modify later on
             dimensional_calibrations = self.__data[0][0].dimensional_calibrations
-            # This aligns and returns the data that will be appended in the data_item
             sum_data, max_index = self.__gdata.send_raw_MetaData(self.__data) #this aligned and returns data to be appended in a data_item
-            #Creating Data Item
-            data_item = DataItem.DataItem(large_format=True)
-            #Setting data
-            data_item.set_data(sum_data)
-            #Modifying and setting intensity calibration and dimensional calibration. Check gain_data.py for info on how this is done
-            int_cal, dim_cal = self.__gdata.data_item_calibration(intensity_calibration, dimensional_calibrations, self.__start_wav, self.__step_wav, 0.013, max_index)
+            data_item = DataItem.DataItem(large_format=True) #Creating Data Item
+            data_item.set_data(sum_data) #Setting data
+            int_cal, dim_cal = self.__gdata.data_item_calibration(intensity_calibration, dimensional_calibrations, self.__start_wav, self.__step_wav, 0.013, max_index) #Modifying and setting int/dimensional calib. Check gain_data.py for info on how this is done
             data_item.set_intensity_calibration(int_cal)
             data_item.set_dimensional_calibrations(dim_cal)
 
             logging.info("Generating our data..")
             self.property_changed_event.fire("stored_status")
 
-            #send data_item back to gain_panel, the one who has control over document_controller. This allows us to display our acquired data in nionswift panel
+            #send data_item back to gain_panel, the one who has control over document_controller
             return data_item
         else:
             return None
@@ -145,19 +144,17 @@ class gainDevice(Observable.Observable):
         i_max=self.__pts
         j=0 #each frame inside an specific e-point
         j_max=self.__avg #dont put directly self.__avg because it will keep refreshing UI
+        
         while( i<i_max and not self.__abort_force): #i means our laser WL's
             self.__data.append([])
             while( j<j_max  and not self.__abort_force): #j is our averages
                 self.__data[i].append(self.__camera.grab_next_to_start()[0])
                 j+=1
-                logging.info(self.__cur_wav)
+                #logging.info(self.__laser.set_scan_thread_hardware_cur_wl()) #this tell us real laser WL. When updated it?
+            j=0
             i+=1
             if (self.__laser.set_scan_thread_hardware_status()==2): #check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release() #if yes, you can advance
-                if (i<i_max and not self.__abort_force): #if we are not in the last E-point and abort was not called
-                    j=0 #reset average
-                    self.__cur_wav += self.__step_wav #update wavelength
-                    self.__pwmeter.pw_set_WL(self.__cur_wav) #set wavelength on powermeter
             else:
                 self.abt() #execute our abort routine (laser and acq thread)
             self.upt() #updating mainly current wavelength
@@ -165,7 +162,6 @@ class gainDevice(Observable.Observable):
         time.sleep(1) #wait 1 second until all hardward tasks are done after a release fail
         if self.__laser.set_scan_thread_locked(): #releasing everything if locked
             self.__laser.set_scan_thread_release()
-
         self.__camera.stop_playing() #stop camera
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
@@ -173,7 +169,7 @@ class gainDevice(Observable.Observable):
         logging.info("Acquistion is over") 
         self.upt() #here you going to update panel only until setWL is over. This is because this specific thread has a join() at the end.
 
-    #this is our callback functions. Messages with 1 digit comes from laser. Messages with 2 digits comes from power meter. Messages with 3 digits comes from data analyses package
+    #x: laser; xx: power meter; xxx: data analyses
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
@@ -251,14 +247,17 @@ class gainDevice(Observable.Observable):
     
     @property
     def cur_wav_f(self) -> float:
-        return format(self.__cur_wav, '.3f')
+        if self.__laser.set_scan_thread_hardware_cur_wl()==None:
+            self.__pwmeter.pw_set_WL(self.__start_wav)
+            return format(self.__start_wav, '.3f')
+        else:
+            self.__cur_wav = self.__laser.set_scan_thread_hardware_cur_wl()
+            self.__pwmeter.pw_set_WL(self.__cur_wav)
+            return format(self.__cur_wav, '.3f')
     
     @property
     def run_status(self):
-        if (self.__status == False):
-            return "False"
-        if (self.__status == True):
-            return "True"
+        return str(self.__status)
     
     @property
     def stored_status(self):

@@ -21,10 +21,12 @@ class SirahCredoLaser:
         self.abort_ctrl = False
         self.laser_thread = None
         self.thread = None
+        self.thread_wl = None
         self.lock=threading.Lock()
 
-    def set_startWL(self, start: float, final: float):
-        latency = round(abs(final - start)*1.0/20.0 + 0.25, 5)
+    def set_startWL(self, wl: float, cur_wl: float):
+        self.thread_wl=wl
+        latency = round(abs(cur_wl - wl)*1.0/20.0 + 0.25, 5)
         time.sleep(latency)
         self.sendmessage(2)
 
@@ -62,14 +64,18 @@ class SirahCredoLaser:
             self.sendmessage(3)
             return 3 #motor moving. Dont advance boys
 
+    def set_scan_thread_hardware_move(self, wl):
+        self.thread_wl=wl
+        latency = round(float(5)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
+        time.sleep(latency)
+        
+    def set_scan_thread_hardware_cur_wl(self):
+        return self.thread_wl
 
     def set_scan_thread(self, cur, i_pts, step):
         if not self.abort_ctrl:
             self.lock.acquire()
-            logging.info("thread WL")
-            logging.info(cur+(i_pts-1)*step)
-            latency = round(float(step)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
-            time.sleep(latency)
+            self.set_scan_thread_hardware_move(cur+i_pts*step)
         else:
             with self.lock:
                 logging.info("Laser abort control function.")
@@ -78,10 +84,10 @@ class SirahCredoLaser:
     def set_scan(self, cur, step, pts):
         self.abort_ctrl = False
         pool = ThreadPoolExecutor(1)
-        for index in range(pts+1):
+        for index in range(pts):
             self.thread = pool.submit(self.set_scan_thread, cur, index, step)
         
-        self.set_scan_thread_release()
+        #self.set_scan_thread_release()
 
 
 

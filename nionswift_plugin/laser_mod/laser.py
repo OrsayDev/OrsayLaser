@@ -25,14 +25,14 @@ class SirahCredoLaser:
         self.thread = None
         self.lock=threading.Lock()
         
-        ser = serial.Serial()
-        ser.baudrate = 19200
-        ser.port='COM12'
-        ser.timeout=1
+        self.ser = serial.Serial()
+        self.ser.baudrate = 19200
+        self.ser.port='COM12'
+        self.ser.timeout=1
 
         try:
-            if not ser.open():
-                ser.open()
+            if not self.ser.is_open:
+                self.ser.open()
         except:
             self.sendmessage(7)
 
@@ -71,9 +71,9 @@ class SirahCredoLaser:
         pos2 = self.bytes_to_pos(byt)
         if (wl > 500 and wl < 800):
             try:
-                ser.open()
-                ser.write(ba_send_mes)
-                ser.close()
+                self.ser.open()
+                self.ser.write(ba_send_mes)
+                self.ser.close()
             except:
                 self.sendmessage(5)
         else:
@@ -83,6 +83,7 @@ class SirahCredoLaser:
         mes = [60, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62]
         bs=bytearray(mes)
         try:
+            self.ser.open()
             ser.write(bs)
             ser.read(1)
             error = ser.read(1)
@@ -92,6 +93,7 @@ class SirahCredoLaser:
             ser.read(6) #clear buffer
             pos = self.bytes_to_pos(abs1)
             cur_wl = pos_to_wl(pos)
+            self.ser.close()
             return (cur_wl, status[0])
         except:
             self.sendmessage(6)

@@ -33,6 +33,8 @@ class SirahCredoLaser:
         try:
             if not self.ser.is_open:
                 self.ser.open()
+                time.sleep(0.5)
+                #self.ser.close()
         except:
             self.sendmessage(7)
 
@@ -71,9 +73,11 @@ class SirahCredoLaser:
         pos2 = self.bytes_to_pos(byt)
         if (wl > 500 and wl < 800):
             try:
-                self.ser.open()
+                #time.sleep(0.05)
+                #self.ser.open()
+                logging.info('set')
                 self.ser.write(ba_send_mes)
-                self.ser.close()
+                #self.ser.close()
             except:
                 self.sendmessage(5)
         else:
@@ -83,17 +87,19 @@ class SirahCredoLaser:
         mes = [60, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62]
         bs=bytearray(mes)
         try:
-            self.ser.open()
-            ser.write(bs)
-            ser.read(1)
-            error = ser.read(1)
-            ser.read(1)
-            status = ser.read(1)
-            abs1 = ser.read(4)
-            ser.read(6) #clear buffer
+            #time.sleep(0.05)
+            #self.ser.open()
+            logging.info('get')
+            self.ser.write(bs)
+            self.ser.read(1)
+            error = self.ser.read(1)
+            self.ser.read(1)
+            status = self.ser.read(1)
+            abs1 = self.ser.read(4)
+            self.ser.read(6) #clear buffer
             pos = self.bytes_to_pos(abs1)
-            cur_wl = pos_to_wl(pos)
-            self.ser.close()
+            cur_wl = self.pos_to_wl(pos)
+            #self.ser.close()
             return (cur_wl, status[0])
         except:
             self.sendmessage(6)
@@ -103,15 +109,15 @@ class SirahCredoLaser:
 
     def set_startWL(self, wl: float, cur_wl: float):
         self.set_hardware_wl(wl)
+        time.sleep(5)
         self.sendmessage(2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
-        if (float(current_wavelength) == float(wavelength)):
+        if (abs(float(current_wavelength) - float(wavelength))<=0.001):
             self.sendmessage(1)
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
-            self.laser_thread.join() #this thread has a join() which means you wait until it finishes
 
     
     

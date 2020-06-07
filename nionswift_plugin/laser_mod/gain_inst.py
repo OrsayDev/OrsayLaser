@@ -89,11 +89,11 @@ class gainDevice(Observable.Observable):
    
     def upt(self):
         self.property_changed_event.fire("pts_f")
-        self.property_changed_event.fire("tpts_f")
-        self.property_changed_event.fire("cur_wav_f")
+        self.property_changed_event.fire("tpts_f")   
         self.property_changed_event.fire("run_status")
         self.property_changed_event.fire("stored_status")
         self.property_changed_event.fire("power_f")
+        self.property_changed_event.fire("cur_wav_f")
         if (self.__status):
             self.busy_event.fire("all")
 
@@ -135,10 +135,11 @@ class gainDevice(Observable.Observable):
         self.__abort_force = False
         
         #Laser thread begins
-        if self.__laser.set_scan_thread_check():
+        if (self.__laser.set_scan_thread_check() and abs(self.__start_wav-self.__cur_wav)<=0.001 and self.__finish_wav>self.__start_wav):
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
         else:
             logging.info("Last thread was not done. Some error happened")
+            self.__abort_force = True
         self.__data = []
         i=0 #e-point counter
         i_max=self.__pts
@@ -159,11 +160,16 @@ class gainDevice(Observable.Observable):
                 self.abt() #execute our abort routine (laser and acq thread)
             self.upt() #updating mainly current wavelength
     
-        time.sleep(1) #wait 1 second until all hardward tasks are done after a release fail
-        if self.__laser.set_scan_thread_locked(): #releasing everything if locked
-            self.__laser.set_scan_thread_release()
-        self.__camera.stop_playing() #stop camera
+        #time.sleep(3)
+        while (not self.__laser.set_scan_thread_check()):
+            if self.__laser.set_scan_thread_locked(): #releasing everything if locked
+                self.__laser.set_scan_thread_release()
+        time.sleep(3)
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
+        logging.info("start_wav")
+        logging.info(self.__start_wav)
+        time.sleep(3) #wait 1 second until all hardward tasks are done after a release fail
+        self.__camera.stop_playing() #stop camera
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
         self.__status = False #acquistion is over
         logging.info("Acquistion is over") 
@@ -177,8 +183,9 @@ class gainDevice(Observable.Observable):
                 self.upt()
             if message==2:
                 logging.info("***LASER***: Current WL updated")
-                self.__cur_wav = self.__start_wav
-                self.__pwmeter.pw_set_WL(self.__cur_wav)
+                #self.__cur_wav = self.__start_wav
+                #self.__pwmeter.pw_set_WL(self.__cur_wav)
+                #time.sleep(2)
                 self.upt()
             if message==3:
                 logging.info("***LASER***: Laser Motor is moving. You can not change wavelength while last one is still moving. Please increase camera dwell time or # of averages in order to give time to our slow hardware.")
@@ -199,8 +206,8 @@ class gainDevice(Observable.Observable):
 
     @start_wav_f.setter
     def start_wav_f(self, value: float) -> None:
-        self.busy_event.fire("all")
         self.__start_wav = float(value)
+        self.busy_event.fire("all")
         self.__laser.setWL(self.__start_wav, self.__cur_wav)
     
     @property

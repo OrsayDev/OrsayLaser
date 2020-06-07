@@ -12,6 +12,7 @@ from nion.utils import Converter
 from nion.utils import Geometry
 from nion.ui import Declarative
 from nion.ui import UserInterface
+from nion.swift.model import DataItem
 import threading
 
 from . import gain_inst
@@ -48,6 +49,10 @@ class gainhandler:
     
     def acq_push(self, widget):
         self.instrument.acq()
+        test_data = numpy.random.randn(10, 10)
+        self.live_data_item = DataItem.DataItem(large_format=True)
+        self.live_data_item.set_data(test_data)
+        self.document_controller.document_model.append_data_item(self.live_data_item)
 
     def gen_push(self, widget):
         data_item=self.instrument.gen()

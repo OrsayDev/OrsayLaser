@@ -36,6 +36,7 @@ class SirahCredoLaser:
         self.thread_wl=wl
         latency = round(abs(cur_wl - wl)*1.0/20.0 + 0.25, 5)
         time.sleep(latency)
+        time.sleep(5)
         self.sendmessage(2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
@@ -44,7 +45,6 @@ class SirahCredoLaser:
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
-            self.laser_thread.join() #this thread has a join() which means you wait until it finishes
     
     
     def abort_control(self):

@@ -31,7 +31,7 @@ import time
 from . import gain_data as gdata
 
 DEBUG_pw = 1
-DEBUG_laser = 0
+DEBUG_laser = 1
 
 if DEBUG_pw:
     from . import power_vi as power
@@ -138,7 +138,7 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(self.__start_wav-self.__cur_wav)<=0.001 and self.__finish_wav>self.__start_wav):
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
         else:
-            logging.info("Last thread was not done. Some error happened")
+            logging.info("Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
         self.__data = []
         i=0 #e-point counter
@@ -160,14 +160,11 @@ class gainDevice(Observable.Observable):
                 self.abt() #execute our abort routine (laser and acq thread)
             self.upt() #updating mainly current wavelength
     
-        #time.sleep(3)
-        while (not self.__laser.set_scan_thread_check()):
+        while (not self.__laser.set_scan_thread_check()): #thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked(): #releasing everything if locked
                 self.__laser.set_scan_thread_release()
-        time.sleep(3)
+        time.sleep(3) #give a lot of time to the hardware
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
-        logging.info("start_wav")
-        logging.info(self.__start_wav)
         time.sleep(3) #wait 1 second until all hardward tasks are done after a release fail
         self.__camera.stop_playing() #stop camera
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
@@ -183,9 +180,6 @@ class gainDevice(Observable.Observable):
                 self.upt()
             if message==2:
                 logging.info("***LASER***: Current WL updated")
-                #self.__cur_wav = self.__start_wav
-                #self.__pwmeter.pw_set_WL(self.__cur_wav)
-                #time.sleep(2)
                 self.upt()
             if message==3:
                 logging.info("***LASER***: Laser Motor is moving. You can not change wavelength while last one is still moving. Please increase camera dwell time or # of averages in order to give time to our slow hardware.")

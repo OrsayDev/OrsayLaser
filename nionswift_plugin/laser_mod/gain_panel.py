@@ -1,15 +1,18 @@
 # standard libraries
 import gettext
+import numpy
 
 # local libraries
 from nion.swift import Panel
 from nion.swift import Workspace
+#from nion.swift.Model import DataItem
 from nion.ui import Widgets
 from nion.utils import Binding
 from nion.utils import Converter
 from nion.utils import Geometry
 from nion.ui import Declarative
 from nion.ui import UserInterface
+from nion.swift.model import DataItem
 import threading
 
 from . import gain_inst
@@ -25,9 +28,12 @@ import inspect
 class gainhandler:
 
 
-    def __init__(self,instrument:gain_inst.gainDevice,event_loop):
+    #def __init__(self, instrument:gain_inst.gainDevice, event_loop): #MATHIEU
+    def __init__(self, instrument:gain_inst.gainDevice, document_controller):
 
-        self.event_loop=event_loop
+        #self.event_loop=event_loop #MATHIEU
+        self.event_loop=document_controller.event_loop
+        self.document_controller=document_controller
         self.instrument=instrument
         self.enabled = False
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
@@ -43,17 +49,28 @@ class gainhandler:
     
     def acq_push(self, widget):
         self.instrument.acq()
+        test_data = numpy.random.randn(10, 10)
+        self.live_data_item = DataItem.DataItem(large_format=True)
+        self.live_data_item.set_data(test_data)
+        self.document_controller.document_model.append_data_item(self.live_data_item)
 
     def gen_push(self, widget):
-        self.instrument.gen()
+        data_item=self.instrument.gen()
+        if data_item!=None:
+            self.document_controller.document_model.append_data_item(data_item)
+            display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
+            self.document_controller.show_display_item(display_item)
+        else:
+            logging.info("Nothing to generate. Is Stored is True?")
+        
+        #datax = numpy.random.randn(100, 1024)
+        #self.document_controller.add_data(datax)
+
 
     def abt_push(self, widget):
         self.instrument.abt()
 
     async def do_enable(self,enabled=True,not_affected_widget_name_list=None):
-        #Pythonic way of finding the widgets
-        #actually a more straigthforward way would be to create a list of widget in the init_handler
-        #then use this list in the present function...
         for var in self.__dict__:
             if var not in not_affected_widget_name_list:
                 if isinstance(getattr(self,var),UserInterface.Widget):
@@ -129,7 +146,8 @@ class gainView:
         
 def create_spectro_panel(document_controller, panel_id, properties):
         instrument = properties["instrument"]
-        ui_handler =gainhandler(instrument, document_controller.event_loop)
+        #ui_handler =gainhandler(instrument, document_controller.event_loop) #MATHIEU
+        ui_handler =gainhandler(instrument, document_controller)
         ui_view=gainView(instrument)
         panel = Panel.Panel(document_controller, panel_id, properties)
 
@@ -145,7 +163,7 @@ def create_spectro_panel(document_controller, panel_id, properties):
 
 
 def run(instrument: gain_inst.gainDevice) -> None:
-    panel_id = "LaserScratch"#make sure it is unique, otherwise only one of the panel will be displayed
-    name = _("LaserScratch")
+    panel_id = "Laser"#make sure it is unique, otherwise only one of the panel will be displayed
+    name = _("Laser")
     Workspace.WorkspaceManager().register_panel(create_spectro_panel, panel_id, name, ["left", "right"], "left",
                                                 {"instrument": instrument})

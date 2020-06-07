@@ -1,4 +1,5 @@
 import sys
+import numpy
 import logging
 import time
 import threading
@@ -20,11 +21,22 @@ class SirahCredoLaser:
         self.abort_ctrl = False
         self.laser_thread = None
         self.thread = None
+        self.thread_wl = 580.0
         self.lock=threading.Lock()
 
-    def set_startWL(self, start: float, final: float):
-        latency = round(abs(final - start)*1.0/20.0 + 0.25, 5)
+    def set_hardware_wl(self, wl):
+        self.thread_wl=wl
+        latency = round(float(5)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
         time.sleep(latency)
+
+    def get_hardware_wl(self):
+        return (self.thread_wl, 0)
+
+    def set_startWL(self, wl: float, cur_wl: float):
+        self.thread_wl=wl
+        latency = round(abs(cur_wl - wl)*1.0/20.0 + 0.25, 5)
+        time.sleep(latency)
+        time.sleep(5)
         self.sendmessage(2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
@@ -33,48 +45,48 @@ class SirahCredoLaser:
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
-            self.laser_thread.join()
-
-    
-    
     
     
     def abort_control(self):
         self.abort_ctrl = True
 
-    def setWL_thread_locked(self):
+    def set_scan_thread_locked(self):
         return self.lock.locked()
 
-    def setWL_thread_release(self):
+    def set_scan_thread_release(self):
         self.lock.release()
 
-    def setWL_thread_check(self):
+    def set_scan_thread_check(self):
         if self.thread==None:
-            return False
+            return True #if there is none then its done
         else:
             return self.thread.done()
 
-    def setWL_thread(self, i_pts, step):
+    def set_scan_thread_hardware_status(self):
+        if self.lock.locked():
+            return 2 #motor holding. You can advance
+        else:
+            self.sendmessage(3)
+            return 3 #motor moving. Dont advance boys
+
+        
+    def set_scan_thread(self, cur, i_pts, step):
         if not self.abort_ctrl:
             self.lock.acquire()
-            latency = round(float(step)*1.0/20.0+0.25, 5)
-            time.sleep(latency)
-            self.sendmessage(3)
-            #self.lock.release()
+            #self.set_scan_thread_hardware_move(cur+i_pts*step)
+            self.set_hardware_wl(cur+i_pts*step)
         else:
             with self.lock:
+                logging.info("Laser abort control function.")
                 self.sendmessage(4)
 
     def set_scan(self, cur, step, pts):
-        #with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            #executor.map(self.setWL_thread, range(3))
-
         self.abort_ctrl = False
         pool = ThreadPoolExecutor(1)
         for index in range(pts):
-            self.thread = pool.submit(self.setWL_thread, index, step)
+            self.thread = pool.submit(self.set_scan_thread, cur, index, step)
         
-        self.setWL_thread_release()
+        #self.set_scan_thread_release()
 
 
 

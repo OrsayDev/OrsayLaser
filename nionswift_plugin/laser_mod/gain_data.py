@@ -52,4 +52,13 @@ class gainData:
         dimensional_calibrations = dc
         return intensity_calibration, dimensional_calibrations
 
-
+    def send_info_data(self, info_data):
+        temp_wl_data=[]
+        temp_pw_data=[]
+        for i in range(len(info_data)):
+            for j in range(len(info_data[i])):
+                temp_wl_data.append(info_data[i][j][0])
+                temp_pw_data.append(info_data[i][j][1])
+        temp_wl_data = numpy.asarray(temp_wl_data)
+        temp_pw_data = numpy.asarray(temp_pw_data)
+        return temp_wl_data, temp_pw_data

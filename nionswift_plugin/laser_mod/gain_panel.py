@@ -49,17 +49,26 @@ class gainhandler:
     
     def acq_push(self, widget):
         self.instrument.acq()
-        test_data = numpy.random.randn(10, 10)
-        self.live_data_item = DataItem.DataItem(large_format=True)
-        self.live_data_item.set_data(test_data)
-        self.document_controller.document_model.append_data_item(self.live_data_item)
+        #test_data = numpy.random.randn(10, 10)
+        #self.live_data_item = DataItem.DataItem(large_format=True)
+        #self.live_data_item.set_data(test_data)
+        #self.document_controller.document_model.append_data_item(self.live_data_item)
 
     def gen_push(self, widget):
-        data_item=self.instrument.gen()
+        data_item, data_item2, data_item3 = self.instrument.gen()
         if data_item!=None:
             self.document_controller.document_model.append_data_item(data_item)
             display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
             self.document_controller.show_display_item(display_item)
+			
+            self.document_controller.document_model.append_data_item(data_item2)
+            display_item2 = self.document_controller.document_model.get_display_item_for_data_item(data_item2)
+            self.document_controller.show_display_item(display_item2)
+   
+            self.document_controller.document_model.append_data_item(data_item3)
+            display_item3 = self.document_controller.document_model.get_display_item_for_data_item(data_item3)
+            self.document_controller.show_display_item(display_item3)			
+			
         else:
             logging.info("Nothing to generate. Is Stored is True?")
         

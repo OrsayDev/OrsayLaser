@@ -44,7 +44,10 @@ if DEBUG_laser:
 else:
     from . import laser as laser
 	
-from . import power_supply as ps
+if DEBUG_ps:
+    from . import power_supply_vi as ps
+else:
+    from . import power_supply as ps
 
 
 class gainDevice(Observable.Observable):
@@ -63,8 +66,9 @@ class gainDevice(Observable.Observable):
         self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
         self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
-        self.__dwell = 0.1
+        self.__dwell = 10
         self.__power=numpy.random.randn(1)[0]
+        self.__arrow_pos = 0 #stupid ascii art
 
         self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
@@ -99,6 +103,9 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("stored_status")
         self.property_changed_event.fire("power_f")
         self.property_changed_event.fire("cur_d1_f")
+        self.property_changed_event.fire("cur_d2_f")
+        self.property_changed_event.fire("sht_f")
+        self.property_changed_event.fire("ascii_f")
         self.property_changed_event.fire("cur_wav_f")
         if (self.__status):
             self.busy_event.fire("all")
@@ -151,6 +158,8 @@ class gainDevice(Observable.Observable):
         #Laser thread begins
         if (self.__laser.set_scan_thread_check() and abs(self.__start_wav-self.__cur_wav)<=0.001 and self.__finish_wav>self.__start_wav):
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+            self.__ps.comm('SHT:1\n')
+            logging.info(self.__ps.query('?SHT\n'))
         else:
             logging.info("Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
@@ -172,8 +181,6 @@ class gainDevice(Observable.Observable):
                 j+=1
                 #logging.info(self.__laser.set_scan_thread_hardware_cur_wl()) #this tell us real laser WL. When updated it?
             j=0
-            self.__ps.comm('SHT:1\n')
-            logging.info(self.__ps.query('?SHT\n'))
             i+=1
             if (self.__laser.set_scan_thread_hardware_status()==2): #check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release() #if yes, you can advance
@@ -181,9 +188,12 @@ class gainDevice(Observable.Observable):
                 self.abt() #execute our abort routine (laser and acq thread)
         
         self.__camera.stop_playing() #stop camera    
+        self.__ps.comm('SHT:0\n')
+        logging.info(self.__ps.query('?SHT\n'))
         while (not self.__laser.set_scan_thread_check()): #thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked(): #releasing everything if locked
                 self.__laser.set_scan_thread_release()
+        self.upt()
         time.sleep(3) #give a lot of time to the hardware
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
         time.sleep(4) #wait 1 second until all hardward tasks are done after a release fail
@@ -297,8 +307,29 @@ class gainDevice(Observable.Observable):
 		
     @property
     def cur_d1_f(self):
-        return self.__ps.query('?C1\n')  
+        return self.__ps.query('?C1\n').decode('UTF-8').replace('\n', '')
+
+    @cur_d1_f.setter
+    def cur_d1_f(self, value):
+        cvalue = format(float(value), '.2f')
+        logging.info(cvalue)
+        self.__ps.comm('C1:'+str(cvalue)+'\n')
+        self.property_changed_event.fire("cur_d2_f")
 
     @property
     def cur_d2_f(self):
-        return self.__ps.query('?C2\n') 
+        return self.__ps.query('?C2\n').decode('UTF-8').replace('\n', '')
+
+    @property
+    def sht_f(self):
+        return self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')
+
+    @property
+    def ascii_f(self):
+        if self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')=='OPEN':
+            self.__arrow_pos+=1
+            if self.__arrow_pos==50:
+                self.__arrow_pos=0
+            return '-'*self.__arrow_pos+'>'+'-'*(50-self.__arrow_pos)
+        else:
+            return '-'*30+'x'+'-'*30

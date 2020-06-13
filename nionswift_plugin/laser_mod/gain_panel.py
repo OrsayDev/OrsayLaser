@@ -79,6 +79,9 @@ class gainhandler:
     def abt_push(self, widget):
         self.instrument.abt()
 
+    def shutter_check(self, widget, checked):
+        logging.info(checked)
+
     async def do_enable(self,enabled=True,not_affected_widget_name_list=None):
         for var in self.__dict__:
             if var not in not_affected_widget_name_list:
@@ -147,13 +150,27 @@ class gainView:
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
         self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), spacing=12)
 
-        self.cur_diode1_label = ui.create_label(text='Id1 (A): ')
-        self.cur_diode1_value_label = ui.create_label(text='@binding(instrument.cur_d1_f)')
-        self.cur_diode2_label = ui.create_label(text='Id2 (A): ')
-        self.cur_diode2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)')
-        self.ui_view8=ui.create_row(self.cur_diode1_label, self.cur_diode1_value_label, self.cur_diode2_label, self.cur_diode2_value_label, ui.create_stretch(), spacing=12)
-		
-        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view8, spacing=1)
+        self.line_label=ui.create_label(text='-----------------------------------------------------------------------------------------------------------------------')
+        self.ui_view_line = ui.create_row(self.line_label)
+
+        self.diode_label = ui.create_label(text='Diodes: ')
+        self.diode_checkbox = ui.create_check_box(name="diode_checkbox")
+        self.q_label = ui.create_label(text='Q Switch: ')
+        self.q_checkbox = ui.create_check_box(name="q_checkbox")
+        self.emission_label=ui.create_label(text='@binding(instrument.ascii_f)')
+        self.shutter_label=ui.create_label(text='Shutter: ')
+        self.shutter_checkbox=ui.create_check_box(name="shutter_checkbox", on_checked_changed='shutter_check')
+        self.ui_view8=ui.create_row(self.diode_label, self.diode_checkbox, self.q_label, self.q_checkbox, self.emission_label, ui.create_stretch(), self.shutter_label, self.shutter_checkbox, spacing=12)
+
+        self.diode_cur_label=ui.create_label(text='Current 01: ')
+        self.diode_cur_line=ui.create_line_edit(text="@binding(instrument.cur_d1_f)", name="diode current")
+        self.diode_cur2_label=ui.create_label(text='Current 02: ')
+        self.diode_cur2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)', name='diode2 current')
+        self.shutter_label02=ui.create_label(text='Shutter: ')
+        self.shutter_label02_value=ui.create_label(text='@binding(instrument.sht_f)', name='shutter value')
+        self.ui_view9=ui.create_row(self.diode_cur_label, self.diode_cur_line, self.diode_cur2_label, self.diode_cur2_value_label, ui.create_stretch(), self.shutter_label02, self.shutter_label02_value, spacing=12)
+
+        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view_line, self.ui_view8, self.ui_view9, spacing=1)
 
 
 

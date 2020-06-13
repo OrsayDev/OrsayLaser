@@ -147,8 +147,13 @@ class gainView:
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
         self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), spacing=12)
 
-
-        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, spacing=1)
+        self.cur_diode1_label = ui.create_label(text='Id1 (A): ')
+        self.cur_diode1_value_label = ui.create_label(text='@binding(instrument.cur_d1_f)')
+        self.cur_diode2_label = ui.create_label(text='Id2 (A): ')
+        self.cur_diode2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)')
+        self.ui_view8=ui.create_row(self.cur_diode1_label, self.cur_diode1_value_label, self.cur_diode2_label, self.cur_diode2_value_label, ui.create_stretch(), spacing=12)
+		
+        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view8, spacing=1)
 
 
 

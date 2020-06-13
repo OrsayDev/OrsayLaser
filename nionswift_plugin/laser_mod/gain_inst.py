@@ -30,8 +30,9 @@ import time
 
 from . import gain_data as gdata
 
-DEBUG_pw = 0
-DEBUG_laser = 0
+DEBUG_pw = 1
+DEBUG_laser = 1
+DEBUG_ps = 1
 
 if DEBUG_pw:
     from . import power_vi as power
@@ -42,6 +43,8 @@ if DEBUG_laser:
     from . import laser_vi as laser
 else:
     from . import laser as laser
+	
+from . import power_supply as ps
 
 
 class gainDevice(Observable.Observable):
@@ -63,7 +66,7 @@ class gainDevice(Observable.Observable):
         self.__dwell = 0.1
         self.__power=numpy.random.randn(1)[0]
 
-        self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[0]
+        self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
         self.__frame_parameters["exposure_ms"]=float(self.__dwell)
         self.__camera.set_current_frame_parameters(self.__frame_parameters)
@@ -79,6 +82,9 @@ class gainDevice(Observable.Observable):
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
+		
+        self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
 
         self.__data_sendmessage = gdata.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__gdata = gdata.gainData(self.__data_sendmessage)
@@ -92,6 +98,7 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("run_status")
         self.property_changed_event.fire("stored_status")
         self.property_changed_event.fire("power_f")
+        self.property_changed_event.fire("cur_d1_f")
         self.property_changed_event.fire("cur_wav_f")
         if (self.__status):
             self.busy_event.fire("all")
@@ -165,6 +172,8 @@ class gainDevice(Observable.Observable):
                 j+=1
                 #logging.info(self.__laser.set_scan_thread_hardware_cur_wl()) #this tell us real laser WL. When updated it?
             j=0
+            self.__ps.comm('SHT:1\n')
+            logging.info(self.__ps.query('?SHT\n'))
             i+=1
             if (self.__laser.set_scan_thread_hardware_status()==2): #check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release() #if yes, you can advance
@@ -183,7 +192,7 @@ class gainDevice(Observable.Observable):
         logging.info("Acquistion is over") 
         self.upt() #here you going to update panel only until setWL is over. This is because this specific thread has a join() at the end.
 
-    #x: laser; xx: power meter; xxx: data analyses
+    #0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
@@ -202,6 +211,8 @@ class gainDevice(Observable.Observable):
                 logging.info("***LASER***: Could not open serial port. Check if connected and port.")
             if message==8:
                 logging.info('***LASER***: Status was not 02 or 03. Problem receiving bytes from laser hardware.')
+            if message==61:
+                logging.info('***LASER PS***: Could not open serial port. Check if connected and port')     
         return sendMessage
 
     @property
@@ -283,3 +294,11 @@ class gainDevice(Observable.Observable):
     def power_f(self):
         self.__power = self.__pwmeter.pw_read()
         return round(self.__power, 4)
+		
+    @property
+    def cur_d1_f(self):
+        return self.__ps.query('?C1\n')  
+
+    @property
+    def cur_d2_f(self):
+        return self.__ps.query('?C2\n') 

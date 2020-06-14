@@ -70,7 +70,21 @@ class gainDevice(Observable.Observable):
         self.__power=0.
         self.__diode=0.
 
-        self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
+        self.__camera=None
+
+        for hards in HardwareSource.HardwareSourceManager().hardware_sources: #finding eels camera. If you dont find, use usim eels
+            if hasattr(hards, 'hardware_source_id'):
+                if hards.hardware_source_id=='orsay_eels_camera':
+                    self.__camera=hards
+
+        if self.__camera==None:
+            for hards in HardwareSource.HardwareSourceManager().hardware_sources: #finding eels camera. If you dont find, use usim eels
+                if hasattr(hards, 'hardware_source_id'):
+                    if hards.hardware_source_id=='usim_eels_camera':
+                        self.__camera=hards
+            
+
+        #self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
         self.__frame_parameters["exposure_ms"]=float(self.__dwell)
         self.__camera.set_current_frame_parameters(self.__frame_parameters)
@@ -256,7 +270,7 @@ class gainDevice(Observable.Observable):
                     self.__ps.comm('C2:'+str(self.__diode+0.1)+'\n')
                 if self.__power > self.__power_ref:
                     self.__ps.comm('C1:'+str(self.__diode-0.1)+'\n')
-                    self.__ps.comm('C2:'+str(self.__diode+0.1)+'\n')
+                    self.__ps.comm('C2:'+str(self.__diode-0.1)+'\n')
         return sendMessage
 
     @property

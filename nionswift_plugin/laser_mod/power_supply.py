@@ -43,5 +43,16 @@ class SpectraPhysics:
         self.ser.write(mes.encode())
         self.ser.readline() #clean buffer
         return None
-		
-		
+
+    def pw_control_thread(self, arg):
+        self.control_thread=threading.currentThread()
+        while getattr(self.control_thread, "do_run", True):
+            time.sleep(0.1)
+            self.sendmessage(79)
+
+    def pw_control_thread_on(self):
+        self.control_thread=threading.Thread(target=self.pw_control_thread, args=("task",))
+        self.control_thread.start()
+
+    def pw_control_thread_off(self):
+        self.control_thread.do_run=False

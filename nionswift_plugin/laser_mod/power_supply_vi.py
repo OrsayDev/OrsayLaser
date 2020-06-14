@@ -19,15 +19,28 @@ class SpectraPhysics:
 
     def __init__(self, sendmessage):
         self.sendmessage=sendmessage
-        self.cur=b'0.10\n'
+        self.control_thread=None
+        self.cur1=b'0.10\n'
+        self.cur2=b'0.10\n'
         self.shutter=b'CLOSED\n'
+        self.diode=b'OFF\n'
+        self.q=b'OFF\n'
 		
     def query(self, mes):
-        if mes=='?C1\n' or mes=='?C2\n':
-            return self.cur
-            #return float(self.cur)+0.1*numpy.random.randn(1)[0]
+        if mes=='?C1\n':
+            val=format(float(self.cur1.decode('UTF-8').replace('\n', ''))+0.01*numpy.random.randn(1)[0], '.2f')
+            val=(str(val)+'\n').encode()
+            return val
+        if mes=='?C2\n':
+            val=format(float(self.cur2.decode('UTF-8').replace('\n', ''))+0.01*numpy.random.randn(1)[0], '.2f')
+            val=(str(val)+'\n').encode()
+            return val
         if mes=='?SHT\n':
             return self.shutter
+        if mes=='?D\n':
+            return self.diode
+        if mes=='?G\n':
+            return self.q
 		
     def comm(self, mes):
         if mes=='SHT:1\n':
@@ -36,7 +49,31 @@ class SpectraPhysics:
             self.shutter=b'CLOSED\n'
         if 'C1' in mes:
             val=str(mes.replace("C1:", ""))
-            self.cur=val.encode()
+            self.cur1=val.encode()
+        if 'C2' in mes:
+            val=str(mes.replace("C2:", ""))
+            self.cur2=val.encode()
+        if mes=='D:0\n':
+            self.diode=b'OFF\n'
+        if mes=='D:1\n':
+            self.diode=b'ON\n'
+        if mes=='G:0\n':
+            self.q=b'OFF\n'
+        if mes=='G:1\n':
+            self.q=b'ON\n'
         return None
-		
-		
+
+
+    def pw_control_thread(self, arg):
+        self.control_thread=threading.currentThread()
+        while getattr(self.control_thread, "do_run", True): #you create an attribute here. Pretty handy
+            time.sleep(0.1)
+            self.sendmessage(79)
+
+    def pw_control_thread_on(self):
+        self.control_thread=threading.Thread(target=self.pw_control_thread, args=("task",))
+        self.control_thread.start()
+
+    def pw_control_thread_off(self):
+        self.control_thread.do_run=False
+

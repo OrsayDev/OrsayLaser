@@ -54,7 +54,7 @@ class gainDevice(Observable.Observable):
 
     def __init__(self):
         self.property_changed_event = Event.Event()
-        self.property_changed_power_event = Event.Event()
+        self.property_changed_running_event = Event.Event()
         self.communicating_event = Event.Event()
         #self.property_changed_event_listener = self.property_changed_event.listen(self.computeCalibration)
         self.busy_event=Event.Event()
@@ -67,8 +67,8 @@ class gainDevice(Observable.Observable):
         self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 10
-        self.__power=numpy.random.randn(1)[0]
-        self.__arrow_pos = 0 #stupid ascii art
+        self.__power=0.
+        self.__diode=0.
 
         self.__camera = HardwareSource.HardwareSourceManager().hardware_sources[1]
         self.__frame_parameters=self.__camera.get_current_frame_parameters()
@@ -95,6 +95,29 @@ class gainDevice(Observable.Observable):
 
     def init(self):
         logging.info("init...")
+
+    def sht(self):
+        if self.sht_f=='CLOSED':
+            self.__ps.comm('SHT:1\n')
+        else:
+            self.__ps.comm('SHT:0\n')
+        self.property_changed_event.fire("sht_f")
+
+    def diode(self, val):
+        if val==True:
+            self.__ps.comm('D:1\n')
+        else:
+            self.__ps.comm('D:0\n')
+        self.property_changed_event.fire('d_f')
+    
+    def q(self, val):
+        if val==True:
+            self.__ps.comm('G:1\n')
+        else:
+            self.__ps.comm('G:0\n')
+        self.property_changed_event.fire('q_f')
+
+
    
     def upt(self):
         self.property_changed_event.fire("pts_f")
@@ -105,7 +128,6 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("cur_d1_f")
         self.property_changed_event.fire("cur_d2_f")
         self.property_changed_event.fire("sht_f")
-        self.property_changed_event.fire("ascii_f")
         self.property_changed_event.fire("cur_wav_f")
         if (self.__status):
             self.busy_event.fire("all")
@@ -159,7 +181,9 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(self.__start_wav-self.__cur_wav)<=0.001 and self.__finish_wav>self.__start_wav):
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.__ps.comm('SHT:1\n')
-            logging.info(self.__ps.query('?SHT\n'))
+            self.__ps.pw_control_thread_on()
+            self.__power_ref = self.__power #reference in power
+            self.__diode_ref = self.__diode
         else:
             logging.info("Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
@@ -176,10 +200,11 @@ class gainDevice(Observable.Observable):
             while( j<j_max  and not self.__abort_force): #j is our averages
                 self.__data[i].append(self.__camera.grab_next_to_start()[0])
                 if j%1==0:
-                    self.upt()
+                    self.cur_wav_f
+                    self.power_f
                     self.__infodata[i].append([self.__cur_wav, self.__power])
                 j+=1
-                #logging.info(self.__laser.set_scan_thread_hardware_cur_wl()) #this tell us real laser WL. When updated it?
+                self.upt()
             j=0
             i+=1
             if (self.__laser.set_scan_thread_hardware_status()==2): #check if laser changes have finished and thread step is over
@@ -187,16 +212,17 @@ class gainDevice(Observable.Observable):
             else:
                 self.abt() #execute our abort routine (laser and acq thread)
         
+        self.__ps.comm('SHT:0\n') #closes shutter
+        self.__ps.pw_control_thread_off() #turns off our periodic thread. See message 79.
+        self.__ps.comm('C1:'+str(self.__diode_ref)+'\n') #diode ref
+        self.__ps.comm('C2:'+str(self.__diode_ref)+'\n') #diode ref
         self.__camera.stop_playing() #stop camera    
-        self.__ps.comm('SHT:0\n')
-        logging.info(self.__ps.query('?SHT\n'))
         while (not self.__laser.set_scan_thread_check()): #thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked(): #releasing everything if locked
                 self.__laser.set_scan_thread_release()
         self.upt()
-        time.sleep(3) #give a lot of time to the hardware
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
-        time.sleep(4) #wait 1 second until all hardward tasks are done after a release fail
+        time.sleep(4.9) #wait laser almost go back to show GUI
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
         self.__status = False #acquistion is over
         logging.info("Acquistion is over") 
@@ -222,7 +248,15 @@ class gainDevice(Observable.Observable):
             if message==8:
                 logging.info('***LASER***: Status was not 02 or 03. Problem receiving bytes from laser hardware.')
             if message==61:
-                logging.info('***LASER PS***: Could not open serial port. Check if connected and port')     
+                logging.info('***LASER PS***: Could not open serial port. Check if connected and port')
+            if message==79:
+                self.power_f
+                if self.__power < self.__power_ref:
+                    self.__ps.comm('C1:'+str(self.__diode+0.1)+'\n')
+                    self.__ps.comm('C2:'+str(self.__diode+0.1)+'\n')
+                if self.__power > self.__power_ref:
+                    self.__ps.comm('C1:'+str(self.__diode-0.1)+'\n')
+                    self.__ps.comm('C2:'+str(self.__diode+0.1)+'\n')
         return sendMessage
 
     @property
@@ -302,19 +336,25 @@ class gainDevice(Observable.Observable):
     
     @property
     def power_f(self):
-        self.__power = self.__pwmeter.pw_read()
+        if DEBUG_pw:
+            self.__power = self.__pwmeter.pw_read()+self.__diode**2
+        else:
+            self.__power = self.__pwmeter.pw_read()
         return round(self.__power, 4)
 		
     @property
     def cur_d1_f(self):
-        return self.__ps.query('?C1\n').decode('UTF-8').replace('\n', '')
+        self.__diode = float(self.__ps.query('?C1\n').decode('UTF-8').replace('\n', ''))
+        return self.__diode
 
     @cur_d1_f.setter
     def cur_d1_f(self, value):
         cvalue = format(float(value), '.2f')
-        logging.info(cvalue)
         self.__ps.comm('C1:'+str(cvalue)+'\n')
+        self.__ps.comm('C2:'+str(cvalue)+'\n')
+        self.property_changed_event.fire("cur_d1_f")
         self.property_changed_event.fire("cur_d2_f")
+        self.property_changed_event.fire("power_f")
 
     @property
     def cur_d2_f(self):
@@ -325,11 +365,17 @@ class gainDevice(Observable.Observable):
         return self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')
 
     @property
+    def d_f(self):
+        return self.__ps.query('?D\n').decode('UTF-8').replace('\n', '')
+    
+    @property
+    def q_f(self):
+        return self.__ps.query('?G\n').decode('UTF-8').replace('\n', '')
+
+    @property
     def ascii_f(self):
-        if self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')=='OPEN':
-            self.__arrow_pos+=1
-            if self.__arrow_pos==50:
-                self.__arrow_pos=0
-            return '-'*self.__arrow_pos+'>'+'-'*(50-self.__arrow_pos)
-        else:
-            return '-'*30+'x'+'-'*30
+        return '-'
+        #if self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')=='OPEN':
+            #return '\n-------o-------\n'
+        #else:
+        #    return '\n-------x-------\n'

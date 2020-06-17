@@ -24,15 +24,23 @@ class TLPowerMeter:
             #self.tl.write('SENS:CORR:COLL:ZERO:INIT')
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
+            self.tl.write('SENS:COUNT 10')
         except:
             logging.info("No device was found") #not working
 
     
     def pw_set_wl(self, cur_WL):
         string='SENS:CORR:WAV '+str(cur_WL)
-        self.tl.write(string)
+        try:
+            self.tl.write(string)
+        except:
+            self.sendmessage(21)
         #logging.info(self.tl.query('SENS:CORR:WAV?'))
 
 
     def pw_read(self):
-        return (float(self.tl.query('READ?'))*1e6)
+        try:
+            return (float(self.tl.query('READ?'))*1e6)
+        except:
+            self.sendmessage(22)
+            return (float(self.tl.query('FETCH?'))*1e6)

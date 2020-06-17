@@ -37,7 +37,7 @@ class gainhandler:
         self.instrument=instrument
         self.enabled = False
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
-        self.property_changed_running_event_listener=self.instrument.property_changed_running_event.listen(self.prepare_running_widget_enable)
+        self.free_event_listener=self.instrument.free_event.listen(self.prepare_free_widget_enable)
         self.busy_event_listener=self.instrument.busy_event.listen(self.prepare_widget_disable)
 
     def init_push(self, widget):
@@ -55,7 +55,7 @@ class gainhandler:
         #self.document_controller.document_model.append_data_item(self.live_data_item)
 
     def gen_push(self, widget):
-        data_item, data_item2, data_item3 = self.instrument.gen()
+        data_item, data_item2, data_item3, data_item4 = self.instrument.gen()
         if data_item!=None:
             self.document_controller.document_model.append_data_item(data_item)
             display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
@@ -68,6 +68,10 @@ class gainhandler:
             self.document_controller.document_model.append_data_item(data_item3)
             display_item3 = self.document_controller.document_model.get_display_item_for_data_item(data_item3)
             self.document_controller.show_display_item(display_item3)			
+			
+            self.document_controller.document_model.append_data_item(data_item4)
+            display_item4 = self.document_controller.document_model.get_display_item_for_data_item(data_item4)
+            self.document_controller.show_display_item(display_item4)
 			
         else:
             logging.info("Nothing to generate. Is Stored is True?")
@@ -85,6 +89,8 @@ class gainhandler:
     def q_check(self, widget, checked):
         self.instrument.q(checked)
 
+    def ctrl_check(self, widget, checked):
+        self.instrument.ctrl_cur(checked)
 
     async def do_enable(self,enabled=True,not_affected_widget_name_list=None):
         for var in self.__dict__:
@@ -94,12 +100,12 @@ class gainhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
+        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb", "cur_slider"]))
 
     def prepare_widget_disable(self,value):
-        self.event_loop.create_task(self.do_enable(False, ["init_pb", "upt_pb", "abt_pb"]))
+        self.event_loop.create_task(self.do_enable(False, ["init_pb"]))
     
-    def prepare_running_widget_enable(self,value): #THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
+    def prepare_free_widget_enable(self,value): #THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
     
 
@@ -163,8 +169,10 @@ class gainView:
         self.q_label = ui.create_label(text='Q Switch: ')
         self.q_checkbox = ui.create_check_box(name="q_checkbox", on_checked_changed='q_check')
         self.q_value_label=ui.create_label(text='@binding(instrument.q_f)')
+        self.control_label = ui.create_label(text="Control: ")
+        self.control_checkbox = ui.create_check_box(name="control_checkbox", on_checked_changed='ctrl_check')
         self.shutter_pb=ui.create_push_button(text='Shutter', name="sht_pb", on_clicked='sht_push')
-        self.ui_view8=ui.create_row(self.diode_label, self.diode_checkbox, self.diode_value_label, ui.create_stretch(), self.q_label, self.q_checkbox, self.q_value_label, ui.create_stretch(), self.shutter_pb, spacing=12)
+        self.ui_view8=ui.create_row(self.diode_label, self.diode_checkbox, self.diode_value_label, ui.create_stretch(), self.q_label, self.q_checkbox, self.q_value_label, ui.create_stretch(), self.control_label, self.control_checkbox, ui.create_stretch(), self.shutter_pb, spacing=12)
 
         self.diode_cur_label=ui.create_label(text='Current 01: ')
         self.diode_cur_line=ui.create_line_edit(text="@binding(instrument.cur_d1_f)", name="diode current")
@@ -174,12 +182,14 @@ class gainView:
         self.shutter_label02_value=ui.create_label(text='@binding(instrument.sht_f)', name='sht_value')
         self.ui_view9=ui.create_row(self.diode_cur_label, self.diode_cur_line, self.diode_cur2_label, self.diode_cur2_value_label, ui.create_stretch(), self.shutter_label02, self.shutter_label02_value, spacing=12)
 
+        self.diode_cur_slider=ui.create_slider(name="cur_slider", value='@binding(instrument.avg_f)', maximum=20)
+        self.ui_view10=ui.create_row(self.diode_cur_slider, ui.create_stretch())
 
         self.ascii_label=ui.create_label(text='@binding(instrument.ascii_f)')
-        self.ui_view10 = ui.create_row(ui.create_stretch(), self.ascii_label, ui.create_stretch())
+        self.ui_view11 = ui.create_row(ui.create_stretch(), self.ascii_label, ui.create_stretch())
 
 
-        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view_line, self.ui_view8, self.ui_view9, self.ui_view10, spacing=1)
+        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view_line, self.ui_view8, self.ui_view9, self.ui_view10, self.ui_view11, spacing=1)
 
 
 

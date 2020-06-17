@@ -19,6 +19,8 @@ class SpectraPhysics:
 
     def __init__(self, sendmessage):
         self.sendmessage=sendmessage
+        self.pow=20.
+        self.control_thread=None
         self.ser = serial.Serial()
         self.ser.baudrate=57600
         self.ser.port='COM11'
@@ -34,24 +36,68 @@ class SpectraPhysics:
         except:
             self.sendmessage(61)
 		
+        self.ser.write('D:0\n'.encode())
+        self.ser.readline()
+		
+        self.ser.write('G:0\n'.encode())
+        self.ser.readline()
 
+        self.ser.write('C1:00.10\n'.encode())
+        self.ser.readline()
+
+        self.ser.write('C2:00.10\n'.encode())
+        self.ser.readline()
+		
+        self.ser.write('Q:10000\n'.encode())
+        self.ser.readline()
+		
+		
+    def flush(self):
+        self.ser.flush()
+		
     def query(self, mes):
-        self.ser.write(mes.encode())		
-        return self.ser.readline()
+        try:
+            self.ser.write(mes.encode())		
+            return self.ser.readline()
+        except:
+            self.sendmessage(62)
+            self.ser.flush()
+            self.ser.write(mes.encode())
+            return self.ser.readline()
 		
     def comm(self, mes):
-        self.ser.write(mes.encode())
-        self.ser.readline() #clean buffer
-        return None
+        try:
+            self.ser.write(mes.encode())
+            self.ser.readline() #clean buffer
+            return None
+        except:
+            self.sendmessage(63)
+            self.ser.flush()
+            self.ser.write(mes.encode())
+            self.ser.readline() #clean buffer
+            return None            
+		
+    def pw_control_receive(self, pow):
+        self.pow=round(pow, 2)
 
     def pw_control_thread(self, arg):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
+            self.comm('C1:'+str(self.pow)+'\n')
+            self.comm('C2:'+str(self.pow)+'\n')
             time.sleep(0.1)
+            logging.info(self.pow)
             self.sendmessage(79)
+
+    def pw_control_thread_check(self):
+        try:
+            return getattr(self.control_thread, "do_run")
+        except:
+            return False
 
     def pw_control_thread_on(self):
         self.control_thread=threading.Thread(target=self.pw_control_thread, args=("task",))
+        self.control_thread.do_run=True
         self.control_thread.start()
 
     def pw_control_thread_off(self):

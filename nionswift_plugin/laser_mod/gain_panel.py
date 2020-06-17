@@ -100,7 +100,7 @@ class gainhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb", "cur_slider"]))
+        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb"]))
 
     def prepare_widget_disable(self,value):
         self.event_loop.create_task(self.do_enable(False, ["init_pb"]))
@@ -175,15 +175,16 @@ class gainView:
         self.ui_view8=ui.create_row(self.diode_label, self.diode_checkbox, self.diode_value_label, ui.create_stretch(), self.q_label, self.q_checkbox, self.q_value_label, ui.create_stretch(), self.control_label, self.control_checkbox, ui.create_stretch(), self.shutter_pb, spacing=12)
 
         self.diode_cur_label=ui.create_label(text='Current 01: ')
-        self.diode_cur_line=ui.create_line_edit(text="@binding(instrument.cur_d1_f)", name="diode current")
+        self.diode_cur_value_label=ui.create_label(text="@binding(instrument.cur_d1_f)")
         self.diode_cur2_label=ui.create_label(text='Current 02: ')
-        self.diode_cur2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)', name='diode2 current')
+        self.diode_cur2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)')
         self.shutter_label02=ui.create_label(text='Shutter: ')
-        self.shutter_label02_value=ui.create_label(text='@binding(instrument.sht_f)', name='sht_value')
-        self.ui_view9=ui.create_row(self.diode_cur_label, self.diode_cur_line, self.diode_cur2_label, self.diode_cur2_value_label, ui.create_stretch(), self.shutter_label02, self.shutter_label02_value, spacing=12)
+        self.shutter_label02_value=ui.create_label(text='@binding(instrument.sht_f)')
+        self.ui_view9=ui.create_row(self.diode_cur_label, self.diode_cur_value_label, self.diode_cur2_label, self.diode_cur2_value_label, ui.create_stretch(), self.shutter_label02, self.shutter_label02_value, spacing=12)
 
-        self.diode_cur_slider=ui.create_slider(name="cur_slider", value='@binding(instrument.avg_f)', maximum=20)
-        self.ui_view10=ui.create_row(self.diode_cur_slider, ui.create_stretch())
+        self.diode_cur_label=ui.create_label(text='Diode(1, 2) (A): ')
+        self.diode_cur_slider=ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=10, maximum=2800)
+        self.ui_view10=ui.create_row(self.diode_cur_label, self.diode_cur_slider, ui.create_stretch())
 
         self.ascii_label=ui.create_label(text='@binding(instrument.ascii_f)')
         self.ui_view11 = ui.create_row(ui.create_stretch(), self.ascii_label, ui.create_stretch())

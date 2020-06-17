@@ -77,8 +77,8 @@ class SpectraPhysics:
             self.ser.readline() #clean buffer
             return None            
 		
-    def pw_control_receive(self, pow):
-        self.pow=round(pow, 2)
+    def pw_control_receive(self, cur):
+        self.pow=round(cur/100., 2) #remeber we need to divide by 100
 
     def pw_control_thread(self, arg):
         self.control_thread=threading.currentThread()

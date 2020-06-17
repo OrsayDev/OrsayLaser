@@ -30,9 +30,9 @@ import time
 
 from . import gain_data as gdata
 
-DEBUG_pw = 0
-DEBUG_laser = 0
-DEBUG_ps = 0
+DEBUG_pw = 1
+DEBUG_laser = 1
+DEBUG_ps = 1
 
 if DEBUG_pw:
     from . import power_vi as power
@@ -68,7 +68,7 @@ class gainDevice(Observable.Observable):
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 10
         self.__power=0.
-        self.__diode=0.
+        self.__diode=10 #slider value should be an int. So 30.00 amps is self.__diode = 3000
         self.__ctrl_cur=False
 
         self.__camera=None
@@ -316,6 +316,7 @@ class gainDevice(Observable.Observable):
         self.__finish_wav = float(value)
         self.property_changed_event.fire("pts_f") 
         self.property_changed_event.fire("tpts_f") 
+        self.free_event.fire("all")		
     
     @property
     def step_wav_f(self) -> float:
@@ -378,39 +379,38 @@ class gainDevice(Observable.Observable):
     @property
     def power_f(self):
         if DEBUG_pw:
-            self.__power = self.__pwmeter.pw_read()+self.__diode**2
+            self.__power = self.__pwmeter.pw_read()+(self.__diode/100.)**2
         else:
             self.__power = self.__pwmeter.pw_read()
         return round(self.__power, 4)
 		
     @property
-    def cur_d1_f(self):
-        try:
-            temp=float(self.__ps.query('?C1\n').decode('UTF-8').replace('\n', ''))
-            self.__diode=temp
-        #try:
-            #self.__diode = float(self.__ps.query('?C1\n').decode('UTF-8').replace('\n', ''))
-            #return self.__diode
-        except ValueError:
-            self.__ps.flush()
+    def cur_d_f(self) -> int:
         return self.__diode
 
-    @cur_d1_f.setter
-    def cur_d1_f(self, value):
-        cvalue = format(float(value), '.2f')
-        if float(cvalue) < 35 and float(cvalue) > 0.:
-            self.__ps.comm('C1:'+str(cvalue)+'\n')
-            self.__ps.comm('C2:'+str(cvalue)+'\n')
-        time.sleep(1.0)
+    @cur_d_f.setter
+    def cur_d_f(self, value: int):
+        self.__diode=value
+        
+        cvalue = format(float(value/100), '.2f') #how to format and send to my hardware
+
+        self.__ps.comm('C1:'+str(cvalue)+'\n')
+        time.sleep(0.05)
+        self.__ps.comm('C2:'+str(cvalue)+'\n')
+        time.sleep(0.05)
         self.property_changed_event.fire("cur_d1_f")
         self.property_changed_event.fire("cur_d2_f")
         self.property_changed_event.fire("power_f")
         self.free_event.fire("all")
 
     @property
+    def cur_d1_f(self):
+        return self.__ps.query('?C1\n').decode('UTF-8').replace('\n', '')
+
+    @property
     def cur_d2_f(self):
         return self.__ps.query('?C2\n').decode('UTF-8').replace('\n', '')
-
+    
     @property
     def sht_f(self):
         return self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')

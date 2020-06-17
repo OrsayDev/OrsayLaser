@@ -20,8 +20,8 @@ class SpectraPhysics:
     def __init__(self, sendmessage):
         self.sendmessage=sendmessage
         self.control_thread=None
-        self.cur1=b'0.10\n'
-        self.cur2=b'0.10\n'
+        self.cur1=b'1\n'
+        self.cur2=b'1\n'
         self.shutter=b'CLOSED\n'
         self.diode=b'OFF\n'
         self.q=b'OFF\n'
@@ -64,16 +64,30 @@ class SpectraPhysics:
         return None
 
 
+    def pw_control_receive(self, cur):
+        self.pow=round(cur/100., 2) #remember we need to divide by 100
+
     def pw_control_thread(self, arg):
         self.control_thread=threading.currentThread()
-        while getattr(self.control_thread, "do_run", True): #you create an attribute here. Pretty handy
+        while getattr(self.control_thread, "do_run", True):
+            self.comm('C1:'+str(self.pow)+'\n')
+            self.comm('C2:'+str(self.pow)+'\n')
             time.sleep(0.1)
             self.sendmessage(79)
 
+    def pw_control_thread_check(self):
+        try:
+            return getattr(self.control_thread, "do_run")
+        except:
+            return False
+
     def pw_control_thread_on(self):
         self.control_thread=threading.Thread(target=self.pw_control_thread, args=("task",))
+        self.control_thread.do_run=True
         self.control_thread.start()
 
     def pw_control_thread_off(self):
         self.control_thread.do_run=False
+
+
 

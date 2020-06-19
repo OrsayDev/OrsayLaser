@@ -97,9 +97,19 @@ class SirahCredoLaser:
             else:
                 self.sendmessage(8)
                 self.ser.close()
-                time.sleep(0.1)
+                time.sleep(0.05)
                 self.ser.open()
-                return (None, None)
+                time.sleep(0.05)
+                self.ser.write(bs)
+                self.ser.read(1)
+                error = self.ser.read(1)
+                self.ser.read(1)
+                status = self.ser.read(1)
+                abs1 = self.ser.read(4)
+                self.ser.read(6) #clear buffer
+                pos  = self.bytes_to_pos(abs1)
+                cur_wl = self.pos_to_wl(pos)
+                return (cur_wl, status[0])
 
 			
         except:

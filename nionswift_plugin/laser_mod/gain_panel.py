@@ -36,9 +36,13 @@ class gainhandler:
         self.document_controller=document_controller
         self.instrument=instrument
         self.enabled = False
+        self.busy_event_listener=self.instrument.busy_event.listen(self.prepare_widget_disable)
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.free_event_listener=self.instrument.free_event.listen(self.prepare_free_widget_enable)
-        self.busy_event_listener=self.instrument.busy_event.listen(self.prepare_widget_disable)
+
+
+    def init_handler(self):
+        self.event_loop.create_task(self.do_enable(True, ['cur_slider'])) #not working as something is calling this guy
 
     def init_push(self, widget):
         self.instrument.init()
@@ -83,14 +87,26 @@ class gainhandler:
     def sht_push(self, widget):
         self.instrument.sht()
 
+    def lock_push(self, widget):
+        self.instrument.lock()
+
     def dio_check(self, widget, checked):
         self.instrument.diode(checked)
 
     def q_check(self, widget, checked):
         self.instrument.q(checked)
-
-    def ctrl_check(self, widget, checked):
-        self.instrument.ctrl_cur(checked)
+		
+    def more_push(self, widget):
+        self.instrument.more_cur()
+		
+    def less_push(self, widget):
+        self.instrument.less_cur()
+		
+    def more_servo_push(self, widget):
+        self.instrument.more_servo()
+		
+    def less_servo_push(self, widget):
+        self.instrument.less_servo()
 
     async def do_enable(self,enabled=True,not_affected_widget_name_list=None):
         for var in self.__dict__:
@@ -141,13 +157,13 @@ class gainView:
         self.avg_label=ui.create_label(text='Averages: ')
         self.avg_line = ui.create_line_edit(text="@binding(instrument.avg_f)", name="avg_line")
         self.running_label=ui.create_label(text='Is running? ')
-        self.running_value_label = ui.create_label(text='@binding(instrument.run_status)')
+        self.running_value_label = ui.create_label(text='@binding(instrument.run_status_f)')
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label, self.running_value_label, spacing=12)
         
         self.dwell_label=ui.create_label(text='Dwell Time (ms): ')
         self.dwell_line = ui.create_line_edit(text="@binding(instrument.dwell_f)", name="dwell_line")
         self.stored_label=ui.create_label(text='Stored Data? ')
-        self.stored_value_label = ui.create_label(text='@binding(instrument.stored_status)')
+        self.stored_value_label = ui.create_label(text='@binding(instrument.stored_status_f)')
         self.ui_view5 = ui.create_row(self.dwell_label, self.dwell_line, ui.create_stretch(), self.stored_label, self.stored_value_label, spacing=12)
         
         self.upt_pb=ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
@@ -158,7 +174,9 @@ class gainView:
 
         self.power_label=ui.create_label(text='Power (uW): ')
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
-        self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), spacing=12)
+        self.power_lock_button=ui.create_push_button(text='Lock', name='Lock_power', on_clicked='lock_push')
+        self.power_lock_value=ui.create_label(text='@binding(instrument.locked_power_f)')
+        self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, self.power_lock_button, self.power_lock_value, ui.create_stretch(), spacing=12)
 
         self.line_label=ui.create_label(text='-', width=2)
         self.ui_view_line = ui.create_row(ui.create_stretch(), self.line_label, ui.create_stretch())
@@ -170,9 +188,9 @@ class gainView:
         self.q_checkbox = ui.create_check_box(name="q_checkbox", on_checked_changed='q_check')
         self.q_value_label=ui.create_label(text='@binding(instrument.q_f)')
         self.control_label = ui.create_label(text="Control: ")
-        self.control_checkbox = ui.create_check_box(name="control_checkbox", on_checked_changed='ctrl_check')
+        self.control_list=ui.create_combo_box(items=['None', 'Servo', 'Laser PS'], current_index='@binding(instrument.pw_ctrl_type_f)', name='control_list')
         self.shutter_pb=ui.create_push_button(text='Shutter', name="sht_pb", on_clicked='sht_push')
-        self.ui_view8=ui.create_row(self.diode_label, self.diode_checkbox, self.diode_value_label, ui.create_stretch(), self.q_label, self.q_checkbox, self.q_value_label, ui.create_stretch(), self.control_label, self.control_checkbox, ui.create_stretch(), self.shutter_pb, spacing=12)
+        self.ui_view8=ui.create_row(self.diode_label, self.diode_checkbox, self.diode_value_label, ui.create_stretch(), self.q_label, self.q_checkbox, self.q_value_label, ui.create_stretch(), self.control_label, self.control_list, ui.create_stretch(), self.shutter_pb, spacing=12)
 
         self.diode_cur_label=ui.create_label(text='Current 01: ')
         self.diode_cur_value_label=ui.create_label(text="@binding(instrument.cur_d1_f)")
@@ -180,17 +198,27 @@ class gainView:
         self.diode_cur2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)')
         self.shutter_label02=ui.create_label(text='Shutter: ')
         self.shutter_label02_value=ui.create_label(text='@binding(instrument.sht_f)')
+
         self.ui_view9=ui.create_row(self.diode_cur_label, self.diode_cur_value_label, self.diode_cur2_label, self.diode_cur2_value_label, ui.create_stretch(), self.shutter_label02, self.shutter_label02_value, spacing=12)
 
         self.diode_cur_label=ui.create_label(text='Diode(1, 2) (A): ')
         self.diode_cur_slider=ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=10, maximum=2800)
-        self.ui_view10=ui.create_row(self.diode_cur_label, self.diode_cur_slider, ui.create_stretch())
-
+        self.text_label=ui.create_label(text='       ||       ')
+        self.diode_cur_line=ui.create_line_edit(text='@binding(instrument.cur_d_f)', name='cur_line')
+        self.less_pb=ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)
+        self.more_pb=ui.create_push_button(text=">>", name="more_pb", on_clicked="more_push", width=25)
+        self.ui_view10=ui.create_row(self.diode_cur_label, self.diode_cur_slider, self.text_label, self.diode_cur_line, ui.create_spacing(12), self.less_pb, ui.create_spacing(5), self.more_pb, ui.create_stretch())
+        
         self.ascii_label=ui.create_label(text='@binding(instrument.ascii_f)')
         self.ui_view11 = ui.create_row(ui.create_stretch(), self.ascii_label, ui.create_stretch())
 
+        self.servo_label=ui.create_label(text='Servo Motor: ')
+        self.servo_slider=ui.create_slider(name="servo_slider", value='@binding(instrument.servo_f)', minimum=0, maximum=180)
+        self.less_servo_pb=ui.create_push_button(text="<<", name="less_servo_pb", on_clicked="less_servo_push", width=25)
+        self.more_servo_pb=ui.create_push_button(text=">>", name="more_servo_pb", on_clicked="more_servo_push", width=25)
+        self.ui_view12=ui.create_row(self.servo_label, ui.create_spacing(12), self.servo_slider, ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5), self.more_servo_pb, ui.create_stretch())
 
-        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view_line, self.ui_view8, self.ui_view9, self.ui_view10, self.ui_view11, spacing=1)
+        self.ui_view=ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view_line, self.ui_view8, self.ui_view9, self.ui_view10, self.ui_view11, self.ui_view12, spacing=1)
 
 
 

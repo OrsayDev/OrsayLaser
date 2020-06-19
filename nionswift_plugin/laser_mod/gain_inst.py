@@ -30,9 +30,10 @@ import time
 
 from . import gain_data as gdata
 
-DEBUG_pw = 1
-DEBUG_laser = 1
-DEBUG_ps = 1
+DEBUG_pw = 0
+DEBUG_laser = 0
+DEBUG_ps = 0
+DEBUG_servo = 0
 
 if DEBUG_pw:
     from . import power_vi as power
@@ -49,6 +50,14 @@ if DEBUG_ps:
 else:
     from . import power_supply as ps
 
+
+if DEBUG_servo:
+    from . import servo_vi as servo
+else:
+    from . import servo as servo
+
+
+from . import control_routine as ctrlRout
 
 class gainDevice(Observable.Observable):
 
@@ -68,8 +77,10 @@ class gainDevice(Observable.Observable):
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 10
         self.__power=0.
+        self.__power_ref=0.
         self.__diode=10 #slider value should be an int. So 30.00 amps is self.__diode = 3000
-        self.__ctrl_cur=False
+        self.__servo_pos=0
+        self.__ctrl_type=0
 
         self.__camera=None
 
@@ -107,7 +118,13 @@ class gainDevice(Observable.Observable):
 
         self.__data_sendmessage = gdata.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__gdata = gdata.gainData(self.__data_sendmessage)
-
+		
+        self.__servo_sendmessage=servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__servo = servo.servoMotor(self.__servo_sendmessage)
+		
+        self.__control_sendmessage=ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__controlRout=ctrlRout.controlRoutine(self.__control_sendmessage)
+		
     def init(self):
         logging.info("init...")
 
@@ -119,15 +136,19 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("sht_f")
         self.free_event.fire("all")
 
+    def lock(self):
+        self.property_changed_event.fire("locked_power_f")
+        self.free_event.fire("all")
+
     def diode(self, val):
         if val==True:
             self.__ps.comm('D:1\n')
-            time.sleep(3)
         else:
             self.__ps.comm('D:0\n')
-
-        self.property_changed_event.fire('d_f')
-        self.free_event.fire("all")
+			
+        self.property_changed_event.fire('d_f') #kill GUI and updates fast OFF response
+        threading.Timer(3, self.property_changed_event.fire, args=('d_f',)).start() #update in case of slow response
+        threading.Timer(3.1, self.free_event.fire, args=('all',)).start() #retake GUI
 
 		
     
@@ -138,28 +159,38 @@ class gainDevice(Observable.Observable):
             self.__ps.comm('G:0\n')
         self.property_changed_event.fire('q_f')
         self.free_event.fire("all")
-    
-    def ctrl_cur(self, val):
-        self.__ctrl_cur=val
+
+   
+    def more_cur(self):
+        self.cur_d_f+=5
+   
+    def less_cur(self):
+        self.cur_d_f-=5
+ 
+    def more_servo(self):
+        self.servo_f+=2
+   
+    def less_servo(self):
+        self.servo_f-=2
+        self.avg_f+=1
    
     def upt(self):   
 
-        self.property_changed_event.fire("run_status")
-        self.property_changed_event.fire("stored_status")
-        self.property_changed_event.fire("power_f")
+        self.property_changed_event.fire("run_status_f")
+        self.property_changed_event.fire("stored_status_f")
         self.property_changed_event.fire("cur_wav_f")
+        self.property_changed_event.fire("power_f")
         if not self.__status:
-            self.property_changed_event.fire("pts_f")
-            self.property_changed_event.fire("tpts_f") 
             self.property_changed_event.fire('d_f')
-            time.sleep(0.005)
+            time.sleep(0.03)
             self.property_changed_event.fire('q_f')
-            time.sleep(0.005)
+            time.sleep(0.03)
             self.property_changed_event.fire("cur_d1_f")
-            time.sleep(0.005)
+            time.sleep(0.03)
             self.property_changed_event.fire("cur_d2_f")
-            time.sleep(0.005)
+            time.sleep(0.03)
             self.property_changed_event.fire("sht_f")
+            self.property_changed_event.fire('servo_f')
             self.free_event.fire("all")		
 
     def acq(self):
@@ -204,8 +235,8 @@ class gainDevice(Observable.Observable):
         self.__laser.abort_control() #abort laser thread as well.
 
     def acqThread(self):
-        self.__status = True
         self.upt()
+        self.__status = True
 
         self.__laser.setWL(self.__start_wav, self.__cur_wav)
         self.__abort_force = False
@@ -214,9 +245,7 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(self.__start_wav-self.__cur_wav)<=0.001 and self.__finish_wav>self.__start_wav):
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.__ps.comm('SHT:1\n')
-            self.__ps.pw_control_receive(self.__diode)
-            self.__ps.pw_control_thread_on()
-            self.__power_ref = self.__power #reference in power
+            self.__controlRout.pw_control_thread_on() 
         else:
             logging.info("Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
@@ -234,7 +263,7 @@ class gainDevice(Observable.Observable):
                 self.__data[i].append(self.__camera.grab_next_to_start()[0])
                 if j%1==0:
                     self.upt()
-                    self.__infodata[i].append([self.__cur_wav, self.__power, self.__diode])
+                    self.__infodata[i].append([self.__cur_wav, self.__power, self.__servo_pos])
                 j+=1
             j=0
             i+=1
@@ -243,22 +272,22 @@ class gainDevice(Observable.Observable):
             else:
                 self.abt() #execute our abort routine (laser and acq thread)
            
-        if self.__ps.pw_control_thread_check():
-            self.__ps.pw_control_thread_off() #turns off our periodic thread. See message 79.
+        if self.__controlRout.pw_control_thread_check():
+            self.__controlRout.pw_control_thread_off() #turns off our periodic thread.
         self.__camera.stop_playing() #stop camera  
         self.__ps.comm('SHT:0\n') #closes shutter  
         while (not self.__laser.set_scan_thread_check()): #thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked(): #releasing everything if locked
                 self.__laser.set_scan_thread_release()
-        self.upt()
+        time.sleep(0.1)
         self.__laser.setWL(self.__start_wav, self.__cur_wav) #puts laser back to start wavelength
-        time.sleep(4.9) #wait laser almost go back to show GUI
         self.__stored = True and not self.__abort_force #Stored is true conditioned that loop was not aborted
         self.__status = False #acquistion is over
         logging.info("Acquistion is over") 
+        time.sleep(4.9) #wait laser almost go back to show GUI
         self.upt() #here you going to update panel only until setWL is over. This is because this specific thread has a join() at the end.
 
-    #0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply
+    #0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
     def sendMessageFactory(self):
         def sendMessage(message):
             if message==1:
@@ -281,20 +310,37 @@ class gainDevice(Observable.Observable):
                 logging.info('***Power Meter***: Cant write')
             if message==22:
                 logging.info('***Power Meter***: Cant READ a new measurement. Fetching last one instead.')
+            if message==23:
+                self.property_changed_event.fire("power_f")
+                self.free_event.fire("all") 
             if message==61:
                 logging.info('***LASER PS***: Could not open serial port. Check if connected and port')
             if message==62:
                 logging.info('***LASER PS***: Could not query properly')
             if message==63:
                 logging.info('***LASER PS***: Could not send command properly')
-            if message==79 and self.__ctrl_cur:
-                if self.__power < self.__power_ref:
-                    self.__diode+=0.05
-                if self.__power > self.__power_ref:
-                    self.__diode-=0.05
-                self.property_changed_event.fire("cur_d1_f")
-                self.property_changed_event.fire("cur_d2_f")
-                self.__ps.pw_control_receive(self.__diode)
+            if message==81:
+                logging.info('***SERVO***: Could not open serial port. Check if connected')
+            if message==82:
+                logging.info('***SERVO***: Could not properly get_pos. Retrying after a flush..')
+            if message==83:
+                logging.info('***SERVO***: Could not properly set_pos. Retrying after a flush..')
+            if message==84:
+                logging.info('***SERVO***: Angle higher than 180. Holding on 180.')
+            if message==85:
+                logging.info('***SERVO***: Angle smaller than 0. Holding on 0.')
+            if message==101 and self.__ctrl_type:
+                if self.__ctrl_type==1:
+                    logging.info(self.__servo_pos)
+                    self.__servo_pos=self.__servo_pos+1 if self.__power<self.__power_ref else self.__servo_pos-2
+                    self.servo_f=self.__servo_pos
+                if self.__ctrl_type==2:
+                    logging.info(self.__diode)
+                    self.__diode=self.__diode+1 if self.__power<self.__power_ref else self.__diode-2
+                    self.cur_d_f=self.__diode
+
+            if message==102:
+                logging.info('***CONTROL***: Control OFF but it was never on.')
         return sendMessage
 
     @property
@@ -361,19 +407,19 @@ class gainDevice(Observable.Observable):
     @property
     def cur_wav_f(self) -> float:
         temp_wav = self.__laser.get_hardware_wl()[0]
-        if (temp_wav==None):
-            return 'Error'
-        else:
-            self.__cur_wav = temp_wav
-            self.__pwmeter.pw_set_wl(self.__cur_wav)
-            return format(self.__cur_wav, '.4f')
+        #if (temp_wav==None):
+        #    return 'Error'
+        #else:
+        self.__cur_wav = temp_wav
+        self.__pwmeter.pw_set_wl(self.__cur_wav)
+        return format(self.__cur_wav, '.4f')
     
     @property
-    def run_status(self):
+    def run_status_f(self):
         return str(self.__status)
     
     @property
-    def stored_status(self):
+    def stored_status_f(self):
         return str(self.__stored)
     
     @property
@@ -385,23 +431,28 @@ class gainDevice(Observable.Observable):
         return round(self.__power, 4)
 		
     @property
+    def locked_power_f(self):
+        logging.info('set')
+        self.__power_ref=self.__power
+        return round(self.__power_ref, 4)
+		
+    @property
     def cur_d_f(self) -> int:
         return self.__diode
 
     @cur_d_f.setter
     def cur_d_f(self, value: int):
-        self.__diode=value
-        
-        cvalue = format(float(value/100), '.2f') #how to format and send to my hardware
-
+        self.__diode=int(value)
+        cvalue = format(float(self.__diode/100), '.2f') #how to format and send to my hardware
         self.__ps.comm('C1:'+str(cvalue)+'\n')
-        time.sleep(0.05)
         self.__ps.comm('C2:'+str(cvalue)+'\n')
-        time.sleep(0.05)
-        self.property_changed_event.fire("cur_d1_f")
-        self.property_changed_event.fire("cur_d2_f")
-        self.property_changed_event.fire("power_f")
-        self.free_event.fire("all")
+		
+        if not self.__status:
+            self.property_changed_event.fire("power_f") 	
+            self.property_changed_event.fire("cur_d1_f")
+            self.property_changed_event.fire("cur_d2_f")
+            self.property_changed_event.fire("cur_d_f")
+            self.free_event.fire("all")
 
     @property
     def cur_d1_f(self):
@@ -430,3 +481,23 @@ class gainDevice(Observable.Observable):
             #return '\n-------o-------\n'
         #else:
         #    return '\n-------x-------\n'
+
+    @property
+    def servo_f(self):
+        self.__servo_pos=int(self.__servo.get_pos().decode('UTF-8'))
+        return self.__servo_pos
+
+    @servo_f.setter
+    def servo_f(self, value: int):
+        self.__servo.set_pos(value)
+        if not self.__status:
+            self.property_changed_event.fire("power_f")
+            self.free_event.fire('all')
+    
+    @property
+    def pw_ctrl_type_f(self):
+        return self.__ctrl_type
+
+    @pw_ctrl_type_f.setter
+    def pw_ctrl_type_f(self, value):
+        self.__ctrl_type=value

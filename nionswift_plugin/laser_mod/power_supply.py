@@ -61,7 +61,10 @@ class SpectraPhysics:
             return self.ser.readline()
         except:
             self.sendmessage(62)
-            self.ser.flush()
+            self.ser.close()
+            time.sleep(0.05)
+            self.ser.open()
+            time.sleep(0.05)
             self.ser.write(mes.encode())
             return self.ser.readline()
 		
@@ -77,17 +80,14 @@ class SpectraPhysics:
             self.ser.readline() #clean buffer
             return None            
 		
-    def pw_control_receive(self, cur):
-        self.pow=round(cur/100., 2) #remeber we need to divide by 100
+    '''def pw_control_receive(self, cur):
+        self.pow=round(cur/100., 2) #remember we need to divide by 100
 
     def pw_control_thread(self, arg):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
-            self.comm('C1:'+str(self.pow)+'\n')
-            self.comm('C2:'+str(self.pow)+'\n')
             time.sleep(0.1)
-            logging.info(self.pow)
-            self.sendmessage(79)
+            self.sendmessage(101)
 
     def pw_control_thread_check(self):
         try:
@@ -101,4 +101,4 @@ class SpectraPhysics:
         self.control_thread.start()
 
     def pw_control_thread_off(self):
-        self.control_thread.do_run=False
+        self.control_thread.do_run=False'''

@@ -73,11 +73,7 @@ class SirahCredoLaser:
         pos2 = self.bytes_to_pos(byt)
         if (wl > 500 and wl < 800):
             try:
-                #time.sleep(0.05)
-                #self.ser.open()
-                logging.info('set')
                 self.ser.write(ba_send_mes)
-                #self.ser.close()
             except:
                 self.sendmessage(5)
         else:
@@ -87,9 +83,6 @@ class SirahCredoLaser:
         mes = [60, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62]
         bs=bytearray(mes)
         try:
-            #time.sleep(0.05)
-            #self.ser.open()
-            logging.info('get')
             self.ser.write(bs)
             self.ser.read(1)
             error = self.ser.read(1)
@@ -99,8 +92,26 @@ class SirahCredoLaser:
             self.ser.read(6) #clear buffer
             pos = self.bytes_to_pos(abs1)
             cur_wl = self.pos_to_wl(pos)
-            #self.ser.close()
-            return (cur_wl, status[0])
+            if (status[0]==2 or status[0]==3):
+                return (cur_wl, status[0])
+            else:
+                self.sendmessage(8)
+                self.ser.close()
+                time.sleep(0.05)
+                self.ser.open()
+                time.sleep(0.05)
+                self.ser.write(bs)
+                self.ser.read(1)
+                error = self.ser.read(1)
+                self.ser.read(1)
+                status = self.ser.read(1)
+                abs1 = self.ser.read(4)
+                self.ser.read(6) #clear buffer
+                pos  = self.bytes_to_pos(abs1)
+                cur_wl = self.pos_to_wl(pos)
+                return (cur_wl, status[0])
+
+			
         except:
             self.sendmessage(6)
             return (580, None)

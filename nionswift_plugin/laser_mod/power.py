@@ -21,22 +21,26 @@ class TLPowerMeter:
         try:
             self.tl = rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
             logging.info(self.tl.query('*IDN?'))
-            self.tl.write('SENS:CORR:COLL:ZERO:INIT')
-            if (tl.query('SENS:POW:RANG:AUTO?')==1):
-                logging.info('Automatic Range, in W')
+            #self.tl.write('SENS:CORR:COLL:ZERO:INIT')
+            self.tl.write('SENS:POW:RANG:AUTO 1')
+            self.tl.write('CONF:POW')
+            self.tl.write('SENS:AVERAGE:COUNT 100')
+            logging.info(self.tl.query('SENS:AVERAGE:COUNT?'))
         except:
             logging.info("No device was found") #not working
 
-    def pw_random_periodic(self):
-        self.pwthread = threading.Timer(0.5, self.pw_random_periodic)
-        self.pwthread.start()
-        self.sendmessage(100)
     
-    def pw_set_WL(self, cur_WL):
+    def pw_set_wl(self, cur_WL):
         string='SENS:CORR:WAV '+str(cur_WL)
-        self.tl.write(string)
-        logging.info(self.tl.query('SENS:CORR:WAV?'))
+        try:
+            self.tl.write(string)
+        except:
+            self.sendmessage(21)
 
 
     def pw_read(self):
-        return (float(self.tl.query('READ?'))*1e6)
+        try:
+            return (float(self.tl.query('READ?'))*1e6)
+        except:
+            self.sendmessage(22)
+            return (float(self.tl.query('FETCH?'))*1e6)

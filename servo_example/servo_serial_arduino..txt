@@ -1,0 +1,39 @@
+/* STEM VG Lumière Servo attenuator control
+Send number in range 0-180 + terminator '/n' to move servo position from 0 to 180 degrees
+*/
+
+#include <Servo.h>
+
+Servo myservo;  // create servo object to control a servo (twelve servo objects can be created on most boards)
+
+int pos = 0;    // variable to store the servo position
+int pos_p = 0;  //variable to store the previous servo position
+String msg;
+String str_pos;
+
+void setup() {
+  myservo.attach(7);  // attaches the servo on pin 7 to the servo object
+  myservo.write(pos);   // set servo to 0 degree
+  Serial.begin(9600);
+  Serial.println("Ready");
+  Serial.setTimeout(50);
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    //int pos = Serial.parseInt();  //look for the next valid integer in incoming serial
+    msg = Serial.readStringUntil('\n');
+    if (msg=="?POS") {
+      Serial.println(int(pos));
+    }
+    if (msg.substring(0, 4)=="POS:") {
+      pos=msg.substring(4).toInt();
+      if (pos > 180) pos = 180;   //limit range in 0-180 degres
+      if (pos < 0) pos = 0;
+      if (pos != pos_p) {
+        pos_p = pos;
+        myservo.write(pos);
+      }
+    }
+  }
+}

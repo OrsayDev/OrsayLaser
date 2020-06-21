@@ -12,17 +12,86 @@ from nion.utils import Converter
 from nion.utils import Geometry
 from nion.ui import Declarative
 from nion.ui import UserInterface
+from nion.swift.model import HardwareSource
 from nion.swift.model import DataItem
+from nion.swift.model import ImportExportManager
 import threading
 
 from . import gain_inst
 import logging
 _ = gettext.gettext
 from nion.utils import Model
+import time
 
 
 
 import inspect
+
+
+class Controller:
+
+    def __init__(self):
+        self.__grab_thread=None
+        self.frame_count_model=Model.PropertyModel(20)
+
+    async def grab(self, document_controller, hardware_source, do_acquire):
+        assert document_controller
+        assert hardware_source
+
+        event_loop = document_controller.event_loop
+        was_playing=hardware_source.is_playing
+        frame_count=self.frame_count_model.value
+        success_ref = [True]
+        xdata_group_list=list()
+
+        def exec_acquire():
+            try:
+                start_time=time.time()
+                max_wait_time=max(hardware_source.get_current_frame_parameters()["exposure_ms"] * 1.5, 3)
+                while not hardware_source.is_playing:
+                    if time.time() - start_time > max_wait_time:
+                        success_ref[0]=False
+                        return
+                    time.sleep(0.01)
+                hardware_source.get_next_xdatas_to_start(max_wait_time * 2)
+                for i in range(frame_count):
+                    hardware_source.get_next_xdatas_to_finish(max_wait_time * 2)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                success_ref[0]=False
+                    
+        if do_acquire:
+            hardware_source.start_playing()
+            await event_loop.run_in_executor(None, exec_acquire)
+
+        def exec_grab():
+            try:
+                start_time=time.time()
+                max_wait_time=max(hardware_source.get_current_frame_parameters()["exposure_ms"] * 1.5, 3)
+                while hardware_source.is_playing:
+                    if time.time()-start_time > max_wait_time:
+                        success_ref[0]=False
+                        return
+                    time.sleep(0.01)
+                data_element_groups = hardware_source.grab_sequence(frame_count)
+                #for data_element_group in data_element_groups:
+                #    xdata_group=list()
+                #    for data_element in data_element_group:
+                #        xdata=ImportExportManager.convert_data_element_to_data_and_metadata(data_element)
+                #        xdata_group.append(xdata)
+                #    xdata_group_list.append(xdata_group)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                success_ref[0]=False
+
+        if success_ref[0]:
+            hardware_source.stop_playing()
+            await event_loop.run_in_executor(None, exec_grab)
+
+        
+
 
 
 class gainhandler:
@@ -36,6 +105,8 @@ class gainhandler:
         self.document_controller=document_controller
         self.instrument=instrument
         self.enabled = False
+        self.__controller=Controller()
+        self.__camera_hardware=HardwareSource.HardwareSourceManager().hardware_sources[0] 
         self.busy_event_listener=self.instrument.busy_event.listen(self.prepare_widget_disable)
         self.property_changed_event_listener=self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.free_event_listener=self.instrument.free_event.listen(self.prepare_free_widget_enable)
@@ -49,6 +120,7 @@ class gainhandler:
         self.init_pb.enabled=False
 
     def upt_push(self, widget):
+        #self.grab()
         self.instrument.upt()
     
     def acq_push(self, widget):
@@ -124,6 +196,9 @@ class gainhandler:
     def prepare_free_widget_enable(self,value): #THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
     
+    def grab(self):
+        self.event_loop.create_task(self.__controller.grab(self.document_controller, self.__camera_hardware, True))
+        
 
 
 

@@ -69,11 +69,11 @@ class gainDevice(Observable.Observable):
         self.busy_event=Event.Event()
         
         self.__start_wav = 575.0
-        self.__finish_wav = 590.0
+        self.__finish_wav = 605.0
         self.__step_wav = 1.0
         self.__cur_wav = self.__start_wav
         self.__pts=int((self.__finish_wav-self.__start_wav)/self.__step_wav+1)
-        self.__avg = 10
+        self.__avg = 20
         self.__tpts = int(self.__avg * self.__pts)
         self.__dwell = 10
         self.__power=0.
@@ -299,13 +299,15 @@ class gainDevice(Observable.Observable):
                 logging.info('***SERVO***: Angle higher than 180. Holding on 180.')
             if message==85:
                 logging.info('***SERVO***: Angle smaller than 0. Holding on 0.')
-            if message==101 and self.__ctrl_type:
+            if message==101:
+                self.property_changed_event.fire("power_f")
                 if self.__ctrl_type==1:
-                    logging.info(self.__servo_pos)
-                    self.__servo_pos=self.__servo_pos+1 if self.__power<self.__power_ref else self.__servo_pos-2
+                    s_val=int((self.__power_ref/self.__power-1)*90)
+                    self.__servo_pos=self.__servo_pos+s_val
+                    #self.__servo_pos=self.__servo_pos+1 if self.__power<self.__power_ref else self.__servo_pos-2
+                    if not s_val: self.servo_f=self.__servo_pos
                     if self.__servo_pos>180: self.__servo_pos=180
                     if self.__servo_pos<0: self.__servo_pos=0
-                    self.servo_f=self.__servo_pos
                 if self.__ctrl_type==2:
                     self.__diode=self.__diode+2 if self.__power<self.__power_ref else self.__diode-4
                     self.cur_d_f=self.__diode
@@ -405,7 +407,7 @@ class gainDevice(Observable.Observable):
     @property
     def power_f(self):
         if DEBUG_pw:
-            self.__power = self.__pwmeter.pw_read()+(self.__diode/100.)**2+self.__servo_pos
+            self.__power = (self.__pwmeter.pw_read()+(self.__diode/100.)**2)*(self.__servo_pos+1)/180
         else:
             self.__power = self.__pwmeter.pw_read()
         return round(self.__power, 4)
@@ -462,9 +464,9 @@ class gainDevice(Observable.Observable):
     @d_f.setter
     def d_f(self, value:bool):
         if value==True:
-            self.__ps.comm('G:1\n')
+            self.__ps.comm('D:1\n')
         else:
-            self.__ps.comm('G:0\n')
+            self.__ps.comm('D:0\n')
 
         self.property_changed_event.fire('d_f') #kill GUI and updates fast OFF response
         threading.Timer(3, self.property_changed_event.fire, args=('d_f',)).start() #update in case of slow response
@@ -521,7 +523,7 @@ class gainDevice(Observable.Observable):
     @combo_data_f.setter
     def combo_data_f(self, value):
         self.property_changed_event.fire("cur_wav_f")
-        self.property_changed_event.fire("power_f")
+        #self.property_changed_event.fire("power_f")
         self.property_changed_event.fire("cur_d_f")
         self.property_changed_event.fire("servo_f")
         if not value and not self.__status: self.free_event.fire('all')

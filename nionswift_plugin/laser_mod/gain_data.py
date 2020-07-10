@@ -1,12 +1,10 @@
 import sys
-import logging
-import time
-import threading
 import numpy
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
+
+#### LEGACY CODE ###
 
 __author__ = "Yves Auad"
+
 
 def _isPython3():
     return sys.version_info[0] >= 3
@@ -24,11 +22,7 @@ class gainData:
         index = [] #max position for alignment
         array = [0] * len(rd[0][0].data[0])
         temp_data =  [array] * len(rd)
-        
-        #logging.info(len(rd)) #E-Points
-        #logging.info(len(rd[0])) #Frames at E-point 0
-        #logging.info(len(rd[0][0].data)) #256 (usim)
-        #logging.info(len(rd[0][0].data[0])) #1024 (usim)
+
 
         for i in range(len(rd)):
             for j in range(len(rd[i])):

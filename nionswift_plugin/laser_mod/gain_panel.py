@@ -12,21 +12,44 @@ from nion.swift.model import DataItem
 from nion.swift.model import Utility
 
 from . import gain_inst
-import logging
+import numpy
+import os
+import json
 
 _ = gettext.gettext
 
+abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
+with open(abs_path) as savfile:
+    settings = json.load(savfile)
+
+MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
+
 
 class DataItemLaserCreation():
-    def __init__(self):
+    def __init__(self, title, array, which):
         self.timezone=Utility.get_local_timezone()
         self.timezone_offset=Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
         self.calibration=Calibration.Calibration()
 
-        if which='WAV':
+        if which=='WAV':
             self.dimensional_calibrations=[Calibration.Calibration()]
             self.dimensional_calibrations[0].units='nm'
+        if which=='POW':
+            self.dimensional_calibrations=[Calibration.Calibration()]
+            self.dimensional_calibrations[0].units='μm'
+        if which=='SER':
+            self.dimensional_calibrations=[Calibration.Calibration()]
+            self.dimensional_calibrations[0].units='°'
+        if which=='PS':
+            self.dimensional_calibrations=[Calibration.Calibration()]
+            self.dimensional_calibrations[0].units='A'
+        if which=="CAM_DATA":
+            self.dimensional_calibrations=[Calibration.Calibration(), Calibration.Calibration()]
+            self.dimensional_calibrations[0].units='nm'
+            self.dimensional_calibrations[1].units='eV'
+
+
         self.xdata=DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations, timezone=self.timezone, timezone_offset=self.timezone_offset)
 
         self.data_item=DataItem.DataItem()
@@ -41,7 +64,6 @@ class DataItemLaserCreation():
 
 class gainhandler:
 
-    # def __init__(self, instrument:gain_inst.gainDevice, event_loop): #MATHIEU
     def __init__(self, instrument: gain_inst.gainDevice, document_controller):
 
         # self.event_loop=event_loop #MATHIEU
@@ -53,6 +75,18 @@ class gainhandler:
         self.busy_event_listener = self.instrument.busy_event.listen(self.prepare_widget_disable)
         self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.free_event_listener = self.instrument.free_event.listen(self.prepare_free_widget_enable)
+
+        self.call_data_listener=self.instrument.call_data.listen(self.call_data)
+        self.append_data_listener=self.instrument.append_data.listen(self.append_data)
+        self.end_data_listener=self.instrument.end_data.listen(self.end_data)
+
+        self.wav_di=None
+        self.pow_di=None
+        self.ser_di=None
+        self.ps_di=None
+
+
+        self.current_acquition = None
 
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(False, ['init_pb']))  # not working as something is calling this guy
@@ -68,29 +102,6 @@ class gainhandler:
 
     def acq_push(self, widget):
         self.instrument.acq()
-
-
-    def gen_push(self, widget):
-        data_item, data_item2, data_item3, data_item4 = self.instrument.gen()
-        if data_item != None:
-            self.document_controller.document_model.append_data_item(data_item)
-            display_item = self.document_controller.document_model.get_display_item_for_data_item(data_item)
-            self.document_controller.show_display_item(display_item)
-
-            self.document_controller.document_model.append_data_item(data_item2)
-            display_item2 = self.document_controller.document_model.get_display_item_for_data_item(data_item2)
-            self.document_controller.show_display_item(display_item2)
-
-            self.document_controller.document_model.append_data_item(data_item3)
-            display_item3 = self.document_controller.document_model.get_display_item_for_data_item(data_item3)
-            self.document_controller.show_display_item(display_item3)
-
-            self.document_controller.document_model.append_data_item(data_item4)
-            display_item4 = self.document_controller.document_model.get_display_item_for_data_item(data_item4)
-            self.document_controller.show_display_item(display_item4)
-
-        else:
-            logging.info("Nothing to generate. Is Stored is True?")
 
     def abt_push(self, widget):
         self.instrument.abt()
@@ -136,8 +147,61 @@ class gainhandler:
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
 
-    def grab(self):
-        self.event_loop.create_task(self.__controller.grab(self.document_controller, self.__camera_hardware, True))
+    def call_data(self, nacq, pts, avg, start, end, ctrl):
+        if self.current_acquition != nacq:
+            self.current_acquition=nacq
+            self.avg = avg
+            self.start_wav=start
+            self.end_wav=end
+            self.ctrl=ctrl
+            self.wav_array = numpy.zeros(pts*avg)
+            self.pow_array = numpy.zeros(pts*avg)
+            if self.ctrl==1: self.ser_array = numpy.zeros(pts*avg)
+            if self.ctrl==2: self.ps_array = numpy.zeros(pts*avg)
+
+            self.wav_di = DataItemLaserCreation("Laser Wavelength "+str(nacq), self.wav_array, "WAV")
+            self.pow_di = DataItemLaserCreation("Power "+str(nacq), self.pow_array, "POW")
+            if self.ctrl==1: self.ser_di = DataItemLaserCreation("Servo Angle "+str(nacq), self.ser_array, "SER")
+            if self.ctrl==2: self.ps_di = DataItemLaserCreation("Power Supply "+str(nacq), self.ps_array, "PS")
+
+
+            self.document_controller.document_model.append_data_item(self.wav_di.data_item)
+            self.document_controller.document_model.append_data_item(self.pow_di.data_item)
+            if self.ctrl==2: self.document_controller.document_model.append_data_item(self.ps_di.data_item)
+            if self.ctrl==1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
+
+            # CAMERA CALL
+            self.cam_array = numpy.zeros((pts*avg, 1600))
+            self.cam_di = DataItemLaserCreation('Gain Data '+str(nacq), self.cam_array, "CAM_DATA")
+            self.document_controller.document_model.append_data_item(self.cam_di.data_item)
+
+
+
+    def append_data(self, value, index1, index2, camera_data):
+
+        try:
+            cur_wav, power, control = value
+        except:
+            cur_wav, power = value
+
+            self.wav_array[index2+index1*self.avg] = cur_wav
+            self.pow_array[index2+index1*self.avg] = power
+            self.cam_array[index2+index1*self.avg] = numpy.sum(camera_data.data, axis=0)
+            if self.ctrl==1: self.ser_array[index2+index1*self.avg] = control
+            if self.ctrl==2: self.ps_array[index2+index1*self.avg] = control
+
+            self.wav_di.update_data_only(self.wav_array)
+            self.pow_di.update_data_only(self.pow_array)
+            self.cam_di.update_data_only(self.cam_array)
+            if self.ctrl==1: self.ser_di.update_data_only(self.ser_array)
+            if self.ctrl==2: self.ps_di.update_data_only(self.ps_array)
+
+    def end_data(self):
+        if self.wav_di: self.wav_di.data_item._exit_live_state()
+        if self.pow_di: self.pow_di.data_item._exit_live_state()
+        if self.ser_di: self.ser_di.data_item._exit_live_state()
+        if self.ps_di: self.ps_di.data_item._exit_live_state()
+        if self.cam_di: self.cam_di.data_item._exit_live_state()
 
 
 class gainView:
@@ -177,16 +241,12 @@ class gainView:
 
         self.dwell_label = ui.create_label(text='Dwell Time (ms): ')
         self.dwell_line = ui.create_line_edit(text="@binding(instrument.dwell_f)", name="dwell_line")
-        self.stored_label = ui.create_label(text='Stored Data? ')
-        self.stored_value_label = ui.create_label(text='@binding(instrument.stored_status_f)')
-        self.ui_view5 = ui.create_row(self.dwell_label, self.dwell_line, ui.create_stretch(), self.stored_label,
-                                      self.stored_value_label, spacing=12)
+        self.ui_view5 = ui.create_row(self.dwell_label, self.dwell_line, ui.create_stretch(), spacing=12)
 
         self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
         self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
-        self.gen_pb = ui.create_push_button(text="Generate", name="gen_pb", on_clicked="gen_push")
         self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
-        self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.gen_pb, self.abt_pb,
+        self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb,
                                       spacing=12)  # yves: Note that i removed update button. It is useless
 
         self.power_label = ui.create_label(text='Power (uW): ')
@@ -228,9 +288,9 @@ class gainView:
 
         self.diode_cur_label = ui.create_label(text='Diode(1, 2) (A): ')
         self.diode_cur_slider = ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=10,
-                                                 maximum=2800)
+                                                 maximum=int(MAX_CURRENT*100))
         self.text_label = ui.create_label(text='       ||       ')
-        self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_f)', name='cur_line')
+        self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_edit_f)', name='cur_line')
         self.less_pb = ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)
         self.more_pb = ui.create_push_button(text=">>", name="more_pb", on_clicked="more_push", width=25)
         self.ui_view10 = ui.create_row(self.diode_cur_label, self.diode_cur_slider, self.text_label,
@@ -242,7 +302,7 @@ class gainView:
 
         self.servo_label = ui.create_label(text='Servo Motor: ')
         self.servo_slider = ui.create_slider(name="servo_slider", value='@binding(instrument.servo_f)', minimum=0,
-                                             maximum=180)
+                                             maximum=int(MAX_CURRENT)*100)
         self.less_servo_pb = ui.create_push_button(text="<<", name="less_servo_pb", on_clicked="less_servo_push",
                                                    width=25)
         self.more_servo_pb = ui.create_push_button(text=">>", name="more_servo_pb", on_clicked="more_servo_push",
@@ -258,7 +318,6 @@ class gainView:
 
 def create_spectro_panel(document_controller, panel_id, properties):
     instrument = properties["instrument"]
-    # ui_handler =gainhandler(instrument, document_controller.event_loop) #MATHIEU
     ui_handler = gainhandler(instrument, document_controller)
     ui_view = gainView(instrument)
     panel = Panel.Panel(document_controller, panel_id, properties)

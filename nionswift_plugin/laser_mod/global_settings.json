@@ -1,0 +1,18 @@
+{
+  "LASER": {
+    "DEBUG": 1,
+    "MAX_WAV": 800,
+    "MIN_WAV": 532
+  },
+  "PS": {
+    "DEBUG": 1,
+    "MAX_CURRENT": 30
+  },
+  "PW": {
+    "DEBUG": 1
+  },
+  "SERVO": {
+    "DEBUG": 1
+  },
+  "CAMERA": "orsay_camera_eire"
+}

@@ -10,7 +10,7 @@ import os
 
 setuptools.setup(
     name="yvorsay-instrumentation_laser",
-    version="1.4.4",
+    version="1.4.5",
     author="Yves Auad",
     description="Laser Control",
     url="https://github.com/yvesauad/yvorsay-instrument",

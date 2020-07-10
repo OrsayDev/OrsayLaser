@@ -18,47 +18,49 @@ import json
 
 _ = gettext.gettext
 
-abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
+abs_path = os.path.abspath(os.path.join((__file__ + "/../"), "global_settings.json"))
 with open(abs_path) as savfile:
     settings = json.load(savfile)
 
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
+PIXELS = settings["CAMERA"]["PIXELS"]
 
 
 class DataItemLaserCreation():
     def __init__(self, title, array, which):
-        self.timezone=Utility.get_local_timezone()
-        self.timezone_offset=Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
+        self.timezone = Utility.get_local_timezone()
+        self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
-        self.calibration=Calibration.Calibration()
+        self.calibration = Calibration.Calibration()
 
-        if which=='WAV':
-            self.dimensional_calibrations=[Calibration.Calibration()]
-            self.dimensional_calibrations[0].units='nm'
-        if which=='POW':
-            self.dimensional_calibrations=[Calibration.Calibration()]
-            self.dimensional_calibrations[0].units='μm'
-        if which=='SER':
-            self.dimensional_calibrations=[Calibration.Calibration()]
-            self.dimensional_calibrations[0].units='°'
-        if which=='PS':
-            self.dimensional_calibrations=[Calibration.Calibration()]
-            self.dimensional_calibrations[0].units='A'
-        if which=="CAM_DATA":
-            self.dimensional_calibrations=[Calibration.Calibration(), Calibration.Calibration()]
-            self.dimensional_calibrations[0].units='nm'
-            self.dimensional_calibrations[1].units='eV'
+        if which == 'WAV':
+            self.dimensional_calibrations = [Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'nm'
+        if which == 'POW':
+            self.dimensional_calibrations = [Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'μm'
+        if which == 'SER':
+            self.dimensional_calibrations = [Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = '°'
+        if which == 'PS':
+            self.dimensional_calibrations = [Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'A'
+        if which == "CAM_DATA":
+            self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[1].units = 'eV'
 
+        self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+                                                           timezone=self.timezone, timezone_offset=self.timezone_offset)
 
-        self.xdata=DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations, timezone=self.timezone, timezone_offset=self.timezone_offset)
-
-        self.data_item=DataItem.DataItem()
+        self.data_item = DataItem.DataItem()
         self.data_item.set_xdata(self.xdata)
         self.data_item.define_property("title", title)
         self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
-        self.xdata=DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations, timezone=self.timezone, timezone_offset=self.timezone_offset)
+        self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+                                                           timezone=self.timezone, timezone_offset=self.timezone_offset)
         self.data_item.set_xdata(self.xdata)
 
 
@@ -76,15 +78,14 @@ class gainhandler:
         self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.free_event_listener = self.instrument.free_event.listen(self.prepare_free_widget_enable)
 
-        self.call_data_listener=self.instrument.call_data.listen(self.call_data)
-        self.append_data_listener=self.instrument.append_data.listen(self.append_data)
-        self.end_data_listener=self.instrument.end_data.listen(self.end_data)
+        self.call_data_listener = self.instrument.call_data.listen(self.call_data)
+        self.append_data_listener = self.instrument.append_data.listen(self.append_data)
+        self.end_data_listener = self.instrument.end_data.listen(self.end_data)
 
-        self.wav_di=None
-        self.pow_di=None
-        self.ser_di=None
-        self.ps_di=None
-
+        self.wav_di = None
+        self.pow_di = None
+        self.ser_di = None
+        self.ps_di = None
 
         self.current_acquition = None
 
@@ -149,33 +150,30 @@ class gainhandler:
 
     def call_data(self, nacq, pts, avg, start, end, ctrl):
         if self.current_acquition != nacq:
-            self.current_acquition=nacq
+            self.current_acquition = nacq
             self.avg = avg
-            self.start_wav=start
-            self.end_wav=end
-            self.ctrl=ctrl
-            self.wav_array = numpy.zeros(pts*avg)
-            self.pow_array = numpy.zeros(pts*avg)
-            if self.ctrl==1: self.ser_array = numpy.zeros(pts*avg)
-            if self.ctrl==2: self.ps_array = numpy.zeros(pts*avg)
+            self.start_wav = start
+            self.end_wav = end
+            self.ctrl = ctrl
+            self.wav_array = numpy.zeros(pts * avg)
+            self.pow_array = numpy.zeros(pts * avg)
+            if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
+            if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
 
-            self.wav_di = DataItemLaserCreation("Laser Wavelength "+str(nacq), self.wav_array, "WAV")
-            self.pow_di = DataItemLaserCreation("Power "+str(nacq), self.pow_array, "POW")
-            if self.ctrl==1: self.ser_di = DataItemLaserCreation("Servo Angle "+str(nacq), self.ser_array, "SER")
-            if self.ctrl==2: self.ps_di = DataItemLaserCreation("Power Supply "+str(nacq), self.ps_array, "PS")
-
+            self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
+            self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
+            if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
+            if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
             self.document_controller.document_model.append_data_item(self.wav_di.data_item)
             self.document_controller.document_model.append_data_item(self.pow_di.data_item)
-            if self.ctrl==2: self.document_controller.document_model.append_data_item(self.ps_di.data_item)
-            if self.ctrl==1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
+            if self.ctrl == 2: self.document_controller.document_model.append_data_item(self.ps_di.data_item)
+            if self.ctrl == 1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
 
             # CAMERA CALL
-            self.cam_array = numpy.zeros((pts*avg, 1600))
-            self.cam_di = DataItemLaserCreation('Gain Data '+str(nacq), self.cam_array, "CAM_DATA")
+            self.cam_array = numpy.zeros((pts * avg, 1024))
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA")
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
-
-
 
     def append_data(self, value, index1, index2, camera_data):
 
@@ -184,17 +182,17 @@ class gainhandler:
         except:
             cur_wav, power = value
 
-            self.wav_array[index2+index1*self.avg] = cur_wav
-            self.pow_array[index2+index1*self.avg] = power
-            self.cam_array[index2+index1*self.avg] = numpy.sum(camera_data.data, axis=0)
-            if self.ctrl==1: self.ser_array[index2+index1*self.avg] = control
-            if self.ctrl==2: self.ps_array[index2+index1*self.avg] = control
+            self.wav_array[index2 + index1 * self.avg] = cur_wav
+            self.pow_array[index2 + index1 * self.avg] = power
+            self.cam_array[index2 + index1 * self.avg] = numpy.sum(camera_data.data, axis=0)
+            if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
+            if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
 
             self.wav_di.update_data_only(self.wav_array)
             self.pow_di.update_data_only(self.pow_array)
             self.cam_di.update_data_only(self.cam_array)
-            if self.ctrl==1: self.ser_di.update_data_only(self.ser_array)
-            if self.ctrl==2: self.ps_di.update_data_only(self.ps_array)
+            if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
+            if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data(self):
         if self.wav_di: self.wav_di.data_item._exit_live_state()
@@ -256,9 +254,10 @@ class gainView:
         self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, self.power_lock_button,
                                       self.power_lock_value, ui.create_stretch(), spacing=12)
 
-        self.line_label = ui.create_label(text='-', width=2)
-        self.ui_view_line = ui.create_row(ui.create_stretch(), self.line_label, ui.create_stretch())
-
+        self.laser_group = ui.create_group(title='Sirah Credo', content=ui.create_column(
+            self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4,
+            self.ui_view5, self.ui_view6, self.ui_view7)
+                                           )
         self.diode_label = ui.create_label(text='Diodes: ')
         self.diode_checkbox = ui.create_check_box(name="diode_checkbox", on_checked_changed='dio_check')
         self.diode_value_label = ui.create_label(text="@binding(instrument.d_f)")
@@ -287,8 +286,8 @@ class gainView:
                                       self.shutter_label02_value, spacing=12)
 
         self.diode_cur_label = ui.create_label(text='Diode(1, 2) (A): ')
-        self.diode_cur_slider = ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=10,
-                                                 maximum=int(MAX_CURRENT*100))
+        self.diode_cur_slider = ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=0,
+                                                 maximum=int(MAX_CURRENT * 100))
         self.text_label = ui.create_label(text='       ||       ')
         self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_edit_f)', name='cur_line')
         self.less_pb = ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)
@@ -297,23 +296,51 @@ class gainView:
                                        self.diode_cur_line, ui.create_spacing(12), self.less_pb, ui.create_spacing(5),
                                        self.more_pb, ui.create_stretch())
 
-        self.ascii_label = ui.create_label(text='@binding(instrument.ascii_f)')
-        self.ui_view11 = ui.create_row(ui.create_stretch(), self.ascii_label, ui.create_stretch())
+        self.ps_group = ui.create_group(title='Laser PS', content=ui.create_column(
+            self.ui_view8,
+            self.ui_view9, self.ui_view10)
+                                        )
+        # Servo Motor
 
-        self.servo_label = ui.create_label(text='Servo Motor: ')
+        self.servo_label = ui.create_label(text='Angle: ')
         self.servo_slider = ui.create_slider(name="servo_slider", value='@binding(instrument.servo_f)', minimum=0,
-                                             maximum=int(MAX_CURRENT)*100)
+                                             maximum=180)
         self.less_servo_pb = ui.create_push_button(text="<<", name="less_servo_pb", on_clicked="less_servo_push",
                                                    width=25)
         self.more_servo_pb = ui.create_push_button(text=">>", name="more_servo_pb", on_clicked="more_servo_push",
                                                    width=25)
-        self.ui_view12 = ui.create_row(self.servo_label, ui.create_spacing(12), self.servo_slider,
-                                       ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5),
-                                       self.more_servo_pb, ui.create_stretch())
 
-        self.ui_view = ui.create_column(self.init_pb, self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4,
-                                        self.ui_view5, self.ui_view6, self.ui_view7, self.ui_view_line, self.ui_view8,
-                                        self.ui_view9, self.ui_view10, self.ui_view11, self.ui_view12, spacing=1)
+        self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_row(
+            self.servo_label, ui.create_spacing(12), self.servo_slider,
+            ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5),
+            self.more_servo_pb, ui.create_stretch())
+                                           )
+
+        # Fast Blanker
+        self.delay_label=ui.create_label(name='delay_label', text='Delay (ns): ')
+        self.delay_value=ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)')
+        self.delay_slider=ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)', minimum=500, maximum=1500)
+        self.delay_row=ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider, ui.create_stretch())
+
+        self.width_label = ui.create_label(name='width_label', text='Width (ns): ')
+        self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)')
+        self.frequency_label = ui.create_label(name='frequency_label', text='Frequency (Hz): ')
+        self.frequency_value = ui.create_line_edit(name='frequency_value', text='@binding(instrument.laser_frequency_f)')
+        self.width_row=ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
+                                     self.frequency_label, self.frequency_value, ui.create_stretch())
+
+        self.shoot_pb=ui.create_push_button(name='shoot_pb', text='Shoot')
+        self.stop_pb=ui.create_push_button(name='stop_pb', text='Stop')
+        self.counts_label = ui.create_label(name='counts_label', text='Counts: ')
+        self.counts_value = ui.create_label(name='counts_value', text='@binding(instrument.laser_counts_f)')
+        self.pb_row=ui.create_row(self.shoot_pb, ui.create_spacing(25), self.stop_pb,
+                                  ui.create_spacing(25), self.counts_label, self.counts_value, ui.create_stretch())
+
+        self.blanker_group=ui.create_group(title='Fast Blanker', content=ui.create_column(
+            self.delay_row, self.width_row, self.pb_row)
+                                           )
+
+        self.ui_view = ui.create_column(self.init_pb, self.laser_group, self.ps_group, self.servo_group, self.blanker_group, spacing=1)
 
 
 def create_spectro_panel(document_controller, panel_id, properties):

@@ -18,7 +18,7 @@ DEBUG_pw = settings["PW"]["DEBUG"]
 DEBUG_laser = settings["LASER"]["DEBUG"]
 DEBUG_ps = settings["PS"]["DEBUG"]
 DEBUG_servo = settings["SERVO"]["DEBUG"]
-CAMERA = settings["CAMERA"]
+CAMERA = settings["CAMERA"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 if DEBUG_pw:
@@ -69,6 +69,10 @@ class gainDevice(Observable.Observable):
         self.__diode = 0.10
         self.__servo_pos = 0
         self.__ctrl_type = 0
+        self.__delay=900
+        self.__width=100
+        self.__counts = 0
+        self.__frequency = 10000
         self.__acq_number = 0 #this is a strange variable. This mesures how many gain acquire you did in order to create new displays every new acquisition
 
         self.__camera = None
@@ -365,7 +369,7 @@ class gainDevice(Observable.Observable):
     @property
     def power_f(self):
         if DEBUG_pw:
-            self.__power = (self.__pwmeter.pw_read() + (self.__diode / 100.) ** 2) * (self.__servo_pos + 1) / 180
+            self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (self.__servo_pos + 1) / 180
         else:
             self.__power = self.__pwmeter.pw_read()
         return round(self.__power, 4)
@@ -384,7 +388,6 @@ class gainDevice(Observable.Observable):
     def cur_d_f(self, value: int):
         self.__diode = value/100
         cvalue = format(float(self.__diode), '.2f')  # how to format and send to my hardware
-        print(self.__diode)
         if self.__diode < MAX_CURRENT:
             self.__ps.comm('C1:' + str(cvalue) + '\n')
             self.__ps.comm('C2:' + str(cvalue) + '\n')
@@ -495,6 +498,40 @@ class gainDevice(Observable.Observable):
     @pw_ctrl_type_f.setter
     def pw_ctrl_type_f(self, value):
         self.__ctrl_type = value
+
+    @property
+    def laser_delay_f(self):
+        return self.__delay
+
+    @laser_delay_f.setter
+    def laser_delay_f(self, value):
+        self.__delay = int(value)
+        self.property_changed_event.fire('laser_delay_f')
+        self.free_event.fire('all')
+
+    @property
+    def laser_width_f(self):
+        return self.__width
+
+    @laser_width_f.setter
+    def laser_width_f(self, value):
+        self.__width=int(value)
+
+    @property
+    def laser_counts_f(self):
+        return format(self.__counts, '.1E')
+
+    @laser_counts_f.setter
+    def laser_counts_f(self, value):
+        self.__counts = value
+
+    @property
+    def laser_frequency_f(self):
+        return self.__frequency
+
+    @laser_frequency_f.setter
+    def laser_frequency_f(self, value):
+        self.__frequency = value
 
     @property
     def combo_data_f(self):

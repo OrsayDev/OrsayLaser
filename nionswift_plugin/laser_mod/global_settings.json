@@ -14,5 +14,5 @@
   "SERVO": {
     "DEBUG": 1
   },
-  "CAMERA": {"WHICH": "usim_eels_camera", "PIXELS": 1600}
+  "CAMERA": {"WHICH": "orsay_camera_eire", "AVAILABLE": ["usim_eels_camera", "orsay_camera_eire"]}
 }

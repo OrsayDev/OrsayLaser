@@ -23,8 +23,6 @@ with open(abs_path) as savfile:
     settings = json.load(savfile)
 
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
-PIXELS = settings["CAMERA"]["PIXELS"]
-
 
 class DataItemLaserCreation():
     def __init__(self, title, array, which):
@@ -150,11 +148,13 @@ class gainhandler:
 
     def call_data(self, nacq, pts, avg, start, end, ctrl):
         if self.current_acquition != nacq:
+            self.__good_shape=True
             self.current_acquition = nacq
             self.avg = avg
             self.start_wav = start
             self.end_wav = end
             self.ctrl = ctrl
+            self.pts=pts
             self.wav_array = numpy.zeros(pts * avg)
             self.pow_array = numpy.zeros(pts * avg)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
@@ -171,7 +171,7 @@ class gainhandler:
             if self.ctrl == 1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
 
             # CAMERA CALL
-            self.cam_array = numpy.zeros((pts * avg, 1024))
+            self.cam_array = numpy.zeros((pts * avg, 1600))
             self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA")
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
 
@@ -184,6 +184,11 @@ class gainhandler:
 
             self.wav_array[index2 + index1 * self.avg] = cur_wav
             self.pow_array[index2 + index1 * self.avg] = power
+            if camera_data.data.shape[1]!=self.cam_array.shape[1] and self.__good_shape:
+                self.cam_array=numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
+                self.__good_shape=False
+                print('***ACQUISTION***: Corrected #PIXELS.')
+
             self.cam_array[index2 + index1 * self.avg] = numpy.sum(camera_data.data, axis=0)
             if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
             if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control

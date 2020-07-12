@@ -57,7 +57,7 @@ class gainDevice(Observable.Observable):
         self.end_data=Event.Event()
 
         self.__start_wav = 575.0
-        self.__finish_wav = 605.0
+        self.__finish_wav = 600.0
         self.__step_wav = 1.0
         self.__cur_wav = self.__start_wav
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
@@ -114,7 +114,7 @@ class gainDevice(Observable.Observable):
                         self.__camera = hards
 
         self.__frame_parameters = self.__camera.get_current_frame_parameters()
-        self.dwell_f=0.02
+        self.dwell_f=5.0
 
     def sht(self):
         if self.sht_f == 'CLOSED':
@@ -180,7 +180,7 @@ class gainDevice(Observable.Observable):
             self.sht_f = True
             self.__controlRout.pw_control_thread_on()
         else:
-            logging.info("Last thread was not done || start and current wavelength differs || end wav < start wav")
+            logging.info("***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
         self.__data = []
         self.__infodata = []

@@ -25,7 +25,7 @@ with open(abs_path) as savfile:
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 class DataItemLaserCreation():
-    def __init__(self, title, array, which):
+    def __init__(self, title, array, which, start=None, avg=None, step=None):
         self.timezone = Utility.get_local_timezone()
         self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
@@ -46,6 +46,8 @@ class DataItemLaserCreation():
         if which == "CAM_DATA":
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset=start
+            self.dimensional_calibrations[0].scale=(step)/avg
             self.dimensional_calibrations[1].units = 'eV'
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
@@ -60,6 +62,9 @@ class DataItemLaserCreation():
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
                                                            timezone=self.timezone, timezone_offset=self.timezone_offset)
         self.data_item.set_xdata(self.xdata)
+
+    def set_cam_di_calibration(self, calib: Calibration.Calibration()):
+        self.dimensional_calibrations[1] = calib
 
 
 class gainhandler:
@@ -146,15 +151,16 @@ class gainhandler:
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
 
-    def call_data(self, nacq, pts, avg, start, end, ctrl):
+    def call_data(self, nacq, pts, avg, start, end, step, ctrl):
         if self.current_acquition != nacq:
-            self.__good_shape=True
+            self.__adjusted=False
             self.current_acquition = nacq
             self.avg = avg
             self.start_wav = start
             self.end_wav = end
             self.ctrl = ctrl
             self.pts=pts
+            self.step=step
             self.wav_array = numpy.zeros(pts * avg)
             self.pow_array = numpy.zeros(pts * avg)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
@@ -172,32 +178,39 @@ class gainhandler:
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, 1600))
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA")
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, avg, step)
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
 
     def append_data(self, value, index1, index2, camera_data):
-
         try:
             cur_wav, power, control = value
         except:
             cur_wav, power = value
 
-            self.wav_array[index2 + index1 * self.avg] = cur_wav
-            self.pow_array[index2 + index1 * self.avg] = power
-            if camera_data.data.shape[1]!=self.cam_array.shape[1] and self.__good_shape:
+        self.wav_array[index2 + index1 * self.avg] = cur_wav
+        self.pow_array[index2 + index1 * self.avg] = power
+        if not self.__adjusted:
+            if camera_data.data.shape[1]!=self.cam_array.shape[1]:
                 self.cam_array=numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
-                self.__good_shape=False
                 print('***ACQUISTION***: Corrected #PIXELS.')
+            try:
+                self.cam_di.set_cam_di_calibration(camera_data.get_dimensional_calibration(1))
+                print('***ACQUISTION***: Calibration OK.')
+            except:
+                logging.info('***ACQUISTION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
 
-            self.cam_array[index2 + index1 * self.avg] = numpy.sum(camera_data.data, axis=0)
-            if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
-            if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
+            self.__adjusted=True
 
-            self.wav_di.update_data_only(self.wav_array)
-            self.pow_di.update_data_only(self.pow_array)
-            self.cam_di.update_data_only(self.cam_array)
-            if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
-            if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
+
+        self.cam_array[index2 + index1 * self.avg] = numpy.sum(camera_data.data, axis=0)
+        if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
+        if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
+
+        self.wav_di.update_data_only(self.wav_array)
+        self.pow_di.update_data_only(self.pow_array)
+        self.cam_di.update_data_only(self.cam_array)
+        if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
+        if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data(self):
         if self.wav_di: self.wav_di.data_item._exit_live_state()

@@ -173,7 +173,7 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
-            self.call_data.fire(self.__acq_number, self.pts_f, self.avg_f, self.__start_wav, self.__finish_wav, self.__ctrl_type)
+            self.call_data.fire(self.__acq_number, self.pts_f, self.avg_f, self.__start_wav, self.__finish_wav, self.__step_wav, self.__ctrl_type)
             self.__acq_number+=1
 
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
@@ -193,10 +193,9 @@ class gainDevice(Observable.Observable):
             self.__data.append([])
             self.__infodata.append([])
             while (j < j_max and not self.__abort_force):  # j is our averages
-                #self.__data[i].append(self.__camera.grab_next_to_start()[0])
                 if j % 1 == 0:
                     self.combo_data_f = True
-                    self.append_data.fire(self.combo_data_f, i, j, self.__camera.grab_next_to_start()[0])
+                    self.append_data.fire(self.combo_data_f, i, j, self.__camera.grab_next_to_finish()[0])
                 j += 1
             j = 0
             i += 1

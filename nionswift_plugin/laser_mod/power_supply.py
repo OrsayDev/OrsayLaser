@@ -46,7 +46,7 @@ class SpectraPhysics:
         self.ser.write('C2:00.10\n'.encode())
         self.ser.readline()
 
-        self.ser.write('Q:10000\n'.encode())
+        self.ser.write('Q:0\n'.encode())
         self.ser.readline()
 
     def flush(self):

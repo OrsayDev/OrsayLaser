@@ -7,6 +7,7 @@ import logging
 import threading
 import os
 import json
+import time
 
 from . import gain_data as gdata
 
@@ -69,8 +70,9 @@ class gainDevice(Observable.Observable):
         self.__diode = 0.10
         self.__servo_pos = 0
         self.__ctrl_type = 0
-        self.__delay=900
-        self.__width=100
+        self.__delay=900 * 1e-9
+        self.__width=100 * 1e-9
+        self.__fb_status=False
         self.__counts = 0
         self.__frequency = 10000
         self.__acq_number = 0 #this is a strange variable. This mesures how many gain acquire you did in order to create new displays every new acquisition
@@ -100,6 +102,9 @@ class gainDevice(Observable.Observable):
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
 
+        self.__OrsayScanInstrument = None
+
+
     def init(self):
 
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont find, use usim eels
@@ -115,6 +120,12 @@ class gainDevice(Observable.Observable):
 
         self.__frame_parameters = self.__camera.get_current_frame_parameters()
         self.dwell_f=5.0
+
+        self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id("orsay_scan_device")
+        if not self.__OrsayScanInstrument:
+            logging.info('***LASER***: Could not find SCAN module. Check for issues')
+        else:
+            logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
     def sht(self):
         if self.sht_f == 'CLOSED':
@@ -283,6 +294,9 @@ class gainDevice(Observable.Observable):
                 logging.info('***CONTROL***: Control OFF but it was never on.')
 
         return sendMessage
+
+    def Laser_stop_all(self):
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
     @property
     def start_wav_f(self) -> float:
@@ -499,22 +513,49 @@ class gainDevice(Observable.Observable):
         self.__ctrl_type = value
 
     @property
+    def fast_blanker_status_f(self):
+        return self.__fb_status
+
+    @fast_blanker_status_f.setter
+    def fast_blanker_status_f(self, value):
+        self.__fb_status=value
+        if value:
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width, delay=self.__delay)
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 5000000, False, -1)
+            self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
+        else:
+            self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()
+        self.property_changed_event.fire('fast_blanker_status_f')
+        self.free_event.fire('all')
+
+    @property
     def laser_delay_f(self):
-        return self.__delay
+        return int(self.__delay*1e9)
 
     @laser_delay_f.setter
     def laser_delay_f(self, value):
-        self.__delay = int(value)
+        self.__delay = float(value)/1e9
+        if self.fast_blanker_status_f:
+            self.fast_blanker_status_f=False
+            time.sleep(0.1)
+            self.fast_blanker_status_f=True
         self.property_changed_event.fire('laser_delay_f')
         self.free_event.fire('all')
 
     @property
     def laser_width_f(self):
-        return self.__width
+        return int(self.__width*1e9)
 
     @laser_width_f.setter
     def laser_width_f(self, value):
-        self.__width=int(value)
+        self.__width=float(value)/1e9
+        if self.fast_blanker_status_f:
+            self.fast_blanker_status_f=False
+            time.sleep(0.1)
+            self.fast_blanker_status_f=True
+        self.property_changed_event.fire('laser_width_f')
+        self.free_event.fire('all')
+
 
     @property
     def laser_counts_f(self):
@@ -530,7 +571,13 @@ class gainDevice(Observable.Observable):
 
     @laser_frequency_f.setter
     def laser_frequency_f(self, value):
-        self.__frequency = value
+        self.__frequency = int(value)
+        if self.fast_blanker_status_f:
+            self.fast_blanker_status_f=False
+            time.sleep(0.1)
+            self.fast_blanker_status_f=True
+        self.property_changed_event.fire('laser_frequency_f')
+        self.free_event.fire('all')
 
     @property
     def combo_data_f(self):

@@ -219,6 +219,9 @@ class gainhandler:
         if self.ps_di: self.ps_di.data_item._exit_live_state()
         if self.cam_di: self.cam_di.data_item._exit_live_state()
 
+    def stop_function(self, wiget):
+        self.instrument.Laser_stop_all()
+
 
 class gainView:
 
@@ -347,15 +350,16 @@ class gainView:
         self.width_row=ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
                                      self.frequency_label, self.frequency_value, ui.create_stretch())
 
-        self.shoot_pb=ui.create_push_button(name='shoot_pb', text='Shoot')
-        self.stop_pb=ui.create_push_button(name='stop_pb', text='Stop')
+        self.stop_pb=ui.create_push_button(name='stop_pb', text='Stop All', on_clicked='stop_function')
+        self.fast_blanker_checkbox = ui.create_check_box(name='fast_blanker_checkbox', checked='@binding(instrument.fast_blanker_status_f)', text='Shoot')
         self.counts_label = ui.create_label(name='counts_label', text='Counts: ')
         self.counts_value = ui.create_label(name='counts_value', text='@binding(instrument.laser_counts_f)')
-        self.pb_row=ui.create_row(self.shoot_pb, ui.create_spacing(25), self.stop_pb,
-                                  ui.create_spacing(25), self.counts_label, self.counts_value, ui.create_stretch())
+
+        self.final_row=ui.create_row(self.fast_blanker_checkbox,
+                                  ui.create_spacing(25), self.counts_label, self.counts_value, ui.create_spacing(25), self.stop_pb, ui.create_stretch())
 
         self.blanker_group=ui.create_group(title='Fast Blanker', content=ui.create_column(
-            self.delay_row, self.width_row, self.pb_row)
+            self.delay_row, self.width_row, self.final_row)
                                            )
 
         self.ui_view = ui.create_column(self.init_pb, self.laser_group, self.ps_group, self.servo_group, self.blanker_group, spacing=1)

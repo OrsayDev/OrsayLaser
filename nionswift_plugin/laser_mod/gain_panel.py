@@ -15,6 +15,7 @@ from . import gain_inst
 import numpy
 import os
 import json
+import logging
 
 _ = gettext.gettext
 
@@ -30,24 +31,27 @@ class DataItemLaserCreation():
         self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
         self.calibration = Calibration.Calibration()
+        self.dimensional_calibrations = [Calibration.Calibration()]
 
         if which == 'WAV':
-            self.dimensional_calibrations = [Calibration.Calibration()]
-            self.dimensional_calibrations[0].units = 'nm'
+            self.calibration.units='nm'
         if which == 'POW':
-            self.dimensional_calibrations = [Calibration.Calibration()]
-            self.dimensional_calibrations[0].units = 'μm'
+            self.calibration.units = 'μW'
         if which == 'SER':
-            self.dimensional_calibrations = [Calibration.Calibration()]
-            self.dimensional_calibrations[0].units = '°'
+            self.calibration.units = '°'
         if which == 'PS':
-            self.dimensional_calibrations = [Calibration.Calibration()]
-            self.dimensional_calibrations[0].units = 'A'
+            self.calibration.units = 'A'
         if which == "CAM_DATA":
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
             self.dimensional_calibrations[0].offset=start
             self.dimensional_calibrations[0].scale=(step)/avg
+            self.dimensional_calibrations[1].units = 'eV'
+        if which == 'ALIGNED_CAM_DATA':
+            self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = step
             self.dimensional_calibrations[1].units = 'eV'
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
@@ -89,6 +93,8 @@ class gainhandler:
         self.pow_di = None
         self.ser_di = None
         self.ps_di = None
+        self.cam_di = None
+        self.aligned_cam_di = None
 
         self.current_acquition = None
 
@@ -161,6 +167,7 @@ class gainhandler:
             self.ctrl = ctrl
             self.pts=pts
             self.step=step
+            self.cam_pixels = 1600
             self.wav_array = numpy.zeros(pts * avg)
             self.pow_array = numpy.zeros(pts * avg)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
@@ -177,11 +184,20 @@ class gainhandler:
             if self.ctrl == 1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
 
             # CAMERA CALL
-            self.cam_array = numpy.zeros((pts * avg, 1600))
+            self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
             self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, avg, step)
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
 
+            # ALIGNED CAMERA CALL
+
+            self.aligned_cam_array = numpy.zeros((pts, self.cam_pixels))
+            self.aligned_cam_di = DataItemLaserCreation('Aligned Gain Data ' + str(nacq), self.aligned_cam_array, "ALIGNED_CAM_DATA", start, avg, step)
+            self.document_controller.document_model.append_data_item(self.aligned_cam_di.data_item)
+
     def append_data(self, value, index1, index2, camera_data):
+        print(value)
+        print(index1)
+        print(index2)
         try:
             cur_wav, power, control = value
         except:
@@ -190,25 +206,42 @@ class gainhandler:
         self.wav_array[index2 + index1 * self.avg] = cur_wav
         self.pow_array[index2 + index1 * self.avg] = power
         if not self.__adjusted:
-            if camera_data.data.shape[1]!=self.cam_array.shape[1]:
+
+            self.cam_pixels = camera_data.data.shape[1]
+            cam_calibration = camera_data.get_dimensional_calibration(1)
+
+            alignedCalibration = Calibration.Calibration()
+            alignedCalibration.scale = cam_calibration.scale
+            alignedCalibration.units = 'eV'
+            alignedCalibration.offset = -self.cam_pixels * cam_calibration.scale/2
+
+            if camera_data.data.shape[1] != self.cam_array.shape[1]:
                 self.cam_array=numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
-                print('***ACQUISTION***: Corrected #PIXELS.')
+                self.aligned_cam_array=numpy.zeros((self.pts, camera_data.data.shape[1]))
+                logging.info('***ACQUISTION***: Corrected #PIXELS.')
             try:
-                self.cam_di.set_cam_di_calibration(camera_data.get_dimensional_calibration(1))
-                print('***ACQUISTION***: Calibration OK.')
+                self.cam_di.set_cam_di_calibration(cam_calibration)
+                self.aligned_cam_di.set_cam_di_calibration(alignedCalibration)
+                logging.info('***ACQUISTION***: Calibration OK.')
             except:
                 logging.info('***ACQUISTION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
 
             self.__adjusted=True
 
+        cam_hor = numpy.sum(camera_data.data, axis=0)
+        temp_max_index = numpy.where(cam_hor==numpy.max(cam_hor))[0][0]
 
-        self.cam_array[index2 + index1 * self.avg] = numpy.sum(camera_data.data, axis=0)
+        self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
+        cam_hor = numpy.roll(cam_hor, -temp_max_index + int(self.cam_pixels/2))  # Row cam_hor to add next
+        self.aligned_cam_array[index1] = self.aligned_cam_array[index2] + cam_hor
+
         if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
         if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
 
         self.wav_di.update_data_only(self.wav_array)
         self.pow_di.update_data_only(self.pow_array)
         self.cam_di.update_data_only(self.cam_array)
+        self.aligned_cam_di.update_data_only(self.aligned_cam_array)
         if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
@@ -218,6 +251,7 @@ class gainhandler:
         if self.ser_di: self.ser_di.data_item._exit_live_state()
         if self.ps_di: self.ps_di.data_item._exit_live_state()
         if self.cam_di: self.cam_di.data_item._exit_live_state()
+        if self.aligned_cam_di: self.aligned_cam_di.data_item._exit_live_state()
 
     def stop_function(self, wiget):
         self.instrument.Laser_stop_all()

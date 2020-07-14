@@ -1,11 +1,11 @@
 {
   "LASER": {
-    "DEBUG": 0,
+    "DEBUG": 1,
     "MAX_WAV": 800,
     "MIN_WAV": 532
   },
   "PS": {
-    "DEBUG": 0,
+    "DEBUG": 1,
     "MAX_CURRENT": 30
   },
   "PW": {
@@ -14,5 +14,5 @@
   "SERVO": {
     "DEBUG": 1
   },
-  "CAMERA": {"WHICH": "orsay_camera_eire", "AVAILABLE": ["usim_eels_camera", "orsay_camera_eire"]}
+  "CAMERA": {"WHICH": "usim_eels_camera", "AVAILABLE": ["usim_eels_camera", "orsay_camera_eire"]}
 }

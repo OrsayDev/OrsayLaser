@@ -193,20 +193,17 @@ class gainDevice(Observable.Observable):
         else:
             logging.info("***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
-        self.__data = []
-        self.__infodata = []
+
         i = 0  # e-point counter
         i_max = self.__pts
         j = 0  # each frame inside an specific e-point
         j_max = self.__avg  # dont put directly self.__avg because it will keep refreshing UI
 
         while (i < i_max and not self.__abort_force):  # i means our laser WL's
-            self.__data.append([])
-            self.__infodata.append([])
             while (j < j_max and not self.__abort_force):  # j is our averages
-                if j % 1 == 0:
-                    self.combo_data_f = True
-                    self.append_data.fire(self.combo_data_f, i, j, self.__camera.grab_next_to_finish()[0])
+                last_cam_acq = self.__camera.grab_next_to_finish()[0] #get camera then check laser.
+                self.combo_data_f = True #check laser now
+                self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
                 j += 1
             j = 0
             i += 1

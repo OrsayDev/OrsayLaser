@@ -122,6 +122,9 @@ class gainhandler:
     def lock_push(self, widget):
         self.instrument.lock()
 
+    def pw_hard_reset(self, widget):
+        self.instrument.hard_reset()
+
     def dio_check(self, widget, checked):
         self.instrument.diode(checked)
 
@@ -195,9 +198,6 @@ class gainhandler:
             self.document_controller.document_model.append_data_item(self.aligned_cam_di.data_item)
 
     def append_data(self, value, index1, index2, camera_data):
-        print(value)
-        print(index1)
-        print(index2)
         try:
             cur_wav, power, control = value
         except:
@@ -306,8 +306,9 @@ class gainView:
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
         self.power_lock_button = ui.create_push_button(text='Lock', name='Lock_power', on_clicked='lock_push')
         self.power_lock_value = ui.create_label(text='@binding(instrument.locked_power_f)')
+        self.power_reset_button = ui.create_push_button(text='Hard Reset', name='power_reset_button', on_clicked='pw_hard_reset')
         self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, self.power_lock_button,
-                                      self.power_lock_value, ui.create_stretch(), spacing=12)
+                                      self.power_lock_value, self.power_reset_button, ui.create_stretch(), spacing=12)
 
         self.laser_group = ui.create_group(title='Sirah Credo', content=ui.create_column(
             self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4,

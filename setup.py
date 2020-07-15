@@ -6,11 +6,10 @@ python setup.py bdist_wheel upload -r <server_identifier>
 """
 
 import setuptools
-import os
 
 setuptools.setup(
     name="yvorsay-instrumentation_laser",
-    version="1.5.1",
+    version="1.5.2",
     author="Yves Auad",
     description="Laser Control",
     url="https://github.com/yvesauad/yvorsay-instrument",

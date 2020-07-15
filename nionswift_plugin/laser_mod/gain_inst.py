@@ -103,6 +103,7 @@ class gainDevice(Observable.Observable):
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
 
         self.__OrsayScanInstrument = None
+        self.__camera=None
 
 
     def init(self):
@@ -118,8 +119,14 @@ class gainDevice(Observable.Observable):
                     if hards.hardware_source_id == 'usim_eels_camera':
                         self.__camera = hards
 
-        self.__frame_parameters = self.__camera.get_current_frame_parameters()
-        self.dwell_f=5.0
+        if not self.__camera:
+            logging.info('***LASER***: No camera was found.')
+        else:
+            logging.info('***LASER***: Camera properly loaded. EELS/EEGS acquistion is good to go.')
+            logging.info(self.__camera.hardware_source_id)
+            self.__frame_parameters = self.__camera.get_current_frame_parameters()
+            self.dwell_f = self.__frame_parameters['exposure_ms']
+
 
         self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id("orsay_scan_device")
         if not self.__OrsayScanInstrument:
@@ -136,6 +143,9 @@ class gainDevice(Observable.Observable):
     def lock(self):
         self.property_changed_event.fire("locked_power_f")
         self.free_event.fire("all")
+
+    def hard_reset(self):
+        self.__pwmeter.pw_reset()
 
     def diode(self, val):
         self.d_f = val
@@ -255,9 +265,15 @@ class gainDevice(Observable.Observable):
                 logging.info('***Power Meter***: Cant write')
             if message == 22:
                 logging.info('***Power Meter***: Cant READ a new measurement. Fetching last one instead.')
-            if message == 23:
-                self.property_changed_event.fire("power_f")
-                self.free_event.fire("all")
+            #if message == 23:
+            #    self.property_changed_event.fire("power_f")
+            #    self.free_event.fire("all")
+            if message == 24:
+                logging.info('***Power Meter***: Power Meter not ID; Please check hardware.')
+            if message == 25:
+                logging.info('***Power Meter***: Hardware reset successful.')
+            if message == 26:
+                logging.info('***Power Meter***: Hardware reset failed.')
             if message == 61:
                 logging.info('***LASER PS***: Could not open serial port. Check if connected and port')
             if message == 62:
@@ -293,6 +309,7 @@ class gainDevice(Observable.Observable):
         return sendMessage
 
     def Laser_stop_all(self):
+        self.fast_blanker_status_f=False
         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
     @property
@@ -347,6 +364,7 @@ class gainDevice(Observable.Observable):
     def dwell_f(self, value: float) -> None:
         self.__dwell = float(value)
         self.__frame_parameters["exposure_ms"] = self.__dwell
+        self.__camera.set_current_frame_parameters(self.__frame_parameters)
         self.property_changed_event.fire('dwell_f')
         self.free_event.fire("all")
 
@@ -522,6 +540,7 @@ class gainDevice(Observable.Observable):
             self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
         else:
             self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
         self.property_changed_event.fire('fast_blanker_status_f')
         self.free_event.fire('all')
 
@@ -532,10 +551,7 @@ class gainDevice(Observable.Observable):
     @laser_delay_f.setter
     def laser_delay_f(self, value):
         self.__delay = float(value)/1e9
-        if self.fast_blanker_status_f:
-            self.fast_blanker_status_f=False
-            time.sleep(0.1)
-            self.fast_blanker_status_f=True
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width, delay=self.__delay)
         self.property_changed_event.fire('laser_delay_f')
         self.free_event.fire('all')
 
@@ -546,10 +562,7 @@ class gainDevice(Observable.Observable):
     @laser_width_f.setter
     def laser_width_f(self, value):
         self.__width=float(value)/1e9
-        if self.fast_blanker_status_f:
-            self.fast_blanker_status_f=False
-            time.sleep(0.1)
-            self.fast_blanker_status_f=True
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width, delay=self.__delay)
         self.property_changed_event.fire('laser_width_f')
         self.free_event.fire('all')
 

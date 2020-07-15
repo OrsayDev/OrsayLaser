@@ -1,9 +1,14 @@
-import time
-import threading
-import numpy
-import enum
 import pyvisa
-import logging
+import time
+import os
+import json
+
+abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
+with open(abs_path) as savfile:
+    settings = json.load(savfile)
+
+AVG = settings["PW"]["AVG"]
+
 
 __author__ = "Yves Auad"
 
@@ -17,17 +22,14 @@ class TLPowerMeter:
     def __init__(self, sendmessage):
         self.sendmessage = sendmessage
         self.pwthread = None
-        rm = pyvisa.ResourceManager()
+        self.rm = pyvisa.ResourceManager()
         try:
-            self.tl = rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
-            logging.info(self.tl.query('*IDN?'))
-            #self.tl.write('SENS:CORR:COLL:ZERO:INIT')
+            self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
-            self.tl.write('SENS:AVERAGE:COUNT 100')
-            logging.info(self.tl.query('SENS:AVERAGE:COUNT?'))
+            self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
         except:
-            logging.info("No device was found") #not working
+            self.sendmessage(24)
 
     
     def pw_set_wl(self, cur_WL):
@@ -44,3 +46,14 @@ class TLPowerMeter:
         except:
             self.sendmessage(22)
             return (float(self.tl.query('FETCH?'))*1e6)
+
+    def pw_reset(self):
+        self.tl.close()
+        time.sleep(0.01)
+        self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
+        self.tl.write('SENS:POW:RANG:AUTO 1')
+        self.tl.write('CONF:POW')
+        self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
+        self.sendmessage(25)
+
+

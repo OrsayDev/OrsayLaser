@@ -59,19 +59,18 @@ class gainDevice(Observable.Observable):
 
         self.__start_wav = 575.0
         self.__finish_wav = 600.0
-        self.__step_wav = 1.0
+        self.__step_wav = 0.5
         self.__cur_wav = self.__start_wav
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
-        self.__avg = 10
+        self.__avg = 5
         self.__tpts = int(self.__avg * self.__pts)
-        self.__dwell = 10
         self.__power = 0.
         self.__power_ref = 0.
         self.__diode = 0.10
         self.__servo_pos = 0
         self.__ctrl_type = 0
-        self.__delay=900 * 1e-9
-        self.__width=100 * 1e-9
+        self.__delay=1500 * 1e-9
+        self.__width=50 * 1e-9
         self.__fb_status=False
         self.__counts = 0
         self.__frequency = 10000
@@ -124,14 +123,13 @@ class gainDevice(Observable.Observable):
         else:
             logging.info('***LASER***: Camera properly loaded. EELS/EEGS acquistion is good to go.')
             logging.info(self.__camera.hardware_source_id)
-            self.__frame_parameters = self.__camera.get_current_frame_parameters()
-            self.dwell_f = self.__frame_parameters['exposure_ms']
 
 
         self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id("orsay_scan_device")
         if not self.__OrsayScanInstrument:
             logging.info('***LASER***: Could not find SCAN module. Check for issues')
         else:
+            fast_blanker_status_f = False
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
     def sht(self):
@@ -177,7 +175,6 @@ class gainDevice(Observable.Observable):
             self.free_event.fire("all")
 
     def acq(self):
-        self.__camera.set_current_frame_parameters(self.__frame_parameters)
         self.__thread = threading.Thread(target=self.acqThread)
         self.__thread.start()
 
@@ -265,9 +262,6 @@ class gainDevice(Observable.Observable):
                 logging.info('***Power Meter***: Cant write')
             if message == 22:
                 logging.info('***Power Meter***: Cant READ a new measurement. Fetching last one instead.')
-            #if message == 23:
-            #    self.property_changed_event.fire("power_f")
-            #    self.free_event.fire("all")
             if message == 24:
                 logging.info('***Power Meter***: Power Meter not ID; Please check hardware.')
             if message == 25:
@@ -293,14 +287,11 @@ class gainDevice(Observable.Observable):
             if message == 101:
                 self.property_changed_event.fire("power_f")
                 if self.__ctrl_type == 1:
-                    s_val = int((self.__power_ref / self.__power - 1) * 90)
-                    self.__servo_pos = self.__servo_pos + s_val
-                    # self.__servo_pos=self.__servo_pos+1 if self.__power<self.__power_ref else self.__servo_pos-2
-                    if not s_val: self.servo_f = self.__servo_pos
+                    self.servo_f=self.servo_f+1 if self.__power<self.__power_ref else self.servo_f-1
                     if self.__servo_pos > 180: self.__servo_pos = 180
                     if self.__servo_pos < 0: self.__servo_pos = 0
                 if self.__ctrl_type == 2:
-                    self.__diode = self.__diode + 2 if self.__power < self.__power_ref else self.__diode - 4
+                    self.__diode = self.__diode + 0.02 if self.__power < self.__power_ref else self.__diode - 0.02
                     self.cur_d_f = self.__diode
 
             if message == 102:
@@ -309,6 +300,7 @@ class gainDevice(Observable.Observable):
         return sendMessage
 
     def Laser_stop_all(self):
+        self.sht_f=False
         self.fast_blanker_status_f=False
         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
@@ -356,17 +348,6 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("tpts_f")
         self.free_event.fire("all")
 
-    @property
-    def dwell_f(self) -> int:
-        return self.__dwell
-
-    @dwell_f.setter
-    def dwell_f(self, value: float) -> None:
-        self.__dwell = float(value)
-        self.__frame_parameters["exposure_ms"] = self.__dwell
-        self.__camera.set_current_frame_parameters(self.__frame_parameters)
-        self.property_changed_event.fire('dwell_f')
-        self.free_event.fire("all")
 
     @property
     def tpts_f(self) -> int:
@@ -400,12 +381,13 @@ class gainDevice(Observable.Observable):
             self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (self.__servo_pos + 1) / 180
         else:
             self.__power = self.__pwmeter.pw_read()
-        return round(self.__power, 4)
+        return format(self.__power, '.2f')
+
 
     @property
     def locked_power_f(self):
         self.__power_ref = self.__power
-        return round(self.__power_ref, 4)
+        return format(self.__power_ref, '.2f')
 
 
     @property

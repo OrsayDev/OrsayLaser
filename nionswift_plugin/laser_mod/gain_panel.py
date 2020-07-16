@@ -292,10 +292,6 @@ class gainView:
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label,
                                       self.running_value_label, spacing=12)
 
-        self.dwell_label = ui.create_label(text='Dwell Time (ms): ')
-        self.dwell_line = ui.create_line_edit(text="@binding(instrument.dwell_f)", name="dwell_line")
-        self.ui_view5 = ui.create_row(self.dwell_label, self.dwell_line, ui.create_stretch(), spacing=12)
-
         self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
         self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
         self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
@@ -312,7 +308,7 @@ class gainView:
 
         self.laser_group = ui.create_group(title='Sirah Credo', content=ui.create_column(
             self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4,
-            self.ui_view5, self.ui_view6, self.ui_view7)
+            self.ui_view6, self.ui_view7)
                                            )
         self.diode_label = ui.create_label(text='Diodes: ')
         self.diode_checkbox = ui.create_check_box(name="diode_checkbox", on_checked_changed='dio_check')
@@ -375,7 +371,7 @@ class gainView:
         # Fast Blanker
         self.delay_label=ui.create_label(name='delay_label', text='Delay (ns): ')
         self.delay_value=ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)')
-        self.delay_slider=ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)', minimum=500, maximum=1500)
+        self.delay_slider=ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)', minimum=900, maximum=2200)
         self.delay_row=ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider, ui.create_stretch())
 
         self.width_label = ui.create_label(name='width_label', text='Width (ns): ')

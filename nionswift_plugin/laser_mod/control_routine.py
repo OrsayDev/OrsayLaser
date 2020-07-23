@@ -1,4 +1,6 @@
 import serial
+import os
+import json
 import sys
 import logging
 import time
@@ -8,6 +10,13 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 
 __author__ = "Yves Auad"
+
+
+abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
+with open(abs_path) as savfile:
+    settings = json.load(savfile)
+
+DEBUG_pw = settings["PW"]["DEBUG"]
 
 def _isPython3():
     return sys.version_info[0] >= 3
@@ -25,6 +34,7 @@ class controlRoutine:
     def pw_control_thread(self, arg):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
+            if DEBUG_pw: time.sleep(0.05)
             self.sendmessage(101)
 
     def pw_control_thread_check(self):

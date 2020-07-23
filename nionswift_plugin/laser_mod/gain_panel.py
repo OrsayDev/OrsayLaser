@@ -112,6 +112,9 @@ class gainhandler:
 
     def acq_push(self, widget):
         self.instrument.acq()
+    
+    def acq_pr_push(self, widget):
+        self.instrument.acq_pr()
 
     def abt_push(self, widget):
         self.instrument.abt()
@@ -132,16 +135,20 @@ class gainhandler:
         self.instrument.q(checked)
 
     def more_push(self, widget):
-        self.instrument.more_cur()
+        self.instrument.cur_d_f += 5
 
     def less_push(self, widget):
-        self.instrument.less_cur()
+        self.instrument.cur_d_f -= 5
 
     def more_servo_push(self, widget):
-        self.instrument.more_servo()
+        self.instrument.servo_f += self.instrument.servo_step_f
+        self.instrument.property_changed_event.fire('servo_f')
+        self.instrument.free_event.fire("all")
 
     def less_servo_push(self, widget):
-        self.instrument.less_servo()
+        self.instrument.servo_f -= self.instrument.servo_step_f
+        self.instrument.property_changed_event.fire('servo_f')
+        self.instrument.free_event.fire("all")
 
     async def do_enable(self, enabled=True, not_affected_widget_name_list=None):
         for var in self.__dict__:
@@ -292,24 +299,27 @@ class gainView:
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label,
                                       self.running_value_label, spacing=12)
 
-        self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
-        self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
-        self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
-        self.ui_view6 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb,
-                                      spacing=12)  # yves: Note that i removed update button. It is useless
+
+        self.laser_group = ui.create_group(title='Sirah Credo', content=ui.create_column(
+            self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4)
+            )
 
         self.power_label = ui.create_label(text='Power (uW): ')
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
-        self.power_lock_button = ui.create_push_button(text='Lock', name='Lock_power', on_clicked='lock_push')
+        self.power_lock_button = ui.create_push_button(text='Lock Current Power', name='Lock_power', on_clicked='lock_push')
+        self.power_row00 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), self.power_lock_button)
+        self.power_lock_label = ui.create_label(text='Control Power (uW): ')
         self.power_lock_value = ui.create_label(text='@binding(instrument.locked_power_f)')
+        self.power_row01 = ui.create_row(self.power_lock_label, self.power_lock_value, ui.create_stretch())
+        self.power_avg_label = ui.create_label(text='Number of Averages: ')
+        self.power_avg_value = ui.create_line_edit(name='power_avg_value', text='@binding(instrument.powermeter_avg_f)')
         self.power_reset_button = ui.create_push_button(text='Hard Reset', name='power_reset_button', on_clicked='pw_hard_reset')
-        self.ui_view7 = ui.create_row(self.power_label, self.power_value_label, self.power_lock_button,
-                                      self.power_lock_value, self.power_reset_button, ui.create_stretch(), spacing=12)
+        self.power_row02 = ui.create_row(self.power_avg_label, self.power_avg_value, ui.create_stretch(), self.power_reset_button)
 
-        self.laser_group = ui.create_group(title='Sirah Credo', content=ui.create_column(
-            self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4,
-            self.ui_view6, self.ui_view7)
-                                           )
+        self.powermeter_group = ui.create_group(title='ThorLabs PowerMeter', content=ui.create_column(
+            self.power_row00, self.power_row01, self.power_row02)
+            )
+
         self.diode_label = ui.create_label(text='Diodes: ')
         self.diode_checkbox = ui.create_check_box(name="diode_checkbox", on_checked_changed='dio_check')
         self.diode_value_label = ui.create_label(text="@binding(instrument.d_f)")
@@ -361,17 +371,21 @@ class gainView:
                                                    width=25)
         self.more_servo_pb = ui.create_push_button(text=">>", name="more_servo_pb", on_clicked="more_servo_push",
                                                    width=25)
+        self.servo_wobbler_cb = ui.create_check_box(text='Wobbler Servo', name='servo_wobbler_cb', checked='@binding(instrument.servo_wobbler_f)')
 
-        self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_row(
-            self.servo_label, ui.create_spacing(12), self.servo_slider,
-            ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5),
-            self.more_servo_pb, ui.create_stretch())
-                                           )
+        self.servo_row = ui.create_row(self.servo_label, ui.create_spacing(12), self.servo_slider, ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5), self.more_servo_pb, ui.create_stretch(), self.servo_wobbler_cb)
+    
+        self.servo_step_label = ui.create_label(name='servo_step_label', text='Servo Step (°): ')
+        self.servo_step_value = ui.create_line_edit(name='servo_step_value', text='@binding(instrument.servo_step_f)')
+        self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, ui.create_stretch())
+
+        self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
+            self.servo_row, self.servo_step_row))
 
         # Fast Blanker
         self.delay_label=ui.create_label(name='delay_label', text='Delay (ns): ')
         self.delay_value=ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)')
-        self.delay_slider=ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)', minimum=900, maximum=2200)
+        self.delay_slider=ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)', minimum=1740, maximum=1850)
         self.delay_row=ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider, ui.create_stretch())
 
         self.width_label = ui.create_label(name='width_label', text='Width (ns): ')
@@ -393,7 +407,50 @@ class gainView:
             self.delay_row, self.width_row, self.final_row)
                                            )
 
-        self.ui_view = ui.create_column(self.init_pb, self.laser_group, self.ps_group, self.servo_group, self.blanker_group, spacing=1)
+        ## ACQUISTION BUTTONS
+        
+        self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
+        self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
+        self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
+        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, spacing=12)  
+
+        self.power_ramp_pb = ui.create_push_button(text='Acquire Power Ramp', name='pr_pb', on_clicked="acq_pr_push")
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, ui.create_stretch())
+
+
+        self.blanker_group=ui.create_group(title='Acquisition', content=ui.create_column(
+            self.buttons_row00, self.buttons_row01))
+        ## END FIRST TAB
+
+        self.main_tab=ui.create_tab(label='Main', content=ui.create_column(
+            self.init_pb, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group))
+
+
+        
+
+        ### BEGIN MY SECOND TAB ##
+
+        self.c1_temp_label = ui.create_label(name='c1_temp_label', text='C1 Temp.: ')
+        self.c1_temp_value = ui.create_label(name='c1_temp_value', text='None')
+        self.c1_row = ui.create_row(self.c1_temp_label, self.c1_temp_value, ui.create_stretch())
+
+        self.c2_temp_label = ui.create_label(name='c2_temp_label', text='C2 Temp.: ')
+        self.c2_temp_value = ui.create_label(name='c2_temp_value', text='None')
+        self.c2_row = ui.create_row(self.c2_temp_label, self.c2_temp_value, ui.create_stretch())
+
+        self.power_ramp_tab = ui.create_tab(label='Status', content=ui.create_column(
+            self.c1_row, self.c2_row)
+            )
+
+
+
+
+        self.tabs=ui.create_tabs(self.main_tab, self.power_ramp_tab)
+
+
+
+
+        self.ui_view = ui.create_column(self.tabs)
 
 
 def create_spectro_panel(document_controller, panel_id, properties):

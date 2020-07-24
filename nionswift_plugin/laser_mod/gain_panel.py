@@ -414,16 +414,16 @@ class gainView:
         self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
         self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, spacing=12)  
 
-        self.power_ramp_pb = ui.create_push_button(text='Acquire Power Ramp', name='pr_pb', on_clicked="acq_pr_push")
+        self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push")
         self.buttons_row01 = ui.create_row(self.power_ramp_pb, ui.create_stretch())
 
 
-        self.blanker_group=ui.create_group(title='Acquisition', content=ui.create_column(
+        self.buttons_group=ui.create_group(title='Acquisition', content=ui.create_column(
             self.buttons_row00, self.buttons_row01))
         ## END FIRST TAB
 
         self.main_tab=ui.create_tab(label='Main', content=ui.create_column(
-            self.init_pb, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group))
+            self.init_pb, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group, self.buttons_group))
 
 
         
@@ -438,14 +438,14 @@ class gainView:
         self.c2_temp_value = ui.create_label(name='c2_temp_value', text='None')
         self.c2_row = ui.create_row(self.c2_temp_label, self.c2_temp_value, ui.create_stretch())
 
-        self.power_ramp_tab = ui.create_tab(label='Status', content=ui.create_column(
+        self.status_tab = ui.create_tab(label='Status', content=ui.create_column(
             self.c1_row, self.c2_row)
             )
 
 
 
 
-        self.tabs=ui.create_tabs(self.main_tab, self.power_ramp_tab)
+        self.tabs=ui.create_tabs(self.main_tab)
 
 
 

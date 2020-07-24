@@ -48,12 +48,22 @@ class TLPowerMeter:
             return (float(self.tl.query('FETCH?'))*1e6)
 
     def pw_reset(self):
-        self.tl.close()
-        time.sleep(0.01)
-        self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
-        self.tl.write('SENS:POW:RANG:AUTO 1')
-        self.tl.write('CONF:POW')
-        self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
-        self.sendmessage(25)
+        try:
+            self.tl.close()
+            time.sleep(0.01)
+            self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
+            self.tl.write('SENS:POW:RANG:AUTO 1')
+            self.tl.write('CONF:POW')
+            self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
+            self.sendmessage(25)
+        except:
+            self.sendmessage(26)
 
+    def pw_set_avg(self, value):
+        try:
+            self.tl.write('SENS:AVERAGE:COUNT '+str(value))
+            print(self.tl.query("SENS:AVERAGE:COUNT?"))
+            self.sendmessage(27)
+        except:
+            self.sendmessage(28)
 

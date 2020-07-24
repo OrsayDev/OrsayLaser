@@ -1,13 +1,8 @@
-import serial
 import os
 import json
 import sys
-import logging
 import time
 import threading
-import numpy
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
 
 __author__ = "Yves Auad"
 
@@ -27,14 +22,13 @@ def SENDMYMESSAGEFUNC(sendmessagefunc):
 class controlRoutine:
 
     def __init__(self, sendmessage):
-        self.sendmessage=sendmessage   
-        #self.control_thread=None  
+        self.sendmessage=sendmessage
 
 
     def pw_control_thread(self, arg):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
-            if DEBUG_pw: time.sleep(0.05)
+            time.sleep(0.01)
             self.sendmessage(101)
 
     def pw_control_thread_check(self):

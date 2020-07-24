@@ -304,6 +304,10 @@ class gainDevice(Observable.Observable):
                 logging.info('***Power Meter***: Hardware reset successful.')
             if message == 26:
                 logging.info('***Power Meter***: Hardware reset failed.')
+            if message == 27:
+                logging.info('***Power Meter***: New averaging OK.')
+            if message == 28:
+                logging.info('***Power Meter***: Could not set new averaging.')
             if message == 61:
                 logging.info('***LASER PS***: Could not open serial port. Check if connected and port')
             if message == 62:
@@ -655,6 +659,7 @@ class gainDevice(Observable.Observable):
     def powermeter_avg_f(self, value):
         try:
             self.__powermeter_avg = int(value)
+            self.__pwmeter.pw_set_avg(self.__powermeter_avg)
         except:
             logging.info("***POWERMETER***: Please enter an integer.")
 

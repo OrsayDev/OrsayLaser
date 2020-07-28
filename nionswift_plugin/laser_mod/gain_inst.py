@@ -211,6 +211,7 @@ class gainDevice(Observable.Observable):
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
         self.servo_f=self.__servo_pos_initial #putting back at the initial position
+        self.combo_data_f = True
         self.__power_ramp = False
         self.end_data.fire()
         self.run_status_f=False
@@ -265,12 +266,13 @@ class gainDevice(Observable.Observable):
 
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
-        self.servo_f=self.__servo_pos_initial #putting back at the initial position
+        if self.__ctrl_type==1: self.servo_f=self.__servo_pos_initial #Even if this is not controlled it doesnt matter
+        if self.__ctrl_type==2: pass #here you can put the initial current of the powersupply. Not implemented yet
+        self.combo_data_f = True #if its controlled then you update servo or powersupply right
         while (
         not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
                 self.__laser.set_scan_thread_release()
-
         self.run_status_f = False  # acquistion is over
         self.start_wav_f=self.__start_wav
         self.end_data.fire()

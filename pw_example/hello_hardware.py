@@ -7,6 +7,9 @@ import pyvisa
 rm = pyvisa.ResourceManager()
 print(rm.list_resources())
 tl = rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
+tl.timeout=50
+print(tl.timeout)
+print('here')
 print(tl.query('*IDN?'))
 #tl.write('*IDN?')
 #print(tl.read())

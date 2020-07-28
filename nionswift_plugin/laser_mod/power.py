@@ -25,6 +25,7 @@ class TLPowerMeter:
         self.rm = pyvisa.ResourceManager()
         try:
             self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
+            self.tl.timeout=50
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
             self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))

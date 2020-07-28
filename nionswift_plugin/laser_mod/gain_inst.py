@@ -71,6 +71,7 @@ class gainDevice(Observable.Observable):
         self.__power_ref = 0.
         self.__diode = 0.10
         self.__servo_pos = 0
+        self.__servo_pos_initial = self.__servo_pos
         self.__servo_wobbler = False
         self.__ctrl_type = 0
         self.__delay=1800 * 1e-9
@@ -173,6 +174,7 @@ class gainDevice(Observable.Observable):
         logging.info("Abort scanning. Going back to origin...")
         self.__abort_force = True
         self.__laser.abort_control()  # abort laser thread as well.
+        self.run_status_f=False #force free GUI
 
     def acq_pr(self):
         self.__thread = threading.Thread(target=self.acq_prThread)
@@ -181,6 +183,7 @@ class gainDevice(Observable.Observable):
     def acq_prThread(self):
         self.run_status_f =  self.__power_ramp = self.sht_f = True
         self.__abort_force=False
+        self.__servo_pos_initial = self.__servo_pos
         i_max = int(self.__servo_pos/self.__servo_step)
         j_max = self.__avg
         self.call_data.fire(self.__acq_number, i_max+1, j_max, self.__start_wav, self.__start_wav, 0.0, 1)
@@ -207,6 +210,7 @@ class gainDevice(Observable.Observable):
 
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
+        self.servo_f=self.__servo_pos_initial #putting back at the initial position
         self.__power_ramp = False
         self.end_data.fire()
         self.run_status_f=False
@@ -214,6 +218,7 @@ class gainDevice(Observable.Observable):
     def acqThread(self):
         self.run_status_f = True
         self.__abort_force = False
+        self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
         if (self.__laser.set_scan_thread_check() and abs(
@@ -260,7 +265,7 @@ class gainDevice(Observable.Observable):
 
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
-        self.__camera.stop_playing()  # stop camera
+        self.servo_f=self.__servo_pos_initial #putting back at the initial position
         while (
         not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
@@ -326,7 +331,7 @@ class gainDevice(Observable.Observable):
                 logging.info('***SERVO***: Angle smaller than 0. Holding on 0.')
             if message == 101:
                 self.property_changed_event.fire("power_f")
-                if self.__ctrl_type == 1:
+                if self.__ctrl_type == 1 and not self.__power_ramp:
                     self.servo_f=self.servo_f+1 if self.__power<self.__power_ref else self.servo_f-1
                     if self.__servo_pos > 180: self.__servo_pos = 180
                     if self.__servo_pos < 0: self.__servo_pos = 0

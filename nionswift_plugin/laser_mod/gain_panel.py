@@ -263,6 +263,9 @@ class gainhandler:
     def stop_function(self, wiget):
         self.instrument.Laser_stop_all()
 
+    def grab_data_item(self, widget):
+        logging.info('Grabbing data item')
+
 
 class gainView:
 
@@ -430,22 +433,21 @@ class gainView:
 
         ### BEGIN MY SECOND TAB ##
 
-        self.c1_temp_label = ui.create_label(name='c1_temp_label', text='C1 Temp.: ')
-        self.c1_temp_value = ui.create_label(name='c1_temp_value', text='None')
-        self.c1_row = ui.create_row(self.c1_temp_label, self.c1_temp_value, ui.create_stretch())
+        self.grab_pb = ui.create_push_button(text='Grab', name='grab_pb', on_clicked='grab_data_item')
+        self.pb_row = ui.create_row(self.grab_pb, ui.create_stretch())
 
-        self.c2_temp_label = ui.create_label(name='c2_temp_label', text='C2 Temp.: ')
-        self.c2_temp_value = ui.create_label(name='c2_temp_value', text='None')
-        self.c2_row = ui.create_row(self.c2_temp_label, self.c2_temp_value, ui.create_stretch())
+        self.file_name_label = ui.create_label(text='File Name:', name='file_name_label')
+        self.file_name_value = ui.create_label(text='FILENAME', name = 'file_name_value')
+        self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch())
 
-        self.status_tab = ui.create_tab(label='Status', content=ui.create_column(
-            self.c1_row, self.c2_row)
+        self.ana_tab = ui.create_tab(label='Analyses', content=ui.create_column(
+            self.pb_row, self.file_name_row)
             )
 
 
 
 
-        self.tabs=ui.create_tabs(self.main_tab)
+        self.tabs=ui.create_tabs(self.main_tab, self.ana_tab)
 
 
 

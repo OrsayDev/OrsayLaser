@@ -88,6 +88,8 @@ class gainhandler:
         self.call_data_listener = self.instrument.call_data.listen(self.call_data)
         self.append_data_listener = self.instrument.append_data.listen(self.append_data)
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
+        
+        self.__current_DI = None
 
         self.wav_di = None
         self.pow_di = None
@@ -264,7 +266,9 @@ class gainhandler:
         self.instrument.Laser_stop_all()
 
     def grab_data_item(self, widget):
-        logging.info('Grabbing data item')
+        logging.info(self.file_name_value.text)
+        self.__current_DI = self.document_controller.document_model.get_data_item_by_title(self.file_name_value.text)
+        print(self.__current_DI.data)
 
 
 class gainView:
@@ -436,12 +440,12 @@ class gainView:
         self.grab_pb = ui.create_push_button(text='Grab', name='grab_pb', on_clicked='grab_data_item')
         self.pb_row = ui.create_row(self.grab_pb, ui.create_stretch())
 
-        self.file_name_label = ui.create_label(text='File Name:', name='file_name_label')
-        self.file_name_value = ui.create_label(text='FILENAME', name = 'file_name_value')
+        self.file_name_label = ui.create_label(text='UUID:', name='file_name_label')
+        self.file_name_value = ui.create_line_edit(name = 'file_name_value')
         self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch())
 
         self.ana_tab = ui.create_tab(label='Analyses', content=ui.create_column(
-            self.pb_row, self.file_name_row)
+            self.pb_row, self.file_name_row, ui.create_stretch())
             )
 
 

@@ -1,7 +1,7 @@
 import sys
 import numpy
+#from nionswift_plugin.eels_analysis import AlignZLP
 
-#### LEGACY CODE ###
 
 __author__ = "Yves Auad"
 

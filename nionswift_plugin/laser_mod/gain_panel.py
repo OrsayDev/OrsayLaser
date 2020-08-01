@@ -12,6 +12,7 @@ from nion.swift.model import DataItem
 from nion.swift.model import Utility
 
 from . import gain_inst
+from . import gain_data
 import numpy
 import os
 import json
@@ -60,6 +61,7 @@ class DataItemLaserCreation():
         self.data_item = DataItem.DataItem()
         self.data_item.set_xdata(self.xdata)
         self.data_item.define_property("title", title)
+        self.data_item.define_property("description", which)
         self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
@@ -106,7 +108,8 @@ class gainhandler:
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled = False
-        self.event_loop.create_task(self.do_enable(True, ['init_pb']))  # not working as something is calling this guy
+        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max']))  # not working as something is calling this guy
+        self.actions_list = [self.align_zlp_max] #i can put here because GUI was already initialized
 
     def upt_push(self, widget):
         # self.grab()
@@ -167,7 +170,7 @@ class gainhandler:
 
     def prepare_free_widget_enable(self,
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
-        self.event_loop.create_task(self.do_enable(True, ["init_pb"]))
+        self.event_loop.create_task(self.do_enable(True, ["init_pb", 'align_zlp_max']))
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl):
         if self.current_acquition != nacq:
@@ -266,9 +269,20 @@ class gainhandler:
         self.instrument.Laser_stop_all()
 
     def grab_data_item(self, widget):
-        logging.info(self.file_name_value.text)
+        logging.info(dir(self.document_controller.document_model))
         self.__current_DI = self.document_controller.document_model.get_data_item_by_title(self.file_name_value.text)
-        print(self.__current_DI.data)
+        self.file_UUID_value.text = self.__current_DI.uuid
+        self.file_dim_value.text = self.__current_DI.data.ndim
+        self.file_type_value.text = self.__current_DI.description
+
+        for pbs in self.actions_list:
+            pbs.enabled=False
+        if self.__current_DI.description=='CAM_DATA':
+            self.align_zlp_max.enabled = True
+
+
+    def max_align_zlp(self, widget):
+        logging.info('aligning')
 
 
 class gainView:
@@ -440,12 +454,30 @@ class gainView:
         self.grab_pb = ui.create_push_button(text='Grab', name='grab_pb', on_clicked='grab_data_item')
         self.pb_row = ui.create_row(self.grab_pb, ui.create_stretch())
 
-        self.file_name_label = ui.create_label(text='UUID:', name='file_name_label')
+        self.file_name_label = ui.create_label(text='Title:', name='file_name_label')
         self.file_name_value = ui.create_line_edit(name = 'file_name_value')
-        self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch())
+        self.file_type_label = ui.create_label(text='Type: ', name='file_type_label')
+        self.file_type_value = ui.create_label(text='type?', name='file_type_value')
+        self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch(), self.file_type_label, self.file_type_value, ui.create_stretch())
+
+        self.file_UUID_label = ui.create_label(text='UUID: ', name='file_UUID_label')
+        self.file_UUID_value = ui.create_label(text='uuid?', name='file_UUID_value')
+        self.file_dim_label = ui.create_label(text='Dim.: ', name='file_dim_label')
+        self.file_dim_value = ui.create_label(text='dim?', name='file_dim_value')
+        self.file_info_row = ui.create_row(self.file_UUID_label, self.file_UUID_value, ui.create_stretch(), self.file_dim_label, self.file_dim_value, ui.create_stretch())
+
+        self.pick_group = ui.create_group(title='Pick Tool', content=ui.create_column(
+            self.file_name_row, self.file_info_row, self.pb_row, ui.create_stretch()))
+
+        self.align_zlp_max = ui.create_push_button(text='Align ZLP (MAX)', on_clicked='max_align_zlp', name='align_zlp_max')
+        self.pb_actions_row = ui.create_row(self.align_zlp_max, ui.create_stretch())
+
+        self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(
+            self.pb_actions_row)
+            )
 
         self.ana_tab = ui.create_tab(label='Analyses', content=ui.create_column(
-            self.pb_row, self.file_name_row, ui.create_stretch())
+            self.pick_group, self.actions_group)
             )
 
 

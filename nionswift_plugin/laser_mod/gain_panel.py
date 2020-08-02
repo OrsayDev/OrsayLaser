@@ -92,6 +92,8 @@ class gainhandler:
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
         
         self.__current_DI = None
+        self.__current_DI_POW = None
+        self.__current_DI_WAV = None
 
         self.wav_di = None
         self.pow_di = None
@@ -187,7 +189,10 @@ class gainhandler:
             self.pow_array = numpy.zeros(pts * avg)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
             if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
-
+            
+            while self.document_controller.document_model.get_data_item_by_title("Laser Wavelength " + str(nacq)) != None:
+                nacq+=1 #this puts always a new set even if swift crashes
+            
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
@@ -269,16 +274,31 @@ class gainhandler:
         self.instrument.Laser_stop_all()
 
     def grab_data_item(self, widget):
-        logging.info(dir(self.document_controller.document_model))
-        self.__current_DI = self.document_controller.document_model.get_data_item_by_title(self.file_name_value.text)
-        self.file_UUID_value.text = self.__current_DI.uuid
-        self.file_dim_value.text = self.__current_DI.data.ndim
-        self.file_type_value.text = self.__current_DI.description
+        try:
+            self.__current_DI = self.document_controller.document_model.get_data_item_by_title(self.file_name_value.text)
+            for pbs in self.actions_list:
+                pbs.enabled=False
+        except:
+            pass
+        if self.__current_DI:
+            temp_acq = int(self.file_name_value.text[-2:])
+            self.file_UUID_value.text = self.__current_DI.uuid
+            self.file_dim_value.text = self.__current_DI.data.ndim
+            self.file_type_value.text = self.__current_DI.description
+            if "Gain" in self.file_name_value.text:
+                self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title("Power " + str(temp_acq))
+                self.power_file_detected_value.text = bool(self.__current_DI_POW)
+                self.__current_DI_WAV = self.document_controller.document_model.get_data_item_by_title("Laser Wavelength " + str(temp_acq))
+                self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
+                if self.__current_DI_POW and self.__current_DI_WAV:
+                    self.align_zlp_max.enabled = True
+            elif "Power" in self.file_name_value.text:
+                pass #something to do with only power?
+            elif "Wavelength" in self.file_name_value.text:
+                pass #something to do with only laser wavelength
+        else:
+            logging.info('***ACQUISTION***: Could not find referenced Data Item.')
 
-        for pbs in self.actions_list:
-            pbs.enabled=False
-        if self.__current_DI.description=='CAM_DATA':
-            self.align_zlp_max.enabled = True
 
 
     def max_align_zlp(self, widget):
@@ -466,8 +486,14 @@ class gainView:
         self.file_dim_value = ui.create_label(text='dim?', name='file_dim_value')
         self.file_info_row = ui.create_row(self.file_UUID_label, self.file_UUID_value, ui.create_stretch(), self.file_dim_label, self.file_dim_value, ui.create_stretch())
 
+        self.power_file_detected_label = ui.create_label(text='is_Power ?', name='power_file_detected_label')
+        self.power_file_detected_value = ui.create_label(text='False', name='power_file_detected_value')
+        self.wav_file_detected_label = ui.create_label(text='is_Wav? ', name='wav_file_detected_label')
+        self.wav_file_detected_value = ui.create_label(text='False', name='wav_file_detected_value')
+        self.detection_row = ui.create_row(self.power_file_detected_label, self.power_file_detected_value, ui.create_stretch(), self.wav_file_detected_label, self.wav_file_detected_value, ui.create_stretch())
+
         self.pick_group = ui.create_group(title='Pick Tool', content=ui.create_column(
-            self.file_name_row, self.file_info_row, self.pb_row, ui.create_stretch()))
+            self.file_name_row, self.file_info_row, self.detection_row, self.pb_row, ui.create_stretch()))
 
         self.align_zlp_max = ui.create_push_button(text='Align ZLP (MAX)', on_clicked='max_align_zlp', name='align_zlp_max')
         self.pb_actions_row = ui.create_row(self.align_zlp_max, ui.create_stretch())

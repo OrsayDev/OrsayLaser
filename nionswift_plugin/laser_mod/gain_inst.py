@@ -9,8 +9,6 @@ import os
 import json
 import time
 
-from . import gain_data as gdata
-
 abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
 with open(abs_path) as savfile:
     settings = json.load(savfile)
@@ -99,9 +97,6 @@ class gainDevice(Observable.Observable):
 
         self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
-
-        self.__data_sendmessage = gdata.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__gdata = gdata.gainData(self.__data_sendmessage)
 
         self.__servo_sendmessage = servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__servo = servo.servoMotor(self.__servo_sendmessage)
@@ -360,6 +355,8 @@ class gainDevice(Observable.Observable):
         self.__start_wav = float(value)
         self.busy_event.fire("all")
         if not self.__status:
+            self.property_changed_event.fire("pts_f")
+            self.property_changed_event.fire("tpts_f")
             self.run_status_f=True
             self.__laser.setWL(self.__start_wav, self.__cur_wav)
 

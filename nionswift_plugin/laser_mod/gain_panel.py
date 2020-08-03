@@ -17,6 +17,7 @@ import numpy
 import os
 import json
 import logging
+import numpy
 
 _ = gettext.gettext
 
@@ -27,7 +28,20 @@ with open(abs_path) as savfile:
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 class DataItemLaserCreation():
-    def __init__(self, title, array, which, start=None, avg=None, step=None):
+    def __init__(self, title, array, which, start=None, final = None, pts = None, avg=None, step=None, delay=None, time_width=None, start_ps_cur = None, ctrl=None, is_live=True):
+        self.acq_parameters = {
+                "title": title,
+                "which": which,
+                "start_wav": start,
+                "final_wav": final,
+                "pts": pts,
+                "averages": avg,
+                "step_wav": step,
+                "delay": delay,
+                "time_width": time_width,
+                "start_ps_cur": start_ps_cur,
+                "control": ctrl
+                }
         self.timezone = Utility.get_local_timezone()
         self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
@@ -61,8 +75,8 @@ class DataItemLaserCreation():
         self.data_item = DataItem.DataItem()
         self.data_item.set_xdata(self.xdata)
         self.data_item.define_property("title", title)
-        self.data_item.define_property("description", which)
-        self.data_item._enter_live_state()
+        self.data_item.define_property("description", self.acq_parameters)
+        if is_live: self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
@@ -95,6 +109,8 @@ class gainhandler:
         self.__current_DI_POW = None
         self.__current_DI_WAV = None
 
+        self.data_proc = gain_data.gainData()
+
         self.wav_di = None
         self.pow_di = None
         self.ser_di = None
@@ -106,12 +122,13 @@ class gainhandler:
 
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(False, ['init_pb']))  # not working as something is calling this guy
+        self.normalize_check_box.checked = True
 
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled = False
-        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max']))  # not working as something is calling this guy
-        self.actions_list = [self.align_zlp_max] #i can put here because GUI was already initialized
+        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'process_eegs_pb', 'process_power_pb']))  # not working as something is calling this guy
+        self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.process_eegs_pb, self.process_power_pb] #i can put here because GUI was already initialized
 
     def upt_push(self, widget):
         # self.grab()
@@ -205,14 +222,10 @@ class gainhandler:
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, avg, step)
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts, avg, step, None, None, None, ctrl)
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
 
-            # ALIGNED CAMERA CALL
 
-            self.aligned_cam_array = numpy.zeros((pts, self.cam_pixels))
-            self.aligned_cam_di = DataItemLaserCreation('Aligned Gain Data ' + str(nacq), self.aligned_cam_array, "ALIGNED_CAM_DATA", start, avg, step)
-            self.document_controller.document_model.append_data_item(self.aligned_cam_di.data_item)
 
     def append_data(self, value, index1, index2, camera_data):
         try:
@@ -227,18 +240,11 @@ class gainhandler:
             self.cam_pixels = camera_data.data.shape[1]
             cam_calibration = camera_data.get_dimensional_calibration(1)
 
-            alignedCalibration = Calibration.Calibration()
-            alignedCalibration.scale = cam_calibration.scale
-            alignedCalibration.units = 'eV'
-            alignedCalibration.offset = -self.cam_pixels * cam_calibration.scale/2
-
             if camera_data.data.shape[1] != self.cam_array.shape[1]:
                 self.cam_array=numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
-                self.aligned_cam_array=numpy.zeros((self.pts, camera_data.data.shape[1]))
                 logging.info('***ACQUISTION***: Corrected #PIXELS.')
             try:
                 self.cam_di.set_cam_di_calibration(cam_calibration)
-                self.aligned_cam_di.set_cam_di_calibration(alignedCalibration)
                 logging.info('***ACQUISTION***: Calibration OK.')
             except:
                 logging.info('***ACQUISTION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
@@ -246,11 +252,8 @@ class gainhandler:
             self.__adjusted=True
 
         cam_hor = numpy.sum(camera_data.data, axis=0)
-        temp_max_index = numpy.where(cam_hor==numpy.max(cam_hor))[0][0]
 
         self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
-        cam_hor = numpy.roll(cam_hor, -temp_max_index + int(self.cam_pixels/2))  # Row cam_hor to add next
-        self.aligned_cam_array[index1] = self.aligned_cam_array[index2] + cam_hor
 
         if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
         if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
@@ -258,7 +261,6 @@ class gainhandler:
         self.wav_di.update_data_only(self.wav_array)
         self.pow_di.update_data_only(self.pow_array)
         self.cam_di.update_data_only(self.cam_array)
-        self.aligned_cam_di.update_data_only(self.aligned_cam_array)
         if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
@@ -268,7 +270,6 @@ class gainhandler:
         if self.ser_di: self.ser_di.data_item._exit_live_state()
         if self.ps_di: self.ps_di.data_item._exit_live_state()
         if self.cam_di: self.cam_di.data_item._exit_live_state()
-        if self.aligned_cam_di: self.aligned_cam_di.data_item._exit_live_state()
 
     def stop_function(self, wiget):
         self.instrument.Laser_stop_all()
@@ -281,10 +282,10 @@ class gainhandler:
         except:
             pass
         if self.__current_DI:
-            temp_acq = int(self.file_name_value.text[-2:])
+            temp_acq = int(self.file_name_value.text[-2:]) #Works from 0-99.
             self.file_UUID_value.text = self.__current_DI.uuid
             self.file_dim_value.text = self.__current_DI.data.ndim
-            self.file_type_value.text = self.__current_DI.description
+            self.file_type_value.text = self.__current_DI.description['which']
             if "Gain" in self.file_name_value.text:
                 self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title("Power " + str(temp_acq))
                 self.power_file_detected_value.text = bool(self.__current_DI_POW)
@@ -292,18 +293,38 @@ class gainhandler:
                 self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
                 if self.__current_DI_POW and self.__current_DI_WAV:
                     self.align_zlp_max.enabled = True
+                    self.align_zlp_fit.enabled = True
             elif "Power" in self.file_name_value.text:
                 pass #something to do with only power?
             elif "Wavelength" in self.file_name_value.text:
-                pass #something to do with only laser wavelength
+                pass #something to do with only laser wavelength?
         else:
             logging.info('***ACQUISTION***: Could not find referenced Data Item.')
 
 
 
-    def max_align_zlp(self, widget):
-        logging.info('aligning')
+    def align_zlp(self, widget):
+        temp_dict = self.__current_DI.description
+        temp_data = self.__current_DI.data
+        pts = temp_dict['pts']
+        cam_pixels = len(self.__current_DI.data[0])
+    
+        if self.normalize_check_box.checked:
+            for i in range(len(self.__current_DI_POW.data)-1): #-1 excludes last point which is without laser.
+                temp_data[i] = numpy.divide(temp_data[i], self.__current_DI_POW.data[i])
 
+
+        if widget==self.align_zlp_max:
+            self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, 'max')
+        elif widget==self.align_zlp_fit:
+            self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, 'max')
+
+        self.aligned_cam_di = DataItemLaserCreation('_aligned_' + temp_dict['title'], self.aligned_cam_array, "ALIGNED_CAM_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False)
+
+        self.document_controller.document_model.append_data_item(self.aligned_cam_di.data_item)
+
+    def process_data(self, widget):
+        logging.info(widget)
 
 class gainView:
 
@@ -456,7 +477,7 @@ class gainView:
         self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, spacing=12)  
 
         self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push")
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, ui.create_stretch())
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, spacing=12)
 
 
         self.buttons_group=ui.create_group(title='Acquisition', content=ui.create_column(
@@ -486,24 +507,31 @@ class gainView:
         self.file_dim_value = ui.create_label(text='dim?', name='file_dim_value')
         self.file_info_row = ui.create_row(self.file_UUID_label, self.file_UUID_value, ui.create_stretch(), self.file_dim_label, self.file_dim_value, ui.create_stretch())
 
-        self.power_file_detected_label = ui.create_label(text='is_Power ?', name='power_file_detected_label')
+        self.power_file_detected_label = ui.create_label(text='Power? ', name='power_file_detected_label')
         self.power_file_detected_value = ui.create_label(text='False', name='power_file_detected_value')
-        self.wav_file_detected_label = ui.create_label(text='is_Wav? ', name='wav_file_detected_label')
+        self.wav_file_detected_label = ui.create_label(text='Wav? ', name='wav_file_detected_label')
         self.wav_file_detected_value = ui.create_label(text='False', name='wav_file_detected_value')
         self.detection_row = ui.create_row(self.power_file_detected_label, self.power_file_detected_value, ui.create_stretch(), self.wav_file_detected_label, self.wav_file_detected_value, ui.create_stretch())
 
         self.pick_group = ui.create_group(title='Pick Tool', content=ui.create_column(
             self.file_name_row, self.file_info_row, self.detection_row, self.pb_row, ui.create_stretch()))
 
-        self.align_zlp_max = ui.create_push_button(text='Align ZLP (MAX)', on_clicked='max_align_zlp', name='align_zlp_max')
-        self.pb_actions_row = ui.create_row(self.align_zlp_max, ui.create_stretch())
+        self.align_zlp_max = ui.create_push_button(text='Align ZLP (Max)', on_clicked='align_zlp', name='align_zlp_max')
+        self.align_zlp_fit = ui.create_push_button(text='Align ZLP (Fit)', on_clicked='align_zlp', name='align_zlp_fit')
+        self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
+        self.pb_actions_row = ui.create_row(self.align_zlp_max, self.align_zlp_fit, self.normalize_check_box, spacing=12)
+
+        self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
+        self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
+        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, spacing=12)
+
 
         self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(
-            self.pb_actions_row)
+            self.pb_actions_row, self.pb_process_row, ui.create_stretch())
             )
 
-        self.ana_tab = ui.create_tab(label='Analyses', content=ui.create_column(
-            self.pick_group, self.actions_group)
+        self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(
+            self.pick_group, self.actions_group, ui.create_stretch())
             )
 
 

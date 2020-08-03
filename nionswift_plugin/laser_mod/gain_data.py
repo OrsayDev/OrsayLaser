@@ -5,18 +5,10 @@ import numpy
 
 __author__ = "Yves Auad"
 
-
-def _isPython3():
-    return sys.version_info[0] >= 3
-
-def SENDMYMESSAGEFUNC(sendmessagefunc):
-    return sendmessagefunc
-
 class gainData:
 
-    def __init__(self, sendmessage):
-        self.sendmessage=sendmessage
-
+    def __init__(self):
+        pass
 
     def send_raw_MetaData(self, rd):
         index = [] #max position for alignment
@@ -59,3 +51,14 @@ class gainData:
         temp_pw_data = numpy.asarray(temp_pw_data)
         temp_di_data = numpy.asarray(temp_di_data)
         return temp_wl_data, temp_pw_data, temp_di_data
+
+    def align_zlp(self, raw_array, pts, avg, pixels, mode='max'):
+        proc_array = numpy.zeros((pts, pixels))
+        if 'max' in mode:
+            for i in range(len(proc_array)):
+                for j in range(avg):
+                    current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
+                    proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
+
+        return proc_array
+

@@ -1,7 +1,7 @@
 import sys
 import numpy
-#from nionswift_plugin.eels_analysis import AlignZLP
-
+from scipy.signal import savgol_filter
+from scipy.interpolate import interp1d
 
 __author__ = "Yves Auad"
 

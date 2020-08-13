@@ -127,6 +127,9 @@ class gainhandler:
         self.normalize_check_box.checked = True
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
+        self.savgol_window_value.text = '41'
+        self.savgol_poly_order_value.text = '3'
+        self.savgol_oversample_value.text = '10'
 
     def init_push(self, widget):
         self.instrument.init()
@@ -358,17 +361,19 @@ class gainhandler:
         
         ### HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT FOR CALIBRATION ***
         if widget==self.align_zlp_max:
-            self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, eels_dispersion, 'max')
+            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, eels_dispersion, 'max')
             temp_title_name+='_max'
         elif widget==self.align_zlp_fit:
-            self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, eels_dispersion, 'fit')
+            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, eels_dispersion, 'fit')
             temp_title_name+='_fit'
-
+        
+        self.zlp_fwhm = zlp_fwhm
+        self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[1].units #displaying
         temp_title_name+=' '+temp_dict['title'] #Final name of Data_Item
 
         self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels)
             
-        if self.aligned_cam_di: #you free next step if the precedent one works
+        if self.aligned_cam_di and self.zlp_fwhm: #you free next step if the precedent one works. For the next step, we need the data and FWHM
             self.process_eegs_pb.enabled = self.process_power_pb.enabled = True
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = False
             logging.info('***ACQUISITION***: Data Item created.')
@@ -378,12 +383,40 @@ class gainhandler:
     def process_data(self, widget):
         temp_data = self.aligned_cam_di.data_item.data
 
+        #for the sake of comprehension, note that self.aligned_cam_di.acq_parameters is the same as self.aligned_cam_di.data_item_description. acq_parameters are defined at __init__ of my DataItemLaserCreation while description is a data_item property defined by nionswift. So if you wanna acess these informations anywhere in any computer you need to use data_item because this is stored in nionswift library. 
+        '''
+        Produces the same output:
+            print(self.aligned_cam_di.acq_parameters)
+            print(self.aligned_cam_di.data_item.description)
+        '''
+
+        temp_dict = self.aligned_cam_di.data_item.description
+        temp_calib = self.aligned_cam_di.data_item.dimensional_calibrations
+
+        x = numpy.arange(temp_calib[1].offset, temp_calib[1].offset + temp_calib[1].scale*temp_data[0].shape[0], temp_calib[1].scale)
+
+        try:
+            window_size, poly_order = int(self.savgol_window_value.text), int(self.savgol_poly_order_value.text)
+            oversample = int(self.savgol_oversample_value.text)
+        except:
+            window_size, poly_order, oversample = 41, 3, 10
+            logging.info('***ACQUISTION***: Window and Poly Order must be integers. Using standard (41, 3) values.')
+        
+        xx = numpy.linspace(x.min(), x.max(), temp_data[0].shape[0] * oversample)
+
 
         if widget==self.process_eegs_pb: 
             logging.info('***ACQUISTION***: EEGS Processing....')
 
         if widget==self.process_power_pb: 
             logging.info('***ACQUISTION***: Power Scan Processing....')
+            
+            #self.power_change_array = self.data_proc.smooth_zlp(temp_data, 10, 3, 1)
+
+            #print(self.savgol_window_value.text)
+            #print(self.savgol_poly_order_value.text)
+            #print(self.savgol_oversample_value.text)
+
 
 
         for pbs in self.actions_list:
@@ -603,13 +636,19 @@ class gainView:
         self.normalize_current_check_box = ui.create_check_box(text='Norm. by Current? ', name='normalize_current_check_box')
         self.display_check_box = ui.create_check_box(text='Display?', name='display_check_box')
         self.pb_actions_row = ui.create_row(self.align_zlp_max, self.align_zlp_fit, self.normalize_check_box, self.normalize_current_check_box, self.display_check_box, spacing=12)
+    
+        self.zlp_label = ui.create_label(text='FWHM of ZLP: ', name='zlp_label')
+        self.zlp_value = ui.create_label(text='fwhm?', name='zlp_value')
+        self.zlp_row = ui.create_row(self.zlp_label, self.zlp_value, ui.create_stretch())
 
         self.savgol_window_label = ui.create_label(text='Smoothing Window: ', name='savgol_window_label')
         self.savgol_window_value = ui.create_line_edit(name='savgol_window_value')
         self.savgol_poly_order_label = ui.create_label(text='Poly Order: ', name='savgol_poly_order_label')
         self.savgol_poly_order_value = ui.create_line_edit(name='savgol_poly_order_value')
+        self.savgol_oversample_label = ui.create_label(text='Oversampling: ', name='savgol_oversample_label')
+        self.savgol_oversample_value = ui.create_line_edit(name='savgol_oversample_value')
 
-        self.savgol_row = ui.create_row(self.savgol_window_label, self.savgol_window_value, self.savgol_poly_order_label, self.savgol_poly_order_value, ui.create_stretch())
+        self.savgol_row = ui.create_row(self.savgol_window_label, self.savgol_window_value, self.savgol_poly_order_label, self.savgol_poly_order_value, self.savgol_oversample_label, self.savgol_oversample_value, ui.create_stretch())
 
         self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
         self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
@@ -617,7 +656,7 @@ class gainView:
 
 
         self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(
-            self.pb_actions_row, self.savgol_row, self.pb_process_row, ui.create_stretch())
+            self.pb_actions_row, self.zlp_row, self.savgol_row, self.pb_process_row, ui.create_stretch())
             )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(

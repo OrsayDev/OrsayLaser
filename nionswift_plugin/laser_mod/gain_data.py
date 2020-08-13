@@ -66,12 +66,19 @@ class gainData:
             return A*numpy.exp(-(x-mu)**2/(2.*sigma**2)) + AG*numpy.exp(-(x-muG)**2/(2.*sigma**2)) + AL*numpy.exp(-(x-muL)**2/(2.*sigma**2))
         
         proc_array = numpy.zeros((pts, pixels))
+        zlp_fit = numpy.zeros(avg)
 
         if 'max' in mode:
             for i in range(len(proc_array)):
                 for j in range(avg):
                     current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
                     proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
+                    x = numpy.linspace((-pixels/2.+1)*disp, (pixels/2.)*disp, pixels)
+                    p0 = [max(proc_array[i]), 0., 1]
+                    coeff, var_matrix = curve_fit(_gaussian, x, proc_array[i], p0 = p0)
+                    if i==(len(proc_array)-1):
+                        zlp_fit[j] = coeff[2]
+            return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2))
 
         if 'fit' in mode: #I HAVE SUB PIXEL WITH MAX_INDEX. How to improve further with fit? I am not sure.
             for i in range(len(proc_array)):
@@ -81,6 +88,9 @@ class gainData:
                     x = numpy.linspace((-pixels/2.+1)*disp, (pixels/2.)*disp, pixels)
                     p0 = [max(proc_array[i]), 0., 1]
                     coeff, var_matrix = curve_fit(_gaussian, x, proc_array[i], p0 = p0)
+                    if i==(len(proc_array)-1):
+                        zlp_fit[j] = coeff[2]
+            return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2))
 
         if 'f_plot' in mode:
             for i in range(len(proc_array)):
@@ -91,7 +101,14 @@ class gainData:
                     p0 = [max(proc_array[i]), 0., 1., 0., -2., 0., 2.]
                     coeff, var_matrix = curve_fit(_gaussian_two_replicas, x, proc_array[i], p0 = p0)
                     proc_array[i] = _gaussian_two_replicas(x, *coeff)
+            return proc_array, None
 
-        return proc_array
 
-
+    def smooth_zlp(self, y_array, x_array, window_size, poly_order, oversampling):
+        #for i in range(len(raw_array)):
+        #    
+        #    itp = interp1d(
+        #    print(i)
+        #print(len(raw_array))
+        #print(len(raw_array[0]))
+        pass

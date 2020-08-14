@@ -353,17 +353,11 @@ class gainhandler:
             self.final_detected_value.text = format(temp_dict['final_wav'], '.3f')
             self.step_detected_value.text = format(temp_dict['step_wav'], '.3f')
 
-        
         temp_data = self.__current_DI.data
         cam_pixels = len(self.__current_DI.data[0])
         eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
         temp_title_name = 'Aligned' #keep adding stuff as far as you doing (or not doing) stuff with your data. Always use a temp one
     
-        if self.normalize_check_box.checked:
-            for i in range(len(self.__current_DI.data)-temp_dict['averages']): #excludes last str(avg) points (LASER OFF).
-                temp_data[i] = numpy.divide(temp_data[i], self.__current_DI_POW.data[i])
-            temp_title_name+='_Npw'
-
         if self.normalize_current_check_box.checked:
             for i in range(len(self.__current_DI.data)):
                 temp_data[i] = numpy.divide(temp_data[i], numpy.sum(temp_data[i]))
@@ -384,7 +378,6 @@ class gainhandler:
         self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels)
             
         if self.aligned_cam_di and self.zlp_fwhm: #you free next step if the precedent one works. For the next step, we need the data and FWHM
-            #self.process_eegs_pb.enabled = self.process_power_pb.enabled = True
             self.smooth_zlp.enabled = True
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = False
             logging.info('***ACQUISITION***: Data Item created.')
@@ -442,10 +435,10 @@ class gainhandler:
         temp_dict = self.smooth_di.data_item.description
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
 
-        gain_array = numpy.zeros(temp_data.shape[0])
-        loss_array = numpy.zeros(temp_data.shape[0])
+        gain_array = numpy.zeros(temp_data.shape[0]-1)
+        loss_array = numpy.zeros(temp_data.shape[0]-1) 
 
-        wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'])
+        wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts']-1)
         energies_loss = numpy.divide(1239.8, wavs)
         energies_gain = numpy.multiply(numpy.divide(1239.8, wavs), -1)
 
@@ -453,11 +446,15 @@ class gainhandler:
         cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
         cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
 
-        for i in range(len(temp_data)):
+        rpa = numpy.reshape(self.__current_DI_POW.data, (temp_dict['pts'], temp_dict['averages']))
+
+        for i in range(len(temp_data)-1):
             gain_array[i] = numpy.sum(temp_data[i][cpg[i]-ihp:cpg[i]+ihp])
             loss_array[i] = numpy.sum(temp_data[i][cpl[i]-ihp:cpl[i]+ihp])
-        
-        
+            if self.normalize_check_box.checked:
+                gain_array[i] = gain_array[i] / (numpy.average(rpa[i]) - numpy.average(rpa[-1]))
+                loss_array[i] = loss_array[i] / (numpy.average(rpa[i]) - numpy.average(rpa[-1]))
+
         self.gain_di = DataItemLaserCreation("GAIN ", gain_array, "WAV", is_live=False)
         self.loss_di = DataItemLaserCreation("LOSS ", loss_array, "WAV", is_live=False)
         
@@ -470,9 +467,6 @@ class gainhandler:
         if widget==self.process_power_pb: 
             logging.info('***ACQUISTION***: Power Scan Processing....')
 
-
-            
-
         for pbs in self.actions_list:
             pbs.enabled=False
         self.aligned_cam_di = None #kill this attribute so next one will start from the beginning. Safest way to do it.
@@ -480,6 +474,7 @@ class gainhandler:
         self.zlp_fwhm = None #kill ZLP as well
         self.gain_di = None #too bad, you dead
         self.loss_di = None #dead
+        self.__current_DI_POW = None #bye
 
 class gainView:
 
@@ -690,10 +685,9 @@ class gainView:
 
         self.align_zlp_max = ui.create_push_button(text='Align ZLP (Max)', on_clicked='align_zlp', name='align_zlp_max')
         self.align_zlp_fit = ui.create_push_button(text='Align ZLP (Fit)', on_clicked='align_zlp', name='align_zlp_fit')
-        self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
         self.normalize_current_check_box = ui.create_check_box(text='Norm. by Current? ', name='normalize_current_check_box')
         self.display_check_box = ui.create_check_box(text='Display?', name='display_check_box')
-        self.pb_actions_row = ui.create_row(self.align_zlp_max, self.align_zlp_fit, self.normalize_check_box, self.normalize_current_check_box, self.display_check_box, spacing=12)
+        self.pb_actions_row = ui.create_row(self.align_zlp_max, self.align_zlp_fit, self.normalize_current_check_box, self.display_check_box, spacing=12)
     
         self.zlp_label = ui.create_label(text='FWHM of ZLP: ', name='zlp_label')
         self.zlp_value = ui.create_label(text='fwhm?', name='zlp_value')
@@ -714,7 +708,8 @@ class gainView:
         
         self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
         self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
-        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, spacing=12)
+        self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
+        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box, spacing=12)
 
 
         self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(

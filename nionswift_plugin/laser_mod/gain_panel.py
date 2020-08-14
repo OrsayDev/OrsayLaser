@@ -427,24 +427,59 @@ class gainhandler:
         self.smooth_di = DataItemLaserCreation(temp_title_name, self.smooth_array, "SMOOTHED_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels, oversample = oversample)
         
         if self.smooth_di: #you free next step if smooth is OK
-            self.process_eegs_pb.enabled = self.process_power_pb.enabled = True
+            if temp_dict['step_wav']: 
+                self.process_eegs_pb.enabled = True
+            else:
+                self.process_power_pb.enabled = True
             self.smooth_zlp.enabled = False
             logging.info('***ACQUISITION***: Smooth Sucessfull. Data Item created.')
 
         if self.display_smooth_check_box.checked: self.document_controller.document_model.append_data_item(self.smooth_di.data_item)
 
     def process_data(self, widget):
+        
+        temp_data = self.smooth_di.data_item.data
+        temp_dict = self.smooth_di.data_item.description
+        temp_calib = self.smooth_di.data_item.dimensional_calibrations
+
+        gain_array = numpy.zeros(temp_data.shape[0])
+        loss_array = numpy.zeros(temp_data.shape[0])
+
+        wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'])
+        energies_loss = numpy.divide(1239.8, wavs)
+        energies_gain = numpy.multiply(numpy.divide(1239.8, wavs), -1)
+
+        ihp = int(round(self.zlp_fwhm / temp_calib[1].scale/2.))
+        cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
+        cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
+
+        for i in range(len(temp_data)):
+            gain_array[i] = numpy.sum(temp_data[i][cpg[i]-ihp:cpg[i]+ihp])
+            loss_array[i] = numpy.sum(temp_data[i][cpl[i]-ihp:cpl[i]+ihp])
+        
+        
+        self.gain_di = DataItemLaserCreation("GAIN ", gain_array, "WAV", is_live=False)
+        self.loss_di = DataItemLaserCreation("LOSS ", loss_array, "WAV", is_live=False)
+        
+        self.document_controller.document_model.append_data_item(self.gain_di.data_item)
+        self.document_controller.document_model.append_data_item(self.loss_di.data_item)
 
         if widget==self.process_eegs_pb: 
             logging.info('***ACQUISTION***: EEGS Processing....')
 
         if widget==self.process_power_pb: 
             logging.info('***ACQUISTION***: Power Scan Processing....')
+
+
             
 
         for pbs in self.actions_list:
             pbs.enabled=False
         self.aligned_cam_di = None #kill this attribute so next one will start from the beginning. Safest way to do it.
+        self.smooth_di = None #kill this one as well.
+        self.zlp_fwhm = None #kill ZLP as well
+        self.gain_di = None #too bad, you dead
+        self.loss_di = None #dead
 
 class gainView:
 

@@ -181,7 +181,7 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
         i_max = int(self.__servo_pos/self.__servo_step)
         j_max = self.__avg
-        self.call_data.fire(self.__acq_number, i_max+1, j_max, self.__start_wav, self.__start_wav, 0.0, 1)
+        self.call_data.fire(self.__acq_number, i_max+1, j_max, self.__start_wav, self.__start_wav, 0.0, 1, self.__delay, self.__width, self.__diode)
         self.__acq_number+=1
         self.__controlRout.pw_control_thread_on()
         i=0
@@ -220,7 +220,7 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
-            self.call_data.fire(self.__acq_number, self.pts_f+1, self.avg_f, self.__start_wav, self.__finish_wav, self.__step_wav, self.__ctrl_type)
+            self.call_data.fire(self.__acq_number, self.pts_f+1, self.avg_f, self.__start_wav, self.__finish_wav, self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
             self.__acq_number+=1
 
 

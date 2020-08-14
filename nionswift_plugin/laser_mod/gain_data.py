@@ -104,11 +104,10 @@ class gainData:
             return proc_array, None
 
 
-    def smooth_zlp(self, y_array, x_array, window_size, poly_order, oversampling):
-        #for i in range(len(raw_array)):
-        #    
-        #    itp = interp1d(
-        #    print(i)
-        #print(len(raw_array))
-        #print(len(raw_array[0]))
-        pass
+    def smooth_zlp(self, raw_array, window_size, poly_order, oversample, x, xx):
+        smooth_array = numpy.zeros((raw_array.shape[0], raw_array.shape[1]*oversample))
+        for i in range(len(raw_array)):
+            itp = interp1d(x, raw_array[i], 'linear')
+            smooth_array[i] = savgol_filter(itp(xx), window_size, poly_order)
+        return smooth_array
+            

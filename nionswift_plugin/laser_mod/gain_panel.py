@@ -28,7 +28,7 @@ with open(abs_path) as savfile:
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 class DataItemLaserCreation():
-    def __init__(self, title, array, which, start=None, final = None, pts = None, avg=None, step=None, delay=None, time_width=None, start_ps_cur = None, ctrl=None, is_live=True, eels_dispersion = 1.0, hor_pixels = 1600):
+    def __init__(self, title, array, which, start=None, final = None, pts = None, avg=None, step=None, delay=None, time_width=None, start_ps_cur = None, ctrl=None, is_live=True, eels_dispersion = 1.0, hor_pixels = 1600, oversample = 1):
         self.acq_parameters = {
                 "title": title,
                 "which": which,
@@ -70,6 +70,15 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[1].units = 'eV'
             self.dimensional_calibrations[1].scale = eels_dispersion
             self.dimensional_calibrations[1].offset = -hor_pixels/2. * eels_dispersion
+        if which == 'SMOOTHED_DATA':
+            self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = step
+            self.dimensional_calibrations[1].units = 'eV'
+            self.dimensional_calibrations[1].scale = eels_dispersion / oversample
+            self.dimensional_calibrations[1].offset = -hor_pixels/2. * eels_dispersion
+
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
                                                            timezone=self.timezone, timezone_offset=self.timezone_offset)
@@ -78,6 +87,7 @@ class DataItemLaserCreation():
         self.data_item.set_xdata(self.xdata)
         self.data_item.define_property("title", title)
         self.data_item.define_property("description", self.acq_parameters)
+        self.data_item.define_property("caption", self.acq_parameters)
         if is_live: self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
@@ -134,8 +144,8 @@ class gainhandler:
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled = False
-        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'process_eegs_pb', 'process_power_pb']))  # not working as something is calling this guy
-        self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.process_eegs_pb, self.process_power_pb] #i can put here because GUI was already initialized
+        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp', 'process_eegs_pb', 'process_power_pb']))  # not working as something is calling this guy
+        self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb, self.process_power_pb] #i can put here because GUI was already initialized
 
     def upt_push(self, widget):
         # self.grab()
@@ -198,7 +208,7 @@ class gainhandler:
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb", 'align_zlp_max']))
 
-    def call_data(self, nacq, pts, avg, start, end, step, ctrl):
+    def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur):
         if self.current_acquition != nacq:
             self.__adjusted=False
             self.current_acquition = nacq
@@ -229,7 +239,7 @@ class gainhandler:
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts, avg, step, None, None, None, ctrl)
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts, avg, step, delay, width, diode_cur, ctrl)
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
 
 
@@ -374,13 +384,15 @@ class gainhandler:
         self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels)
             
         if self.aligned_cam_di and self.zlp_fwhm: #you free next step if the precedent one works. For the next step, we need the data and FWHM
-            self.process_eegs_pb.enabled = self.process_power_pb.enabled = True
+            #self.process_eegs_pb.enabled = self.process_power_pb.enabled = True
+            self.smooth_zlp.enabled = True
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = False
             logging.info('***ACQUISITION***: Data Item created.')
 
         if self.display_check_box.checked: self.document_controller.document_model.append_data_item(self.aligned_cam_di.data_item)
 
-    def process_data(self, widget):
+
+    def smooth_data(self, widget):
         temp_data = self.aligned_cam_di.data_item.data
 
         #for the sake of comprehension, note that self.aligned_cam_di.acq_parameters is the same as self.aligned_cam_di.data_item_description. acq_parameters are defined at __init__ of my DataItemLaserCreation while description is a data_item property defined by nionswift. So if you wanna acess these informations anywhere in any computer you need to use data_item because this is stored in nionswift library. 
@@ -392,6 +404,10 @@ class gainhandler:
 
         temp_dict = self.aligned_cam_di.data_item.description
         temp_calib = self.aligned_cam_di.data_item.dimensional_calibrations
+        
+        cam_pixels = len(self.__current_DI.data[0])
+        eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
+        temp_title_name = 'Smooth'
 
         x = numpy.arange(temp_calib[1].offset, temp_calib[1].offset + temp_calib[1].scale*temp_data[0].shape[0], temp_calib[1].scale)
 
@@ -400,10 +416,24 @@ class gainhandler:
             oversample = int(self.savgol_oversample_value.text)
         except:
             window_size, poly_order, oversample = 41, 3, 10
-            logging.info('***ACQUISTION***: Window and Poly Order must be integers. Using standard (41, 3) values.')
+            logging.info('***ACQUISTION***: Window, Poly Order and Oversample must be integers. Using standard (41, 3, 10) values.')
+
+        temp_title_name+= '_ws_'+str(window_size)+'_po_'+str(poly_order)+'_os_'+str(oversample)+'_'+temp_dict['title']
         
         xx = numpy.linspace(x.min(), x.max(), temp_data[0].shape[0] * oversample)
 
+        self.smooth_array = self.data_proc.smooth_zlp(temp_data, window_size, poly_order, oversample, x, xx)
+            
+        self.smooth_di = DataItemLaserCreation(temp_title_name, self.smooth_array, "SMOOTHED_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels, oversample = oversample)
+        
+        if self.smooth_di: #you free next step if smooth is OK
+            self.process_eegs_pb.enabled = self.process_power_pb.enabled = True
+            self.smooth_zlp.enabled = False
+            logging.info('***ACQUISITION***: Smooth Sucessfull. Data Item created.')
+
+        if self.display_smooth_check_box.checked: self.document_controller.document_model.append_data_item(self.smooth_di.data_item)
+
+    def process_data(self, widget):
 
         if widget==self.process_eegs_pb: 
             logging.info('***ACQUISTION***: EEGS Processing....')
@@ -411,13 +441,6 @@ class gainhandler:
         if widget==self.process_power_pb: 
             logging.info('***ACQUISTION***: Power Scan Processing....')
             
-            #self.power_change_array = self.data_proc.smooth_zlp(temp_data, 10, 3, 1)
-
-            #print(self.savgol_window_value.text)
-            #print(self.savgol_poly_order_value.text)
-            #print(self.savgol_oversample_value.text)
-
-
 
         for pbs in self.actions_list:
             pbs.enabled=False
@@ -647,16 +670,20 @@ class gainView:
         self.savgol_poly_order_value = ui.create_line_edit(name='savgol_poly_order_value')
         self.savgol_oversample_label = ui.create_label(text='Oversampling: ', name='savgol_oversample_label')
         self.savgol_oversample_value = ui.create_line_edit(name='savgol_oversample_value')
-
         self.savgol_row = ui.create_row(self.savgol_window_label, self.savgol_window_value, self.savgol_poly_order_label, self.savgol_poly_order_value, self.savgol_oversample_label, self.savgol_oversample_value, ui.create_stretch())
 
+        self.smooth_zlp = ui.create_push_button(text='Smooth ZLP', on_clicked='smooth_data', name='smooth_zlp')
+        self.display_smooth_check_box = ui.create_check_box(text='Display?', name='display_smooth_check_box')
+        self.smooth_row = ui.create_row(self.smooth_zlp, self.display_smooth_check_box, spacing=12)
+        
+        
         self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
         self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
         self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, spacing=12)
 
 
         self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(
-            self.pb_actions_row, self.zlp_row, self.savgol_row, self.pb_process_row, ui.create_stretch())
+            self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row, ui.create_stretch())
             )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(

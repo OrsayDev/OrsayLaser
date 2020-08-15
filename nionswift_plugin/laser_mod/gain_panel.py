@@ -28,7 +28,7 @@ with open(abs_path) as savfile:
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 class DataItemLaserCreation():
-    def __init__(self, title, array, which, start=None, final = None, pts = None, avg=None, step=None, delay=None, time_width=None, start_ps_cur = None, ctrl=None, is_live=True, eels_dispersion = 1.0, hor_pixels = 1600, oversample = 1):
+    def __init__(self, title, array, which, start=None, final = None, pts = None, avg=None, step=None, delay=None, time_width=None, start_ps_cur = None, ctrl=None, is_live=True, eels_dispersion = 1.0, hor_pixels = 1600, oversample = 1, power_min = 0, power_inc = 1):
         self.acq_parameters = {
                 "title": title,
                 "which": which,
@@ -56,11 +56,11 @@ class DataItemLaserCreation():
             self.calibration.units = '°'
         if which == 'PS':
             self.calibration.units = 'A'
-        if which == 'sEEGS/sEELS':
+        if which == 'sEEGS/sEELS_power':
             self.calibration.units = 'A.U.'
-            self.dimensional_calibrations[0].units = 'nm'
-            self.dimensional_calibrations[0].offset = start
-            self.dimensional_calibrations[0].scale = step
+            self.dimensional_calibrations[0].units = 'μW'
+            self.dimensional_calibrations[0].offset = power_min
+            self.dimensional_calibrations[0].scale = power_inc
         if which == "CAM_DATA":
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
@@ -145,6 +145,7 @@ class gainhandler:
         self.savgol_window_value.text = '41'
         self.savgol_poly_order_value.text = '3'
         self.savgol_oversample_value.text = '10'
+        self.many_replicas.text = '1'
 
     def init_push(self, widget):
         self.instrument.init()
@@ -429,6 +430,7 @@ class gainhandler:
                 self.process_eegs_pb.enabled = True
             else:
                 self.process_power_pb.enabled = True
+                self.normalize_check_box.enabled = False
             self.smooth_zlp.enabled = False
             logging.info('***ACQUISITION***: Smooth Sucessfull. Data Item created.')
 
@@ -439,10 +441,13 @@ class gainhandler:
         temp_data = self.smooth_di.data_item.data
         temp_dict = self.smooth_di.data_item.description
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
-        print(temp_calib[1])
-        print(temp_calib[1].units)
         temp_gain_title_name = 'sEEGS'
         temp_loss_title_name = 'sEELS'
+        try:
+            number_orders = int(self.many_replicas.text)
+        except:
+            number_orders = 1
+            logging.info('***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
 
         gain_array = numpy.zeros(temp_data.shape[0]-1)
         loss_array = numpy.zeros(temp_data.shape[0]-1) 
@@ -455,34 +460,33 @@ class gainhandler:
         cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
         cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
 
-        rpa = numpy.reshape(self.__current_DI_POW.data, (temp_dict['pts'], temp_dict['averages']))
+        rpa = numpy.reshape(self.__current_DI_POW.data, (temp_dict['pts'], temp_dict['averages'])) #reshaped power array
+        rpa_avg = numpy.zeros(temp_dict['pts']-1) #reshaped power array averaged
 
         for i in range(len(temp_data)-1):
             gain_array[i] = numpy.sum(temp_data[i][cpg[i]-ihp:cpg[i]+ihp])
             loss_array[i] = numpy.sum(temp_data[i][cpl[i]-ihp:cpl[i]+ihp])
-            if self.normalize_check_box.checked:
-                gain_array[i] = gain_array[i] / (numpy.average(rpa[i]) - numpy.average(rpa[-1]))
-                loss_array[i] = loss_array[i] / (numpy.average(rpa[i]) - numpy.average(rpa[-1]))
 
-        if self.normalize_check_box.checked:
-            temp_gain_title_name+='_Norm'
-            temp_loss_title_name+='_Norm'
-            
+            rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
         temp_gain_title_name+= '_' + temp_dict['title']
         temp_loss_title_name+= '_' + temp_dict['title']
-
-        self.gain_di = DataItemLaserCreation(temp_gain_title_name, gain_array, "sEEGS/sEELS", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False)
-        self.loss_di = DataItemLaserCreation(temp_loss_title_name, loss_array, "sEEGS/sEELS", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False)
-        
-        self.document_controller.document_model.append_data_item(self.gain_di.data_item)
-        self.document_controller.document_model.append_data_item(self.loss_di.data_item)
     
         if widget==self.process_eegs_pb: 
             logging.info('***ACQUISTION***: EEGS Processing....')
 
         if widget==self.process_power_pb: 
             logging.info('***ACQUISTION***: Power Scan Processing....')
+
+            power_array_itp, gain_array_itp = self.data_proc.as_power_func(gain_array, rpa_avg, 1)
+            self.gain_di = DataItemLaserCreation(temp_gain_title_name, gain_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
+            
+            power_array_itp, loss_array_itp = self.data_proc.as_power_func(loss_array, rpa_avg, 1)
+            self.loss_di = DataItemLaserCreation(temp_loss_title_name, loss_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
+            
+            self.document_controller.document_model.append_data_item(self.gain_di.data_item)
+            self.document_controller.document_model.append_data_item(self.loss_di.data_item)
+        
 
         for pbs in self.actions_list:
             pbs.enabled=False
@@ -724,9 +728,11 @@ class gainView:
         
         
         self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
-        self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
         self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
-        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box, spacing=12)
+        self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
+        self.many_replicas_label = ui.create_label(name='many_replicas_label', text='# Orders?: ')
+        self.many_replicas = ui.create_line_edit(name='many_replicas')
+        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box, self.many_replicas_label, self.many_replicas, spacing=12)
 
 
         self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(

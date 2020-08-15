@@ -56,6 +56,11 @@ class DataItemLaserCreation():
             self.calibration.units = '°'
         if which == 'PS':
             self.calibration.units = 'A'
+        if which == 'sEEGS/sEELS':
+            self.calibration.units = 'A.U.'
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = step
         if which == "CAM_DATA":
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
@@ -434,6 +439,10 @@ class gainhandler:
         temp_data = self.smooth_di.data_item.data
         temp_dict = self.smooth_di.data_item.description
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
+        print(temp_calib[1])
+        print(temp_calib[1].units)
+        temp_gain_title_name = 'sEEGS'
+        temp_loss_title_name = 'sEELS'
 
         gain_array = numpy.zeros(temp_data.shape[0]-1)
         loss_array = numpy.zeros(temp_data.shape[0]-1) 
@@ -455,12 +464,20 @@ class gainhandler:
                 gain_array[i] = gain_array[i] / (numpy.average(rpa[i]) - numpy.average(rpa[-1]))
                 loss_array[i] = loss_array[i] / (numpy.average(rpa[i]) - numpy.average(rpa[-1]))
 
-        self.gain_di = DataItemLaserCreation("GAIN ", gain_array, "WAV", is_live=False)
-        self.loss_di = DataItemLaserCreation("LOSS ", loss_array, "WAV", is_live=False)
+        if self.normalize_check_box.checked:
+            temp_gain_title_name+='_Norm'
+            temp_loss_title_name+='_Norm'
+            
+
+        temp_gain_title_name+= '_' + temp_dict['title']
+        temp_loss_title_name+= '_' + temp_dict['title']
+
+        self.gain_di = DataItemLaserCreation(temp_gain_title_name, gain_array, "sEEGS/sEELS", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False)
+        self.loss_di = DataItemLaserCreation(temp_loss_title_name, loss_array, "sEEGS/sEELS", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False)
         
         self.document_controller.document_model.append_data_item(self.gain_di.data_item)
         self.document_controller.document_model.append_data_item(self.loss_di.data_item)
-
+    
         if widget==self.process_eegs_pb: 
             logging.info('***ACQUISTION***: EEGS Processing....')
 

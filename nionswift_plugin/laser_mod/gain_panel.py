@@ -142,6 +142,7 @@ class gainhandler:
         self.normalize_check_box.checked = True
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
+        self.recheck_check_box.checked = True
         self.savgol_window_value.text = '3'
         self.savgol_poly_order_value.text = '1'
         self.savgol_oversample_value.text = '1'
@@ -462,21 +463,35 @@ class gainhandler:
 
         ihp = int(round(self.zlp_fwhm / temp_calib[1].scale/2.)) #index half peak
         cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int) #center peak loss
+        cpl_meas = numpy.zeros((number_orders, temp_dict['pts']-1), dtype=int)
         cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int) # center peak gain
+        cpg_meas = numpy.zeros((number_orders, temp_dict['pts']-1), dtype=int)
 
         rpa = numpy.reshape(self.__current_DI_POW.data, (temp_dict['pts'], temp_dict['averages'])) #reshaped power array
         rpa_avg = numpy.zeros(temp_dict['pts']-1) #reshaped power array averaged
 
         for k in range(number_orders):
             for i in range(len(temp_data)-1):
-                garray = temp_data[i][cpg[k][i]-2*ihp:cpl[k][i]+2*ihp]
-                garray_di = DataItemLaserCreation("Laser Wavelength " + str(i), garray, "WAV")
-                self.document_controller.document_model.append_data_item(garray_di.data_item)
+                cpg_meas[k][i] = int(numpy.where(temp_data[i]==numpy.max(temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp]))[0])
+                cpl_meas[k][i] = int(numpy.where(temp_data[i]==numpy.max(temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp]))[0])
+                
+                garray = temp_data[i][cpg_meas[k][i]-ihp:cpg_meas[k][i]+ihp] if self.recheck_check_box.checked else temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp]
+                larray = temp_data[i][cpl_meas[k][i]-ihp:cpl_meas[k][i]+ihp] if self.recheck_check_box.checked else temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp]
 
-                gain_array[k][i] = numpy.sum(temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp])
-                loss_array[k][i] = numpy.sum(temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp])
+                gain_array[k][i] = numpy.sum(garray)
+                loss_array[k][i] = numpy.sum(larray)
+
                 rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
+                #creation of several plots so you can check if they are correct. Commented because it spams my data_items
+                #gdi = DataItemLaserCreation("Laser Wavelength "+str(i)+str(k), garray, "WAV", is_live=False)
+                #self.document_controller.document_model.append_data_item(gdi.data_item)
+
+        if self.recheck_check_box.checked: 
+            new_disp = numpy.average(numpy.divide(numpy.subtract(energies_loss, energies_gain), numpy.subtract(cpl_meas, cpg_meas)))
+            self.eff_dispersion_value.text = format(new_disp, '.4f') + ' eV'
+        else:
+            self.eff_dispersion_value.text = 'XX?'
         
         temp_gain_title_name+= '_order_' + temp_dict['title']
         temp_loss_title_name+= '_order_' + temp_dict['title']
@@ -705,8 +720,8 @@ class gainView:
         self.step_detected_label = ui.create_label(text='Step Wav.: ', name='step_detected_label')
         self.step_detected_value = ui.create_label(text='stp?', name='step_detected_value')
 
-        self.first_detected_row = ui.create_row(self.pts_detected_label, self.pts_detected_value, self.avg_detected_label, self.avg_detected_value, spacing=12)
-        self.second_detected_row = ui.create_row(self.start_detected_label, self.start_detected_value, self.final_detected_label, self.final_detected_value, self.step_detected_label, self.step_detected_value, spacing=12)
+        self.first_detected_row = ui.create_row(self.pts_detected_label, self.pts_detected_value, self.avg_detected_label, self.avg_detected_value, ui.create_stretch(), spacing=12)
+        self.second_detected_row = ui.create_row(self.start_detected_label, self.start_detected_value, self.final_detected_label, self.final_detected_value, self.step_detected_label, self.step_detected_value, ui.create_stretch(), spacing=12)
 
 
         self.pick_group = ui.create_group(title='Pick Tool', content=ui.create_column(
@@ -737,14 +752,18 @@ class gainView:
         
         self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
         self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
+        self.recheck_check_box = ui.create_check_box(text='Re-Disp? ', name='recheck_check_box')
         self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
         self.many_replicas_label = ui.create_label(name='many_replicas_label', text='# Orders?: ')
         self.many_replicas = ui.create_line_edit(name='many_replicas')
-        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box, self.many_replicas_label, self.many_replicas, spacing=12)
+        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box, self.recheck_check_box, self.many_replicas_label, self.many_replicas, spacing=3)
 
+        self.eff_dispersion = ui.create_label(name='eff_dispersion', text='Measured Dispersion: ')
+        self.eff_dispersion_value = ui.create_label(name='eff_dispersion_value', text='eff disp?')
+        self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, ui.create_stretch(), spacing=12)
 
         self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(
-            self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row, ui.create_stretch())
+            self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row, self.info_process_row, ui.create_stretch())
             )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(

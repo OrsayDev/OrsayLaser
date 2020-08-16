@@ -142,9 +142,9 @@ class gainhandler:
         self.normalize_check_box.checked = True
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
-        self.savgol_window_value.text = '41'
-        self.savgol_poly_order_value.text = '3'
-        self.savgol_oversample_value.text = '10'
+        self.savgol_window_value.text = '3'
+        self.savgol_poly_order_value.text = '1'
+        self.savgol_oversample_value.text = '1'
         self.many_replicas.text = '1'
 
     def init_push(self, widget):
@@ -469,6 +469,10 @@ class gainhandler:
 
         for k in range(number_orders):
             for i in range(len(temp_data)-1):
+                garray = temp_data[i][cpg[k][i]-2*ihp:cpl[k][i]+2*ihp]
+                garray_di = DataItemLaserCreation("Laser Wavelength " + str(i), garray, "WAV")
+                self.document_controller.document_model.append_data_item(garray_di.data_item)
+
                 gain_array[k][i] = numpy.sum(temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp])
                 loss_array[k][i] = numpy.sum(temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp])
                 rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])

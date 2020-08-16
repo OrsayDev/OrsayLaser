@@ -449,28 +449,33 @@ class gainhandler:
             number_orders = 1
             logging.info('***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
 
-        gain_array = numpy.zeros(temp_data.shape[0]-1)
-        loss_array = numpy.zeros(temp_data.shape[0]-1) 
+        gain_array = numpy.zeros((number_orders, temp_dict['pts']-1))
+        loss_array = numpy.zeros((number_orders, temp_dict['pts']-1)) 
+
+        energies_loss = numpy.zeros((number_orders, temp_dict['pts']-1))
+        energies_gain = numpy.zeros((number_orders, temp_dict['pts']-1))
 
         wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts']-1)
-        energies_loss = numpy.divide(1239.8, wavs)
-        energies_gain = numpy.multiply(numpy.divide(1239.8, wavs), -1)
+        for k in range(number_orders):
+            energies_loss[k] = numpy.divide(1239.8*(k+1), wavs)
+            energies_gain[k] = numpy.multiply(numpy.divide(1239.8*(k+1), wavs), -1)
 
-        ihp = int(round(self.zlp_fwhm / temp_calib[1].scale/2.))
-        cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
-        cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int)
+        ihp = int(round(self.zlp_fwhm / temp_calib[1].scale/2.)) #index half peak
+        cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int) #center peak loss
+        cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int) # center peak gain
 
         rpa = numpy.reshape(self.__current_DI_POW.data, (temp_dict['pts'], temp_dict['averages'])) #reshaped power array
         rpa_avg = numpy.zeros(temp_dict['pts']-1) #reshaped power array averaged
 
-        for i in range(len(temp_data)-1):
-            gain_array[i] = numpy.sum(temp_data[i][cpg[i]-ihp:cpg[i]+ihp])
-            loss_array[i] = numpy.sum(temp_data[i][cpl[i]-ihp:cpl[i]+ihp])
+        for k in range(number_orders):
+            for i in range(len(temp_data)-1):
+                gain_array[k][i] = numpy.sum(temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp])
+                loss_array[k][i] = numpy.sum(temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp])
+                rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
-            rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
-
-        temp_gain_title_name+= '_' + temp_dict['title']
-        temp_loss_title_name+= '_' + temp_dict['title']
+        
+        temp_gain_title_name+= '_order_' + temp_dict['title']
+        temp_loss_title_name+= '_order_' + temp_dict['title']
     
         if widget==self.process_eegs_pb: 
             logging.info('***ACQUISTION***: EEGS Processing....')
@@ -478,16 +483,15 @@ class gainhandler:
         if widget==self.process_power_pb: 
             logging.info('***ACQUISTION***: Power Scan Processing....')
 
-            power_array_itp, gain_array_itp = self.data_proc.as_power_func(gain_array, rpa_avg, 1)
-            self.gain_di = DataItemLaserCreation(temp_gain_title_name, gain_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
+            for k in range(number_orders):
+                power_array_itp, gain_array_itp = self.data_proc.as_power_func(gain_array[k], rpa_avg, 1)
+                self.gain_di = DataItemLaserCreation('_' + str(k+1) + temp_gain_title_name, gain_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
+                self.document_controller.document_model.append_data_item(self.gain_di.data_item)
             
-            power_array_itp, loss_array_itp = self.data_proc.as_power_func(loss_array, rpa_avg, 1)
-            self.loss_di = DataItemLaserCreation(temp_loss_title_name, loss_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
-            
-            self.document_controller.document_model.append_data_item(self.gain_di.data_item)
-            self.document_controller.document_model.append_data_item(self.loss_di.data_item)
+                power_array_itp, loss_array_itp = self.data_proc.as_power_func(loss_array[k], rpa_avg, 1)
+                self.loss_di = DataItemLaserCreation('_' + str(k+1) + temp_loss_title_name, loss_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
+                self.document_controller.document_model.append_data_item(self.loss_di.data_item)
         
-
         for pbs in self.actions_list:
             pbs.enabled=False
         self.aligned_cam_di = None #kill this attribute so next one will start from the beginning. Safest way to do it.

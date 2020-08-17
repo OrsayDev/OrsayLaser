@@ -52,7 +52,24 @@ class gainData:
         temp_pw_data = numpy.asarray(temp_pw_data)
         temp_di_data = numpy.asarray(temp_di_data)
         return temp_wl_data, temp_pw_data, temp_di_data
-    
+
+    def fit_data(self, data, pts, start, end, step, disp, fwhm):
+        def _gaussian_fit(x, *p):
+            A, mu, sigma, A_1, mu_1, fond = p
+            return A * numpy.exp(-(x) ** 2 / (2. * sigma ** 2)) + A_1 * numpy.exp(
+                -(x - mu_1) ** 2 / (2. * sigma ** 2)) + A_1 * numpy.exp(-(x + mu_1) ** 2 / (2. * sigma ** 2)) + fond
+
+        fit_array = numpy.zeros(data.shape)
+
+        for i in range(fit_array.shape[0]):
+            x = numpy.linspace(-(fit_array.shape[1] / 2.) * disp, (fit_array.shape[1] / 2.) * disp, fit_array.shape[1])
+            print(x)
+            print(x[780:820])
+            #print(numpy.where(data[i] == numpy.max(data[i]))[0][0])
+            p0 = [max(fit_array[i]), 0., 1, 0., -2., data.min()]
+            coeff, var_matrix = curve_fit(_gaussian_fit, x, data[i], p0=p0)
+            fit_array[i] = _gaussian_fit(x, *coeff)
+        return fit_array
 
 
     def align_zlp(self, raw_array, pts, avg, pixels, disp, mode='max'):

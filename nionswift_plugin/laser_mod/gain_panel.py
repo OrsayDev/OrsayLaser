@@ -160,10 +160,10 @@ class gainhandler:
         self.init_pb.enabled = False
         self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                                           'process_eegs_pb',
-                                                          'process_power_pb']))  # not working as something is
+                                                          'process_power_pb', 'fit_pb', 'cancel_pb']))  # not working as something is
         # calling this guy
         self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb,
-                             self.process_power_pb]  # i can put here because GUI was already initialized
+                             self.process_power_pb, self.fit_pb, self.cancel_pb]  # i can put here because GUI was already initialized
 
     def upt_push(self, widget):
         # self.grab()
@@ -550,6 +550,10 @@ class gainhandler:
             self.eff_fwhm_value.text = format(self.zlp_fwhm / temp_calib[1].scale * new_disp, '.4f') + ' eV'
         else:
             self.eff_dispersion_value.text = 'XX?'
+            new_disp = None
+
+        self.final_disp = new_disp if new_disp is not None else temp_calib[1].scale
+        self.zlp_fwhm = self.zlp_fwhm / temp_calib[1].scale * new_disp if new_disp is not None else self.zlp_fwhm
 
         for k in range(number_orders):
             for i in range(len(temp_data) - 1):
@@ -626,6 +630,40 @@ class gainhandler:
 
                 logging.info('***ACQUISTION***: Power Scan Done.')
 
+            self.process_eegs_pb.enabled = False
+            self.process_power_pb.enabled = False
+            if self.gain_di and self.loss_di and self.smooth_di:
+                self.fit_pb.enabled = True
+            self.cancel_pb.enabled = True
+
+
+
+    def fit_or_cancel(self, widget):
+
+        temp_data = self.smooth_di.data_item.data
+        temp_dict = self.smooth_di.data_item.description
+        temp_calib = self.smooth_di.data_item.dimensional_calibrations
+
+
+        if widget==self.fit_pb:
+            logging.info('***ACQUISITION***: Attempting to fit data..')
+            fit_array = self.data_proc.fit_data(temp_data, temp_dict['pts'], temp_dict['start_wav'], temp_dict['final_wav'],
+                                    temp_dict['step_wav'], self.final_disp, self.zlp_fwhm)
+
+            self.fit_di = DataItemLaserCreation('fit', fit_array, "SMOOTHED_DATA",
+                                                   temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+                                                   temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+                                                   temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                   temp_dict['control'], is_live=False)
+
+            self.document_controller.document_model.append_data_item(self.fit_di.data_item)
+
+
+            logging.info('***ACQUISITION***: Fit Done.')
+
+        elif widget==self.cancel_pb:
+            logging.info('***ACQUISITION***: Not attempting to fit data.')
+
         for pbs in self.actions_list:
             pbs.enabled = False
         self.aligned_cam_di = None  # kill this attribute so next one will start from the beg. Safest way to do it.
@@ -634,6 +672,8 @@ class gainhandler:
         self.gain_di = None  # too bad, you dead
         self.loss_di = None  # dead
         self.__current_DI_POW = None  # bye
+        self.garray = None
+        self.larray = None
 
 
 class gainView:
@@ -909,9 +949,13 @@ class gainView:
         self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, self.eff_fwhm, self.eff_fwhm_value, ui.create_stretch(),
                                               spacing=12)
 
+        self.fit_pb = ui.create_push_button(text='Fit', on_clicked='fit_or_cancel', name='fit_pb')
+        self.cancel_pb = ui.create_push_button(text='Cancel', on_clicked='fit_or_cancel', name='cancel_pb')
+        self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, ui.create_stretch(), spacing=12)
+
         self.actions_group = ui.create_group(title='Actions', content=ui.create_column(
             self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row,
-            self.info_process_row, ui.create_stretch())
+            self.info_process_row, self.fit_row, ui.create_stretch())
                                              )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(

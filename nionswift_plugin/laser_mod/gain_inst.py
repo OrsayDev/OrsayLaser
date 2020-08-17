@@ -70,6 +70,7 @@ class gainDevice(Observable.Observable):
         self.__diode = 0.10
         self.__servo_pos = 0
         self.__servo_pos_initial = self.__servo_pos
+        self.__servo_pts = 0
         self.__servo_wobbler = False
         self.__ctrl_type = 0
         self.__delay=1800 * 1e-9
@@ -554,6 +555,8 @@ class gainDevice(Observable.Observable):
         self.__servo_pos = value
         self.__servo.set_pos(self.__servo_pos)
         if not self.__status:
+            self.__servo_pts = int(self.__servo_pos/self.__servo_step)
+            self.property_changed_event.fire("servo_pts_f")
             self.property_changed_event.fire("power_f")
             self.free_event.fire('all')
 
@@ -568,6 +571,14 @@ class gainDevice(Observable.Observable):
             self.__servo_step = int(value)
         except:
             logging.info('***SERVO***: Please enter an integer.')
+        if not self.__status:
+            self.__servo_pts = int(self.__servo_pos/self.__servo_step)
+            self.property_changed_event.fire("servo_pts_f")
+            self.free_event.fire('all')
+
+    @property
+    def servo_pts_f(self):
+        return self.__servo_pts
 
     @property
     def pw_ctrl_type_f(self):

@@ -27,21 +27,24 @@ with open(abs_path) as savfile:
 
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
+
 class DataItemLaserCreation():
-    def __init__(self, title, array, which, start=None, final = None, pts = None, avg=None, step=None, delay=None, time_width=None, start_ps_cur = None, ctrl=None, is_live=True, eels_dispersion = 1.0, hor_pixels = 1600, oversample = 1, power_min = 0, power_inc = 1):
+    def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
+                 time_width=None, start_ps_cur=None, ctrl=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
+                 oversample=1, power_min=0, power_inc=1):
         self.acq_parameters = {
-                "title": title,
-                "which": which,
-                "start_wav": start,
-                "final_wav": final,
-                "pts": pts,
-                "averages": avg,
-                "step_wav": step,
-                "delay": delay,
-                "time_width": time_width,
-                "start_ps_cur": start_ps_cur,
-                "control": ctrl
-                }
+            "title": title,
+            "which": which,
+            "start_wav": start,
+            "final_wav": final,
+            "pts": pts,
+            "averages": avg,
+            "step_wav": step,
+            "delay": delay,
+            "time_width": time_width,
+            "start_ps_cur": start_ps_cur,
+            "control": ctrl
+        }
         self.timezone = Utility.get_local_timezone()
         self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
@@ -49,7 +52,7 @@ class DataItemLaserCreation():
         self.dimensional_calibrations = [Calibration.Calibration()]
 
         if which == 'WAV':
-            self.calibration.units='nm'
+            self.calibration.units = 'nm'
         if which == 'POW':
             self.calibration.units = 'μW'
         if which == 'SER':
@@ -61,11 +64,16 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].units = 'μW'
             self.dimensional_calibrations[0].offset = power_min
             self.dimensional_calibrations[0].scale = power_inc
+        if which == 'sEEGS/sEELS':
+            self.calibration.units = 'A.U.'
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = step
         if which == "CAM_DATA":
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
-            self.dimensional_calibrations[0].offset=start
-            self.dimensional_calibrations[0].scale=(step)/avg
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = (step) / avg
             self.dimensional_calibrations[1].units = 'eV'
         if which == 'ALIGNED_CAM_DATA':
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
@@ -74,7 +82,7 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].scale = step
             self.dimensional_calibrations[1].units = 'eV'
             self.dimensional_calibrations[1].scale = eels_dispersion
-            self.dimensional_calibrations[1].offset = -hor_pixels/2. * eels_dispersion
+            self.dimensional_calibrations[1].offset = -hor_pixels / 2. * eels_dispersion
         if which == 'SMOOTHED_DATA':
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
@@ -82,8 +90,7 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].scale = step
             self.dimensional_calibrations[1].units = 'eV'
             self.dimensional_calibrations[1].scale = eels_dispersion / oversample
-            self.dimensional_calibrations[1].offset = -hor_pixels/2. * eels_dispersion
-
+            self.dimensional_calibrations[1].offset = -hor_pixels / 2. * eels_dispersion
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
                                                            timezone=self.timezone, timezone_offset=self.timezone_offset)
@@ -121,7 +128,7 @@ class gainhandler:
         self.call_data_listener = self.instrument.call_data.listen(self.call_data)
         self.append_data_listener = self.instrument.append_data.listen(self.append_data)
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
-        
+
         self.__current_DI = None
         self.__current_DI_POW = None
         self.__current_DI_WAV = None
@@ -151,8 +158,12 @@ class gainhandler:
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled = False
-        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp', 'process_eegs_pb', 'process_power_pb']))  # not working as something is calling this guy
-        self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb, self.process_power_pb] #i can put here because GUI was already initialized
+        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
+                                                          'process_eegs_pb',
+                                                          'process_power_pb']))  # not working as something is
+        # calling this guy
+        self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb,
+                             self.process_power_pb]  # i can put here because GUI was already initialized
 
     def upt_push(self, widget):
         # self.grab()
@@ -160,7 +171,7 @@ class gainhandler:
 
     def acq_push(self, widget):
         self.instrument.acq()
-    
+
     def acq_pr_push(self, widget):
         self.instrument.acq_pr()
 
@@ -217,23 +228,24 @@ class gainhandler:
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur):
         if self.current_acquition != nacq:
-            self.__adjusted=False
+            self.__adjusted = False
             self.current_acquition = nacq
             self.avg = avg
             self.start_wav = start
             self.end_wav = end
             self.ctrl = ctrl
-            self.pts=pts
-            self.step=step
+            self.pts = pts
+            self.step = step
             self.cam_pixels = 1600
             self.wav_array = numpy.zeros(pts * avg)
             self.pow_array = numpy.zeros(pts * avg)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
             if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
-            
-            while self.document_controller.document_model.get_data_item_by_title("Laser Wavelength " + str(nacq)) != None:
-                nacq+=1 #this puts always a new set even if swift crashes
-            
+
+            while self.document_controller.document_model.get_data_item_by_title(
+                    'Laser Wavelength ' + str(nacq)) is not None:
+                nacq += 1  # this puts always a new set even if swift crashes
+
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
@@ -246,10 +258,9 @@ class gainhandler:
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts, avg, step, delay, width, diode_cur, ctrl)
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
+                                                avg, step, delay, width, diode_cur, ctrl)
             self.document_controller.document_model.append_data_item(self.cam_di.data_item)
-
-
 
     def append_data(self, value, index1, index2, camera_data):
         try:
@@ -265,15 +276,16 @@ class gainhandler:
             cam_calibration = camera_data.get_dimensional_calibration(1)
 
             if camera_data.data.shape[1] != self.cam_array.shape[1]:
-                self.cam_array=numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
+                self.cam_array = numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
                 logging.info('***ACQUISTION***: Corrected #PIXELS.')
             try:
                 self.cam_di.set_cam_di_calibration(cam_calibration)
                 logging.info('***ACQUISTION***: Calibration OK.')
             except:
-                logging.info('***ACQUISTION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
+                logging.info(
+                    '***ACQUISTION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
 
-            self.__adjusted=True
+            self.__adjusted = True
 
         cam_hor = numpy.sum(camera_data.data, axis=0)
 
@@ -300,102 +312,139 @@ class gainhandler:
 
     def grab_data_item(self, widget):
         try:
-            self.__current_DI = self.document_controller.document_model.get_data_item_by_title(self.file_name_value.text)
+            self.__current_DI = self.document_controller.document_model.get_data_item_by_title(
+                self.file_name_value.text)
             for pbs in self.actions_list:
-                pbs.enabled=False
+                pbs.enabled = False
         except:
             pass
         if self.__current_DI:
-            temp_acq = int(self.file_name_value.text[-2:]) #Works from 0-99.
+            temp_acq = int(self.file_name_value.text[-2:])  # Works from 0-99.
             self.file_UUID_value.text = self.__current_DI.uuid
             self.file_dim_value.text = self.__current_DI.data.ndim
-            self.file_x_disp_value.text=str(self.__current_DI.dimensional_calibrations[1].scale) + ' ' + self.__current_DI.dimensional_calibrations[1].units
+            self.file_x_disp_value.text = str(self.__current_DI.dimensional_calibrations[1].scale) + ' ' + \
+                                          self.__current_DI.dimensional_calibrations[1].units
+            self.zlp_value.text = ''
+            self.eff_dispersion_value.text = ''
+            self.eff_fwhm_value.text = ''
+
             try:
                 self.file_type_value.text = self.__current_DI.description['which']
+                self.pts_detected_value.text = self.__current_DI.description['pts']
+                self.avg_detected_value.text = self.__current_DI.description['averages']
+                self.start_detected_value.text = format(self.__current_DI.description['start_wav'], '.3f')
+                self.final_detected_value.text = format(self.__current_DI.description['final_wav'], '.3f')
+                self.step_detected_value.text = format(self.__current_DI.description['step_wav'], '.3f')
             except:
                 self.file_type_value.text = 'Unknown'
+                self.pts_detected_value.text = 'Unknown'
+                self.avg_detected_value.text = 'Unknown'
+                self.start_detected_value.text = 'Unknown'
+                self.final_detected_value.text = 'Unknown'
+                self.step_detected_value.text = 'Unknown'
+
+
             if "Gain" in self.file_name_value.text:
-                self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title("Power " + str(temp_acq))
+                self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title(
+                    "Power " + str(temp_acq))
                 self.power_file_detected_value.text = bool(self.__current_DI_POW)
-                self.__current_DI_WAV = self.document_controller.document_model.get_data_item_by_title("Laser Wavelength " + str(temp_acq))
+                self.__current_DI_WAV = self.document_controller.document_model.get_data_item_by_title(
+                    "Laser Wavelength " + str(temp_acq))
                 self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
                 if self.__current_DI_POW and self.__current_DI_WAV:
                     self.align_zlp_max.enabled = self.align_zlp_fit.enabled = True
 
             elif "Power" in self.file_name_value.text:
-                pass #something to do with only power?
+                pass  # something to do with only power?
             elif "Wavelength" in self.file_name_value.text:
-                pass #something to do with only laser wavelength?
+                pass  # something to do with only laser wavelength?
         else:
             logging.info('***ACQUISTION***: Could not find referenced Data Item.')
-
-
 
     def align_zlp(self, widget):
         temp_dict = self.__current_DI.description
         if not temp_dict:
             temp_dict = dict()
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter number of different energies (laser scan) or servo positions (servo scan): ')
-            temp_dict['pts'] = int(input()) 
+            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter number of points ('
+                         'including last off laser one): ')
+            temp_dict['pts'] = int(input())
             self.pts_detected_value.text = temp_dict['pts']
             logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter number of averages: ')
-            temp_dict['averages'] = int(input()) 
+            temp_dict['averages'] = int(input())
             self.avg_detected_value.text = temp_dict['averages']
             logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter start wavelength: ')
-            temp_dict['start_wav'] = float(input()) 
+            temp_dict['start_wav'] = float(input())
             self.start_detected_value.text = format(temp_dict['start_wav'], '.3f')
             logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter final wavelength: ')
-            temp_dict['final_wav'] = float(input()) 
+            temp_dict['final_wav'] = float(input())
             self.final_detected_value.text = format(temp_dict['final_wav'], '.3f')
             logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter step wavelength: ')
             temp_dict['step_wav'] = float(input())
             self.step_detected_value.text = format(temp_dict['step_wav'], '.3f')
             logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter original title: ')
             temp_dict['title'] = input()
+            # as we dont have this, we certainly dont have delay, width and control. We put it here none so we dont
+            # conflict when creating data_item, as we would like to save this info if it is available
+            temp_dict['delay'] = None
+            temp_dict['time_width'] = None
+            temp_dict['start_ps_cur'] = None
+            temp_dict['control'] = None
 
-        else:
-            self.pts_detected_value.text = temp_dict['pts']
-            self.avg_detected_value.text = temp_dict['averages']
-            self.start_detected_value.text = format(temp_dict['start_wav'], '.3f')
-            self.final_detected_value.text = format(temp_dict['final_wav'], '.3f')
-            self.step_detected_value.text = format(temp_dict['step_wav'], '.3f')
+        print(temp_dict)
 
         temp_data = self.__current_DI.data
         cam_pixels = len(self.__current_DI.data[0])
         eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
-        temp_title_name = 'Aligned' #keep adding stuff as far as you doing (or not doing) stuff with your data. Always use a temp one
-    
+        temp_title_name = 'Aligned'  # keep adding stuff as far as you doing (or not doing) stuff with your data.
+        # Always use a temp one
+
         if self.normalize_current_check_box.checked:
             for i in range(len(self.__current_DI.data)):
                 temp_data[i] = numpy.divide(temp_data[i], numpy.sum(temp_data[i]))
-            temp_title_name+='_Ncur'
-        
-        ### HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT FOR CALIBRATION ***
-        if widget==self.align_zlp_max:
-            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, eels_dispersion, 'max')
-            temp_title_name+='_max'
-        elif widget==self.align_zlp_fit:
-            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'], temp_dict['averages'], cam_pixels, eels_dispersion, 'fit')
-            temp_title_name+='_fit'
-        
-        self.zlp_fwhm = zlp_fwhm
-        self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[1].units #displaying
-        temp_title_name+=' '+temp_dict['title'] #Final name of Data_Item
+            temp_title_name += '_Ncur'
 
-        self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels)
-            
-        if self.aligned_cam_di and self.zlp_fwhm: #you free next step if the precedent one works. For the next step, we need the data and FWHM
+        # ## HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT
+        # FOR CALIBRATION ***
+        if widget == self.align_zlp_max:
+            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
+                                                                        temp_dict['averages'], cam_pixels,
+                                                                        eels_dispersion, 'max')
+            temp_title_name += '_max'
+        elif widget == self.align_zlp_fit:
+            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
+                                                                        temp_dict['averages'], cam_pixels,
+                                                                        eels_dispersion, 'fit')
+            temp_title_name += '_fit'
+
+        self.zlp_fwhm = zlp_fwhm
+        self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[
+            1].units  # displaying
+        temp_title_name += ' ' + temp_dict['title']  # Final name of Data_Item
+
+        self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA",
+                                                    temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+                                                    temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False,
+                                                    eels_dispersion=eels_dispersion, hor_pixels=cam_pixels)
+
+        if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
+            # step, we need the data and FWHM
             self.smooth_zlp.enabled = True
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = False
             logging.info('***ACQUISITION***: Data Item created.')
 
-        if self.display_check_box.checked: self.document_controller.document_model.append_data_item(self.aligned_cam_di.data_item)
-
+        if self.display_check_box.checked: self.document_controller.document_model.append_data_item(
+            self.aligned_cam_di.data_item)
 
     def smooth_data(self, widget):
         temp_data = self.aligned_cam_di.data_item.data
 
-        #for the sake of comprehension, note that self.aligned_cam_di.acq_parameters is the same as self.aligned_cam_di.data_item_description. acq_parameters are defined at __init__ of my DataItemLaserCreation while description is a data_item property defined by nionswift. So if you wanna acess these informations anywhere in any computer you need to use data_item because this is stored in nionswift library. 
+        # for the sake of comprehension, note that self.aligned_cam_di.acq_parameters is the same as
+        # self.aligned_cam_di.data_item_description. acq_parameters are defined at __init__ of my
+        # DataItemLaserCreation while description is a data_item property defined by nionswift. So if you wanna acess
+        # these informations anywhere in any computer you need to use data_item because this is stored in nionswift
+        # library.
         '''
         Produces the same output:
             print(self.aligned_cam_di.acq_parameters)
@@ -404,41 +453,52 @@ class gainhandler:
 
         temp_dict = self.aligned_cam_di.data_item.description
         temp_calib = self.aligned_cam_di.data_item.dimensional_calibrations
-        
+
         cam_pixels = len(self.__current_DI.data[0])
         eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
         temp_title_name = 'Smooth'
 
-        x = numpy.arange(temp_calib[1].offset, temp_calib[1].offset + temp_calib[1].scale*temp_data[0].shape[0], temp_calib[1].scale)
+        x = numpy.arange(temp_calib[1].offset, temp_calib[1].offset + temp_calib[1].scale * temp_data[0].shape[0],
+                         temp_calib[1].scale)
 
         try:
             window_size, poly_order = int(self.savgol_window_value.text), int(self.savgol_poly_order_value.text)
             oversample = int(self.savgol_oversample_value.text)
         except:
             window_size, poly_order, oversample = 41, 3, 10
-            logging.info('***ACQUISTION***: Window, Poly Order and Oversample must be integers. Using standard (41, 3, 10) values.')
+            logging.info(
+                '***ACQUISTION***: Window, Poly Order and Oversample must be integers. Using standard (41, 3, '
+                '10) values.')
 
-        temp_title_name+= '_ws_'+str(window_size)+'_po_'+str(poly_order)+'_os_'+str(oversample)+'_'+temp_dict['title']
-        
+        temp_title_name += '_ws_' + str(window_size) + '_po_' + str(poly_order) + '_os_' + str(oversample) + '_' + \
+                           temp_dict['title']
+
         xx = numpy.linspace(x.min(), x.max(), temp_data[0].shape[0] * oversample)
 
         self.smooth_array = self.data_proc.smooth_zlp(temp_data, window_size, poly_order, oversample, x, xx)
-            
-        self.smooth_di = DataItemLaserCreation(temp_title_name, self.smooth_array, "SMOOTHED_DATA", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] , temp_dict['averages'], temp_dict['step_wav'], is_live = False, eels_dispersion = eels_dispersion, hor_pixels = cam_pixels, oversample = oversample)
-        
-        if self.smooth_di: #you free next step if smooth is OK
-            if temp_dict['step_wav']: 
+
+        self.smooth_di = DataItemLaserCreation(temp_title_name, self.smooth_array, "SMOOTHED_DATA",
+                                               temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+                                               temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+                                               temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                               temp_dict['control'], is_live=False,
+                                               eels_dispersion=eels_dispersion, hor_pixels=cam_pixels,
+                                               oversample=oversample)
+
+        if self.smooth_di:  # you free next step if smooth is OK
+            if temp_dict['step_wav']:
                 self.process_eegs_pb.enabled = True
             else:
                 self.process_power_pb.enabled = True
                 self.normalize_check_box.enabled = False
             self.smooth_zlp.enabled = False
-            logging.info('***ACQUISITION***: Smooth Sucessfull. Data Item created.')
+            logging.info('***ACQUISITION***: Smooth Successful. Data Item created.')
 
-        if self.display_smooth_check_box.checked: self.document_controller.document_model.append_data_item(self.smooth_di.data_item)
+        if self.display_smooth_check_box.checked: self.document_controller.document_model.append_data_item(
+            self.smooth_di.data_item)
 
     def process_data(self, widget):
-        
+
         temp_data = self.smooth_di.data_item.data
         temp_dict = self.smooth_di.data_item.description
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
@@ -448,77 +508,133 @@ class gainhandler:
             number_orders = int(self.many_replicas.text)
         except:
             number_orders = 1
-            logging.info('***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
+            logging.info(
+                '***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
 
-        gain_array = numpy.zeros((number_orders, temp_dict['pts']-1))
-        loss_array = numpy.zeros((number_orders, temp_dict['pts']-1)) 
+        gain_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
+        loss_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
 
-        energies_loss = numpy.zeros((number_orders, temp_dict['pts']-1))
-        energies_gain = numpy.zeros((number_orders, temp_dict['pts']-1))
+        energies_loss = numpy.zeros((number_orders, temp_dict['pts'] - 1))
+        energies_gain = numpy.zeros((number_orders, temp_dict['pts'] - 1))
 
-        wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts']-1)
+        wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] - 1)
         for k in range(number_orders):
-            energies_loss[k] = numpy.divide(1239.8*(k+1), wavs)
-            energies_gain[k] = numpy.multiply(numpy.divide(1239.8*(k+1), wavs), -1)
+            energies_loss[k] = numpy.divide(1239.8 * (k + 1), wavs)
+            energies_gain[k] = numpy.multiply(numpy.divide(1239.8 * (k + 1), wavs), -1)
 
-        ihp = int(round(self.zlp_fwhm / temp_calib[1].scale/2.)) #index half peak
-        cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale), dtype=int) #center peak loss
-        cpl_meas = numpy.zeros((number_orders, temp_dict['pts']-1), dtype=int)
-        cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale), dtype=int) # center peak gain
-        cpg_meas = numpy.zeros((number_orders, temp_dict['pts']-1), dtype=int)
+        ihp = int(round(self.zlp_fwhm / temp_calib[1].scale / 2.))  # index half peak
+        cpl = numpy.array(numpy.divide(numpy.subtract(energies_loss, temp_calib[1].offset), temp_calib[1].scale),
+                          dtype=int)  # center peak loss
+        cpl_meas = numpy.zeros((number_orders, temp_dict['pts'] - 1), dtype=int)
+        cpg = numpy.array(numpy.divide(numpy.subtract(energies_gain, temp_calib[1].offset), temp_calib[1].scale),
+                          dtype=int)  # center peak gain
+        cpg_meas = numpy.zeros((number_orders, temp_dict['pts'] - 1), dtype=int)
 
-        rpa = numpy.reshape(self.__current_DI_POW.data, (temp_dict['pts'], temp_dict['averages'])) #reshaped power array
-        rpa_avg = numpy.zeros(temp_dict['pts']-1) #reshaped power array averaged
+        rpa = numpy.reshape(self.__current_DI_POW.data,
+                            (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
+        rpa_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
+
 
         for k in range(number_orders):
-            for i in range(len(temp_data)-1):
-                cpg_meas[k][i] = int(numpy.where(temp_data[i]==numpy.max(temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp]))[0])
-                cpl_meas[k][i] = int(numpy.where(temp_data[i]==numpy.max(temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp]))[0])
-                
-                garray = temp_data[i][cpg_meas[k][i]-ihp:cpg_meas[k][i]+ihp] if self.recheck_check_box.checked else temp_data[i][cpg[k][i]-ihp:cpg[k][i]+ihp]
-                larray = temp_data[i][cpl_meas[k][i]-ihp:cpl_meas[k][i]+ihp] if self.recheck_check_box.checked else temp_data[i][cpl[k][i]-ihp:cpl[k][i]+ihp]
+            for i in range(len(temp_data) - 1):
+                cpg_meas[k][i] = int(
+                    numpy.where(temp_data[i] == numpy.max(temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]))[0])
+                cpl_meas[k][i] = int(
+                    numpy.where(temp_data[i] == numpy.max(temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]))[0])
+
+        if self.recheck_check_box.checked:
+            new_disp = numpy.average(
+                numpy.divide(numpy.subtract(energies_loss, energies_gain), numpy.subtract(cpl_meas, cpg_meas)))
+            self.eff_dispersion_value.text = format(new_disp, '.4f') + ' eV'
+            ihp = int(round(self.zlp_fwhm / new_disp / 2.))
+            self.eff_fwhm_value.text = format(self.zlp_fwhm / temp_calib[1].scale * new_disp, '.4f') + ' eV'
+        else:
+            self.eff_dispersion_value.text = 'XX?'
+
+        for k in range(number_orders):
+            for i in range(len(temp_data) - 1):
+
+                garray = temp_data[i][cpg_meas[k][i] - ihp:cpg_meas[k][i] + ihp] if self.recheck_check_box.checked else \
+                temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
+                larray = temp_data[i][cpl_meas[k][i] - ihp:cpl_meas[k][i] + ihp] if self.recheck_check_box.checked else \
+                temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
 
                 gain_array[k][i] = numpy.sum(garray)
                 loss_array[k][i] = numpy.sum(larray)
 
                 rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
-                #creation of several plots so you can check if they are correct. Commented because it spams my data_items
+                #garray = temp_data[i][cpg_meas[k][i] - ihp:cpl_meas[k][i] + ihp]
                 #gdi = DataItemLaserCreation("Laser Wavelength "+str(i)+str(k), garray, "WAV", is_live=False)
                 #self.document_controller.document_model.append_data_item(gdi.data_item)
 
-        if self.recheck_check_box.checked: 
-            new_disp = numpy.average(numpy.divide(numpy.subtract(energies_loss, energies_gain), numpy.subtract(cpl_meas, cpg_meas)))
-            self.eff_dispersion_value.text = format(new_disp, '.4f') + ' eV'
-        else:
-            self.eff_dispersion_value.text = 'XX?'
-        
-        temp_gain_title_name+= '_order_' + temp_dict['title']
-        temp_loss_title_name+= '_order_' + temp_dict['title']
-    
-        if widget==self.process_eegs_pb: 
-            logging.info('***ACQUISTION***: EEGS Processing....')
 
-        if widget==self.process_power_pb: 
-            logging.info('***ACQUISTION***: Power Scan Processing....')
 
+        temp_gain_title_name += '_order_' + temp_dict['title']
+        temp_loss_title_name += '_order_' + temp_dict['title']
+
+        if widget == self.process_eegs_pb:
             for k in range(number_orders):
-                power_array_itp, gain_array_itp = self.data_proc.as_power_func(gain_array[k], rpa_avg, 1)
-                self.gain_di = DataItemLaserCreation('_' + str(k+1) + temp_gain_title_name, gain_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
+
+                if self.normalize_check_box.checked:
+                    gain_array[k] = numpy.divide(gain_array[k], rpa_avg)
+                    loss_array[k] = numpy.divide(loss_array[k], rpa_avg)
+                    print('***ACQUISITION***: Data Normalized by power.')
+
+
+
+                self.gain_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_gain_title_name, gain_array[k],
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
+
+
+                self.loss_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_loss_title_name, loss_array[k],
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
+
                 self.document_controller.document_model.append_data_item(self.gain_di.data_item)
-            
-                power_array_itp, loss_array_itp = self.data_proc.as_power_func(loss_array[k], rpa_avg, 1)
-                self.loss_di = DataItemLaserCreation('_' + str(k+1) + temp_loss_title_name, loss_array_itp, "sEEGS/sEELS_power", temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'], temp_dict['step_wav'], is_live=False, power_min = power_array_itp.min(), power_inc = 1)
                 self.document_controller.document_model.append_data_item(self.loss_di.data_item)
-        
+            logging.info('***ACQUISTION***: sEEGS/sEELS Done.')
+
+        if widget == self.process_power_pb:
+            for k in range(number_orders):
+                power_array_itp, gain_array_itp = self.data_proc.as_power_func(gain_array[k], rpa_avg)
+                self.gain_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_gain_title_name, gain_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=1)
+                self.document_controller.document_model.append_data_item(self.gain_di.data_item)
+
+                power_array_itp, loss_array_itp = self.data_proc.as_power_func(loss_array[k], rpa_avg)
+                self.loss_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_loss_title_name, loss_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=1)
+                self.document_controller.document_model.append_data_item(self.loss_di.data_item)
+
+                logging.info('***ACQUISTION***: Power Scan Done.')
+
         for pbs in self.actions_list:
-            pbs.enabled=False
-        self.aligned_cam_di = None #kill this attribute so next one will start from the beginning. Safest way to do it.
-        self.smooth_di = None #kill this one as well.
-        self.zlp_fwhm = None #kill ZLP as well
-        self.gain_di = None #too bad, you dead
-        self.loss_di = None #dead
-        self.__current_DI_POW = None #bye
+            pbs.enabled = False
+        self.aligned_cam_di = None  # kill this attribute so next one will start from the beg. Safest way to do it.
+        self.smooth_di = None  # kill this one as well.
+        self.zlp_fwhm = None  # kill ZLP as well
+        self.gain_di = None  # too bad, you dead
+        self.loss_di = None  # dead
+        self.__current_DI_POW = None  # bye
+
 
 class gainView:
 
@@ -555,26 +671,29 @@ class gainView:
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label,
                                       self.running_value_label, spacing=12)
 
-
         self.laser_group = ui.create_group(title='Sirah Credo', content=ui.create_column(
             self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4)
-            )
+                                           )
 
         self.power_label = ui.create_label(text='Power (uW): ')
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
-        self.power_lock_button = ui.create_push_button(text='Lock Current Power', name='Lock_power', on_clicked='lock_push')
-        self.power_row00 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), self.power_lock_button)
+        self.power_lock_button = ui.create_push_button(text='Lock Current Power', name='Lock_power',
+                                                       on_clicked='lock_push')
+        self.power_row00 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(),
+                                         self.power_lock_button)
         self.power_lock_label = ui.create_label(text='Control Power (uW): ')
         self.power_lock_value = ui.create_label(text='@binding(instrument.locked_power_f)')
         self.power_row01 = ui.create_row(self.power_lock_label, self.power_lock_value, ui.create_stretch())
         self.power_avg_label = ui.create_label(text='Number of Averages: ')
         self.power_avg_value = ui.create_line_edit(name='power_avg_value', text='@binding(instrument.powermeter_avg_f)')
-        self.power_reset_button = ui.create_push_button(text='Hard Reset', name='power_reset_button', on_clicked='pw_hard_reset')
-        self.power_row02 = ui.create_row(self.power_avg_label, self.power_avg_value, ui.create_stretch(), self.power_reset_button)
+        self.power_reset_button = ui.create_push_button(text='Hard Reset', name='power_reset_button',
+                                                        on_clicked='pw_hard_reset')
+        self.power_row02 = ui.create_row(self.power_avg_label, self.power_avg_value, ui.create_stretch(),
+                                         self.power_reset_button)
 
         self.powermeter_group = ui.create_group(title='ThorLabs PowerMeter', content=ui.create_column(
             self.power_row00, self.power_row01, self.power_row02)
-            )
+                                                )
 
         self.diode_label = ui.create_label(text='Diodes: ')
         self.diode_checkbox = ui.create_check_box(name="diode_checkbox", on_checked_changed='dio_check')
@@ -627,62 +746,70 @@ class gainView:
                                                    width=25)
         self.more_servo_pb = ui.create_push_button(text=">>", name="more_servo_pb", on_clicked="more_servo_push",
                                                    width=25)
-        self.servo_wobbler_cb = ui.create_check_box(text='Wobbler Servo', name='servo_wobbler_cb', checked='@binding(instrument.servo_wobbler_f)')
+        self.servo_wobbler_cb = ui.create_check_box(text='Wobbler Servo', name='servo_wobbler_cb',
+                                                    checked='@binding(instrument.servo_wobbler_f)')
 
-        self.servo_row = ui.create_row(self.servo_label, ui.create_spacing(12), self.servo_slider, ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5), self.more_servo_pb, ui.create_stretch(), self.servo_wobbler_cb)
-    
+        self.servo_row = ui.create_row(self.servo_label, ui.create_spacing(12), self.servo_slider,
+                                       ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5),
+                                       self.more_servo_pb, ui.create_stretch(), self.servo_wobbler_cb)
+
         self.servo_step_label = ui.create_label(name='servo_step_label', text='Servo Step (°): ')
         self.servo_step_value = ui.create_line_edit(name='servo_step_value', text='@binding(instrument.servo_step_f)')
-        self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, ui.create_stretch())
+        self.servo_p_points_label = ui.create_label(name='servo_p_points_label', text='P-Points: ')
+        self.servo_p_points_value = ui.create_label(name='servo_p_points_value', text='@binding(instrument.servo_pts_f)')
+        self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, self.servo_p_points_label, self.servo_p_points_value, ui.create_stretch(), spacing=12)
 
         self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
             self.servo_row, self.servo_step_row))
 
         # Fast Blanker
-        self.delay_label=ui.create_label(name='delay_label', text='Delay (ns): ')
-        self.delay_value=ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)')
-        self.delay_slider=ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)', minimum=1740, maximum=1850)
-        self.delay_row=ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider, ui.create_stretch())
+        self.delay_label = ui.create_label(name='delay_label', text='Delay (ns): ')
+        self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)')
+        self.delay_slider = ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)',
+                                             minimum=1740, maximum=1850)
+        self.delay_row = ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider,
+                                       ui.create_stretch())
 
         self.width_label = ui.create_label(name='width_label', text='Width (ns): ')
         self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)')
         self.frequency_label = ui.create_label(name='frequency_label', text='Frequency (Hz): ')
-        self.frequency_value = ui.create_line_edit(name='frequency_value', text='@binding(instrument.laser_frequency_f)')
-        self.width_row=ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
-                                     self.frequency_label, self.frequency_value, ui.create_stretch())
+        self.frequency_value = ui.create_line_edit(name='frequency_value',
+                                                   text='@binding(instrument.laser_frequency_f)')
+        self.width_row = ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
+                                       self.frequency_label, self.frequency_value, ui.create_stretch())
 
-        self.stop_pb=ui.create_push_button(name='stop_pb', text='Stop All', on_clicked='stop_function')
-        self.fast_blanker_checkbox = ui.create_check_box(name='fast_blanker_checkbox', checked='@binding(instrument.fast_blanker_status_f)', text='Shoot')
+        self.stop_pb = ui.create_push_button(name='stop_pb', text='Stop All', on_clicked='stop_function')
+        self.fast_blanker_checkbox = ui.create_check_box(name='fast_blanker_checkbox',
+                                                         checked='@binding(instrument.fast_blanker_status_f)',
+                                                         text='Shoot')
         self.counts_label = ui.create_label(name='counts_label', text='Counts: ')
         self.counts_value = ui.create_label(name='counts_value', text='@binding(instrument.laser_counts_f)')
 
-        self.final_row=ui.create_row(self.fast_blanker_checkbox,
-                                  ui.create_spacing(25), self.counts_label, self.counts_value, ui.create_spacing(25), self.stop_pb, ui.create_stretch())
+        self.final_row = ui.create_row(self.fast_blanker_checkbox,
+                                       ui.create_spacing(25), self.counts_label, self.counts_value,
+                                       ui.create_spacing(25), self.stop_pb, ui.create_stretch())
 
-        self.blanker_group=ui.create_group(title='Fast Blanker', content=ui.create_column(
+        self.blanker_group = ui.create_group(title='Fast Blanker', content=ui.create_column(
             self.delay_row, self.width_row, self.final_row)
-                                           )
+                                             )
 
         ## ACQUISTION BUTTONS
-        
+
         self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
         self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
         self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
-        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, spacing=12)  
+        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, spacing=12)
 
         self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push")
         self.buttons_row01 = ui.create_row(self.power_ramp_pb, spacing=12)
 
-
-        self.buttons_group=ui.create_group(title='Acquisition', content=ui.create_column(
+        self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(
             self.buttons_row00, self.buttons_row01))
         ## END FIRST TAB
 
-        self.main_tab=ui.create_tab(label='Main', content=ui.create_column(
-            self.init_pb, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group, self.buttons_group))
-
-
-        
+        self.main_tab = ui.create_tab(label='Main', content=ui.create_column(
+            self.init_pb, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
+            self.buttons_group))
 
         ### BEGIN MY SECOND TAB ##
 
@@ -690,10 +817,11 @@ class gainView:
         self.pb_row = ui.create_row(self.grab_pb, ui.create_stretch())
 
         self.file_name_label = ui.create_label(text='Title:', name='file_name_label')
-        self.file_name_value = ui.create_line_edit(name = 'file_name_value')
+        self.file_name_value = ui.create_line_edit(name='file_name_value')
         self.file_type_label = ui.create_label(text='Type: ', name='file_type_label')
         self.file_type_value = ui.create_label(text='type?', name='file_type_value')
-        self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch(), self.file_type_label, self.file_type_value, ui.create_stretch())
+        self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch(),
+                                           self.file_type_label, self.file_type_value, ui.create_stretch())
 
         self.file_UUID_label = ui.create_label(text='UUID: ', name='file_UUID_label')
         self.file_UUID_value = ui.create_label(text='uuid?', name='file_UUID_value')
@@ -701,38 +829,49 @@ class gainView:
         self.file_dim_value = ui.create_label(text='dim?', name='file_dim_value')
         self.file_x_disp_label = ui.create_label(text='Dispersion: ', name='file_x_disp_label')
         self.file_x_disp_value = ui.create_label(text='disp?', name='file_x_disp_value')
-        self.file_info_row = ui.create_row(self.file_UUID_label, self.file_UUID_value, self.file_dim_label, self.file_dim_value, self.file_x_disp_label, self.file_x_disp_value, spacing = 12)
+        self.file_info_row = ui.create_row(self.file_UUID_label, self.file_UUID_value, self.file_dim_label,
+                                           self.file_dim_value, self.file_x_disp_label, self.file_x_disp_value,
+                                           spacing=12)
 
         self.power_file_detected_label = ui.create_label(text='Power? ', name='power_file_detected_label')
         self.power_file_detected_value = ui.create_label(text='False', name='power_file_detected_value')
         self.wav_file_detected_label = ui.create_label(text='Wav? ', name='wav_file_detected_label')
         self.wav_file_detected_value = ui.create_label(text='False', name='wav_file_detected_value')
-        self.detection_row = ui.create_row(self.power_file_detected_label, self.power_file_detected_value, ui.create_stretch(), self.wav_file_detected_label, self.wav_file_detected_value, ui.create_stretch())
+        self.detection_row = ui.create_row(self.power_file_detected_label, self.power_file_detected_value,
+                                           ui.create_stretch(), self.wav_file_detected_label,
+                                           self.wav_file_detected_value, ui.create_stretch())
 
         self.pts_detected_label = ui.create_label(text='Points: ', name='pts_detected_label')
         self.pts_detected_value = ui.create_label(text='pts?', name='pts_detected_value')
         self.avg_detected_label = ui.create_label(text='Averages: ', name='avg_detected_label')
         self.avg_detected_value = ui.create_label(text='avg?', name='avg_detected_value')
         self.start_detected_label = ui.create_label(text='Start Wav.: ', name='start_detected_label')
-        self.start_detected_value = ui.create_label(text='st?', name = 'start_detected_value')
+        self.start_detected_value = ui.create_label(text='st?', name='start_detected_value')
         self.final_detected_label = ui.create_label(text='End Wav.: ', name='final_detected_label')
-        self.final_detected_value = ui.create_label(text='end?', name = 'final_detected_value')
+        self.final_detected_value = ui.create_label(text='end?', name='final_detected_value')
         self.step_detected_label = ui.create_label(text='Step Wav.: ', name='step_detected_label')
         self.step_detected_value = ui.create_label(text='stp?', name='step_detected_value')
 
-        self.first_detected_row = ui.create_row(self.pts_detected_label, self.pts_detected_value, self.avg_detected_label, self.avg_detected_value, ui.create_stretch(), spacing=12)
-        self.second_detected_row = ui.create_row(self.start_detected_label, self.start_detected_value, self.final_detected_label, self.final_detected_value, self.step_detected_label, self.step_detected_value, ui.create_stretch(), spacing=12)
-
+        self.first_detected_row = ui.create_row(self.pts_detected_label, self.pts_detected_value,
+                                                self.avg_detected_label, self.avg_detected_value, ui.create_stretch(),
+                                                spacing=12)
+        self.second_detected_row = ui.create_row(self.start_detected_label, self.start_detected_value,
+                                                 self.final_detected_label, self.final_detected_value,
+                                                 self.step_detected_label, self.step_detected_value,
+                                                 ui.create_stretch(), spacing=12)
 
         self.pick_group = ui.create_group(title='Pick Tool', content=ui.create_column(
-            self.file_name_row, self.file_info_row, self.detection_row, self.pb_row, self.first_detected_row, self.second_detected_row, ui.create_stretch()))
+            self.file_name_row, self.file_info_row, self.detection_row, self.pb_row, self.first_detected_row,
+            self.second_detected_row, ui.create_stretch()))
 
         self.align_zlp_max = ui.create_push_button(text='Align ZLP (Max)', on_clicked='align_zlp', name='align_zlp_max')
         self.align_zlp_fit = ui.create_push_button(text='Align ZLP (Fit)', on_clicked='align_zlp', name='align_zlp_fit')
-        self.normalize_current_check_box = ui.create_check_box(text='Norm. by Current? ', name='normalize_current_check_box')
+        self.normalize_current_check_box = ui.create_check_box(text='Norm. by Current? ',
+                                                               name='normalize_current_check_box')
         self.display_check_box = ui.create_check_box(text='Display?', name='display_check_box')
-        self.pb_actions_row = ui.create_row(self.align_zlp_max, self.align_zlp_fit, self.normalize_current_check_box, self.display_check_box, spacing=12)
-    
+        self.pb_actions_row = ui.create_row(self.align_zlp_max, self.align_zlp_fit, self.normalize_current_check_box,
+                                            self.display_check_box, spacing=12)
+
         self.zlp_label = ui.create_label(text='FWHM of ZLP: ', name='zlp_label')
         self.zlp_value = ui.create_label(text='fwhm?', name='zlp_value')
         self.zlp_row = ui.create_row(self.zlp_label, self.zlp_value, ui.create_stretch())
@@ -743,40 +882,43 @@ class gainView:
         self.savgol_poly_order_value = ui.create_line_edit(name='savgol_poly_order_value')
         self.savgol_oversample_label = ui.create_label(text='Oversampling: ', name='savgol_oversample_label')
         self.savgol_oversample_value = ui.create_line_edit(name='savgol_oversample_value')
-        self.savgol_row = ui.create_row(self.savgol_window_label, self.savgol_window_value, self.savgol_poly_order_label, self.savgol_poly_order_value, self.savgol_oversample_label, self.savgol_oversample_value, ui.create_stretch())
+        self.savgol_row = ui.create_row(self.savgol_window_label, self.savgol_window_value,
+                                        self.savgol_poly_order_label, self.savgol_poly_order_value,
+                                        self.savgol_oversample_label, self.savgol_oversample_value, ui.create_stretch())
 
         self.smooth_zlp = ui.create_push_button(text='Smooth ZLP', on_clicked='smooth_data', name='smooth_zlp')
         self.display_smooth_check_box = ui.create_check_box(text='Display?', name='display_smooth_check_box')
         self.smooth_row = ui.create_row(self.smooth_zlp, self.display_smooth_check_box, spacing=12)
-        
-        
-        self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data', name='process_eegs_pb')
+
+        self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data',
+                                                     name='process_eegs_pb')
         self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
         self.recheck_check_box = ui.create_check_box(text='Re-Disp? ', name='recheck_check_box')
-        self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data', name='process_power_pb')
+        self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data',
+                                                      name='process_power_pb')
         self.many_replicas_label = ui.create_label(name='many_replicas_label', text='# Orders?: ')
         self.many_replicas = ui.create_line_edit(name='many_replicas')
-        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box, self.recheck_check_box, self.many_replicas_label, self.many_replicas, spacing=3)
+        self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box,
+                                            self.recheck_check_box, self.many_replicas_label, self.many_replicas,
+                                            spacing=3)
 
         self.eff_dispersion = ui.create_label(name='eff_dispersion', text='Measured Dispersion: ')
         self.eff_dispersion_value = ui.create_label(name='eff_dispersion_value', text='eff disp?')
-        self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, ui.create_stretch(), spacing=12)
+        self.eff_fwhm = ui.create_label(name = 'eff_fwhm', text='Measured FWHM: ')
+        self.eff_fwhm_value = ui.create_label(name='eff_fwhm_value')
+        self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, self.eff_fwhm, self.eff_fwhm_value, ui.create_stretch(),
+                                              spacing=12)
 
-        self.actions_group = ui.create_group(title = 'Actions', content=ui.create_column(
-            self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row, self.info_process_row, ui.create_stretch())
-            )
+        self.actions_group = ui.create_group(title='Actions', content=ui.create_column(
+            self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row,
+            self.info_process_row, ui.create_stretch())
+                                             )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(
             self.pick_group, self.actions_group, ui.create_stretch())
-            )
+                                     )
 
-
-
-
-        self.tabs=ui.create_tabs(self.main_tab, self.ana_tab)
-
-
-
+        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab)
 
         self.ui_view = ui.create_column(self.tabs)
 

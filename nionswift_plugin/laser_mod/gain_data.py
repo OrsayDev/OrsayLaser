@@ -111,10 +111,8 @@ class gainData:
             smooth_array[i] = savgol_filter(itp(xx), window_size, poly_order)
         return smooth_array
 
-    def as_power_func(self, raw_array, power_array, power_inc):
+    def as_power_func(self, raw_array, power_array):
         f = interp1d(power_array, raw_array, 'linear')
-        power_array_new = numpy.arange(power_array.min(), power_array.max(), power_inc)
+        power_array_new = numpy.linspace(power_array.min(), power_array.max(), len(power_array))
         raw_array_new = f(power_array_new)
         return power_array_new, raw_array_new
-
-            

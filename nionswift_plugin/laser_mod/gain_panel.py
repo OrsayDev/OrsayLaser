@@ -608,24 +608,24 @@ class gainhandler:
 
         if widget == self.process_power_pb:
             for k in range(number_orders):
-                power_array_itp, gain_array_itp = self.data_proc.as_power_func(gain_array[k], rpa_avg)
+                power_array_itp, gain_array_itp, power_inc = self.data_proc.as_power_func(gain_array[k], rpa_avg)
                 self.gain_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_gain_title_name, gain_array_itp,
                                                      "sEEGS/sEELS_power", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False,
-                                                     power_min=power_array_itp.min(), power_inc=1)
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
                 self.document_controller.document_model.append_data_item(self.gain_di.data_item)
 
-                power_array_itp, loss_array_itp = self.data_proc.as_power_func(loss_array[k], rpa_avg)
+                power_array_itp, loss_array_itp, power_inc = self.data_proc.as_power_func(loss_array[k], rpa_avg)
                 self.loss_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_loss_title_name, loss_array_itp,
                                                      "sEEGS/sEELS_power", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False,
-                                                     power_min=power_array_itp.min(), power_inc=1)
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
                 self.document_controller.document_model.append_data_item(self.loss_di.data_item)
 
                 logging.info('***ACQUISTION***: Power Scan Done.')
@@ -644,17 +644,31 @@ class gainhandler:
         temp_dict = self.smooth_di.data_item.description
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
 
+        data_size = temp_data.shape[1]
+        eels_dispersion = - 2 * temp_calib[1].offset /data_size
+        oversample = eels_dispersion / temp_calib[1].scale
 
         if widget==self.fit_pb:
             logging.info('***ACQUISITION***: Attempting to fit data..')
-            fit_array = self.data_proc.fit_data(temp_data, temp_dict['pts'], temp_dict['start_wav'], temp_dict['final_wav'],
-                                    temp_dict['step_wav'], self.final_disp, self.zlp_fwhm)
+            #fit array is the fitting data from smooth, a_array is the intensity of the zlp, a1_array is the intensity
+            # of the first replica, a2_array is the intensity of the second replica and sigma_array is the sigma
+            # that can be used to check for FWHM
 
-            self.fit_di = DataItemLaserCreation('fit', fit_array, "SMOOTHED_DATA",
-                                                   temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
-                                                   temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
-                                                   temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                   temp_dict['control'], is_live=False)
+            fit_array, a_array, a1_array, a2_array, sigma_array = self.data_proc.fit_data(temp_data,
+                                                                                          temp_dict['pts'],
+                                                                                          temp_dict['start_wav'],
+                                                                                          temp_dict['final_wav'],
+                                                                                          temp_dict['step_wav'],
+                                                                                          self.final_disp,
+                                                                                          self.zlp_fwhm)
+
+            self.fit_di = DataItemLaserCreation('fit_' + temp_dict['title'], fit_array, "SMOOTHED_DATA",
+                                                temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+                                                temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+                                                temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                temp_dict['control'], is_live=False,
+                                                eels_dispersion=eels_dispersion, hor_pixels=data_size,
+                                                oversample=oversample)
 
             self.document_controller.document_model.append_data_item(self.fit_di.data_item)
 

@@ -54,22 +54,39 @@ class gainData:
         return temp_wl_data, temp_pw_data, temp_di_data
 
     def fit_data(self, data, pts, start, end, step, disp, fwhm):
+
+        ene = 0
+
         def _gaussian_fit(x, *p):
-            A, mu, sigma, A_1, mu_1, fond = p
-            return A * numpy.exp(-(x) ** 2 / (2. * sigma ** 2)) + A_1 * numpy.exp(
-                -(x - mu_1) ** 2 / (2. * sigma ** 2)) + A_1 * numpy.exp(-(x + mu_1) ** 2 / (2. * sigma ** 2)) + fond
+            #A, sigma, A_1, A_2, A_3, mu_1, fond = p
+            A, sigma, A_1, A_2, A_3, fond, x_off = p
+            return A * numpy.exp(-(x - x_off) ** 2 / (2. * sigma ** 2)) +\
+                   A_1 * numpy.exp(-(x - ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+                   A_1 * numpy.exp(-(x + ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+                   A_2 * numpy.exp(-(x + 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+                   A_2 * numpy.exp(-(x - 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+                   0 * numpy.exp(-(x + 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+                   0 * numpy.exp(-(x - 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+                   fond
 
         fit_array = numpy.zeros(data.shape)
+        a_array = numpy.zeros(data.shape[0])
+        a1_array = numpy.zeros(data.shape[0])
+        a2_array = numpy.zeros(data.shape[0])
+        sigma_array = numpy.zeros(data.shape[0])
+
+        wavs = numpy.linspace(start, end, pts-1)
+        energies_loss = numpy.divide(1239.8, wavs)
+        energies_loss = numpy.append(energies_loss, 0.)
 
         for i in range(fit_array.shape[0]):
             x = numpy.linspace(-(fit_array.shape[1] / 2.) * disp, (fit_array.shape[1] / 2.) * disp, fit_array.shape[1])
-            print(x)
-            print(x[780:820])
-            #print(numpy.where(data[i] == numpy.max(data[i]))[0][0])
-            p0 = [max(fit_array[i]), 0., 1, 0., -2., data.min()]
+            ene = energies_loss[i]
+            p0 = [max(fit_array[i]), 1, 0., 0., 0., data.min(), 0.]
             coeff, var_matrix = curve_fit(_gaussian_fit, x, data[i], p0=p0)
+            a_array[i], a1_array[i], a2_array[i], sigma_array[i] = coeff[0], coeff[2], coeff[3], coeff[1]
             fit_array[i] = _gaussian_fit(x, *coeff)
-        return fit_array
+        return fit_array, a_array, a1_array, a2_array, sigma_array
 
 
     def align_zlp(self, raw_array, pts, avg, pixels, disp, mode='max'):
@@ -132,4 +149,5 @@ class gainData:
         f = interp1d(power_array, raw_array, 'linear')
         power_array_new = numpy.linspace(power_array.min(), power_array.max(), len(power_array))
         raw_array_new = f(power_array_new)
-        return power_array_new, raw_array_new
+        #the subtraction i am returning is to known the power increment
+        return power_array_new, raw_array_new, power_array_new[1]-power_array_new[0]

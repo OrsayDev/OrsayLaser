@@ -54,11 +54,8 @@ class gainData:
         return temp_wl_data, temp_pw_data, temp_di_data
 
     def fit_data(self, data, pts, start, end, step, disp, fwhm):
-
         ene = 0
-
         def _gaussian_fit(x, *p):
-            #A, sigma, A_1, A_2, A_3, mu_1, fond = p
             A, sigma, A_1, A_2, A_3, fond, x_off = p
             return A * numpy.exp(-(x - x_off) ** 2 / (2. * sigma ** 2)) +\
                    A_1 * numpy.exp(-(x - ene - x_off) ** 2 / (2. * sigma ** 2)) +\

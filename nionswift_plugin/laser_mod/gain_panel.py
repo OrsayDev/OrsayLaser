@@ -31,7 +31,7 @@ MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
                  time_width=None, start_ps_cur=None, ctrl=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
-                 oversample=1, power_min=0, power_inc=1):
+                 oversample=1, power_min=0, power_inc=1, power_array_itp=None):
         self.acq_parameters = {
             "title": title,
             "which": which,
@@ -64,6 +64,7 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].units = 'μW'
             self.dimensional_calibrations[0].offset = power_min
             self.dimensional_calibrations[0].scale = power_inc
+            print(power_inc)
         if which == 'sEEGS/sEELS':
             self.calibration.units = 'A.U.'
             self.dimensional_calibrations[0].units = 'nm'
@@ -100,6 +101,7 @@ class DataItemLaserCreation():
         self.data_item.define_property("title", title)
         self.data_item.define_property("description", self.acq_parameters)
         self.data_item.define_property("caption", self.acq_parameters)
+
         if is_live: self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
@@ -532,7 +534,7 @@ class gainhandler:
 
         rpa = numpy.reshape(self.__current_DI_POW.data,
                             (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
-        rpa_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
+        self.rpa_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
 
 
         for k in range(number_orders):
@@ -566,7 +568,7 @@ class gainhandler:
                 gain_array[k][i] = numpy.sum(garray)
                 loss_array[k][i] = numpy.sum(larray)
 
-                rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
+                self.rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
                 #garray = temp_data[i][cpg_meas[k][i] - ihp:cpl_meas[k][i] + ihp]
                 #gdi = DataItemLaserCreation("Laser Wavelength "+str(i)+str(k), garray, "WAV", is_live=False)
@@ -581,8 +583,8 @@ class gainhandler:
             for k in range(number_orders):
 
                 if self.normalize_check_box.checked:
-                    gain_array[k] = numpy.divide(gain_array[k], rpa_avg)
-                    loss_array[k] = numpy.divide(loss_array[k], rpa_avg)
+                    gain_array[k] = numpy.divide(gain_array[k], self.rpa_avg)
+                    loss_array[k] = numpy.divide(loss_array[k], self.rpa_avg)
                     print('***ACQUISITION***: Data Normalized by power.')
 
 
@@ -608,7 +610,7 @@ class gainhandler:
 
         if widget == self.process_power_pb:
             for k in range(number_orders):
-                power_array_itp, gain_array_itp, power_inc = self.data_proc.as_power_func(gain_array[k], rpa_avg)
+                power_array_itp, gain_array_itp, power_inc = self.data_proc.as_power_func(gain_array[k], self.rpa_avg)
                 self.gain_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_gain_title_name, gain_array_itp,
                                                      "sEEGS/sEELS_power", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
@@ -616,9 +618,10 @@ class gainhandler:
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
+
                 self.document_controller.document_model.append_data_item(self.gain_di.data_item)
 
-                power_array_itp, loss_array_itp, power_inc = self.data_proc.as_power_func(loss_array[k], rpa_avg)
+                power_array_itp, loss_array_itp, power_inc = self.data_proc.as_power_func(loss_array[k], self.rpa_avg)
                 self.loss_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_loss_title_name, loss_array_itp,
                                                      "sEEGS/sEELS_power", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
@@ -634,6 +637,8 @@ class gainhandler:
             self.process_power_pb.enabled = False
             if self.gain_di and self.loss_di and self.smooth_di:
                 self.fit_pb.enabled = True
+                if widget ==self.process_power_pb: self.fit_pb.text='Fit Power Scan'
+                if widget == self.process_eegs_pb: self.fit_pb.text = 'Fit Laser Scan'
             self.cancel_pb.enabled = True
 
 
@@ -647,6 +652,7 @@ class gainhandler:
         data_size = temp_data.shape[1]
         eels_dispersion = - 2 * temp_calib[1].offset /data_size
         oversample = eels_dispersion / temp_calib[1].scale
+
 
         if widget==self.fit_pb:
             logging.info('***ACQUISITION***: Attempting to fit data..')
@@ -669,8 +675,41 @@ class gainhandler:
                                                 temp_dict['control'], is_live=False,
                                                 eels_dispersion=eels_dispersion, hor_pixels=data_size,
                                                 oversample=oversample)
-
             self.document_controller.document_model.append_data_item(self.fit_di.data_item)
+
+            if self.fit_pb.text == 'Fit Power Scan':
+
+                power_array_itp, a_array_itp, power_inc = self.data_proc.as_power_func(a_array[:-1], self.rpa_avg)
+                self.int_di = DataItemLaserCreation('Power_fit_int_' + temp_dict['title'], a_array_itp,
+                                                    "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                    temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False,
+                                                    power_min=power_array_itp.min(), power_inc=power_inc)
+
+                power_array_itp, a1_array_itp, power_inc = self.data_proc.as_power_func(a1_array[:-1], self.rpa_avg)
+                self.int1_di = DataItemLaserCreation('Power_fit_int1_' + temp_dict['title'], a1_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
+
+                power_array_itp, a2_array_itp, power_inc = self.data_proc.as_power_func(a2_array[:-1], self.rpa_avg)
+                self.int2_di = DataItemLaserCreation('Power_fit_int2_' + temp_dict['title'], a2_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
+
+
+                self.document_controller.document_model.append_data_item(self.int_di.data_item)
+                self.document_controller.document_model.append_data_item(self.int1_di.data_item)
+                self.document_controller.document_model.append_data_item(self.int2_di.data_item)
 
 
             logging.info('***ACQUISITION***: Fit Done.')

@@ -64,7 +64,6 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].units = 'μW'
             self.dimensional_calibrations[0].offset = power_min
             self.dimensional_calibrations[0].scale = power_inc
-            print(power_inc)
         if which == 'sEEGS/sEELS':
             self.calibration.units = 'A.U.'
             self.dimensional_calibrations[0].units = 'nm'
@@ -162,10 +161,12 @@ class gainhandler:
         self.init_pb.enabled = False
         self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                                           'process_eegs_pb',
-                                                          'process_power_pb', 'fit_pb', 'cancel_pb']))  # not working as something is
+                                                          'process_power_pb', 'fit_pb',
+                                                          'cancel_pb']))  # not working as something is
         # calling this guy
         self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb,
-                             self.process_power_pb, self.fit_pb, self.cancel_pb]  # i can put here because GUI was already initialized
+                             self.process_power_pb, self.fit_pb,
+                             self.cancel_pb]  # i can put here because GUI was already initialized
 
     def upt_push(self, widget):
         # self.grab()
@@ -344,7 +345,6 @@ class gainhandler:
                 self.start_detected_value.text = 'Unknown'
                 self.final_detected_value.text = 'Unknown'
                 self.step_detected_value.text = 'Unknown'
-
 
             if "Gain" in self.file_name_value.text:
                 self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title(
@@ -536,7 +536,6 @@ class gainhandler:
                             (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
         self.rpa_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
 
-
         for k in range(number_orders):
             for i in range(len(temp_data) - 1):
                 cpg_meas[k][i] = int(
@@ -559,22 +558,19 @@ class gainhandler:
 
         for k in range(number_orders):
             for i in range(len(temp_data) - 1):
-
                 garray = temp_data[i][cpg_meas[k][i] - ihp:cpg_meas[k][i] + ihp] if self.recheck_check_box.checked else \
-                temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
+                    temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
                 larray = temp_data[i][cpl_meas[k][i] - ihp:cpl_meas[k][i] + ihp] if self.recheck_check_box.checked else \
-                temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
+                    temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
 
                 gain_array[k][i] = numpy.sum(garray)
                 loss_array[k][i] = numpy.sum(larray)
 
                 self.rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
-                #garray = temp_data[i][cpg_meas[k][i] - ihp:cpl_meas[k][i] + ihp]
-                #gdi = DataItemLaserCreation("Laser Wavelength "+str(i)+str(k), garray, "WAV", is_live=False)
-                #self.document_controller.document_model.append_data_item(gdi.data_item)
-
-
+                # garray = temp_data[i][cpg_meas[k][i] - ihp:cpl_meas[k][i] + ihp]
+                # gdi = DataItemLaserCreation("Laser Wavelength "+str(i)+str(k), garray, "WAV", is_live=False)
+                # self.document_controller.document_model.append_data_item(gdi.data_item)
 
         temp_gain_title_name += '_order_' + temp_dict['title']
         temp_loss_title_name += '_order_' + temp_dict['title']
@@ -585,9 +581,7 @@ class gainhandler:
                 if self.normalize_check_box.checked:
                     gain_array[k] = numpy.divide(gain_array[k], self.rpa_avg)
                     loss_array[k] = numpy.divide(loss_array[k], self.rpa_avg)
-                    print('***ACQUISITION***: Data Normalized by power.')
-
-
+                    logging.info('***ACQUISITION***: Data Normalized by power.')
 
                 self.gain_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_gain_title_name, gain_array[k],
                                                      "sEEGS/sEELS", temp_dict['start_wav'],
@@ -595,7 +589,6 @@ class gainhandler:
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False)
-
 
                 self.loss_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_loss_title_name, loss_array[k],
                                                      "sEEGS/sEELS", temp_dict['start_wav'],
@@ -606,7 +599,7 @@ class gainhandler:
 
                 self.document_controller.document_model.append_data_item(self.gain_di.data_item)
                 self.document_controller.document_model.append_data_item(self.loss_di.data_item)
-            logging.info('***ACQUISTION***: sEEGS/sEELS Done.')
+            logging.info('***ACQUISITION***: sEEGS/sEELS Done.')
 
         if widget == self.process_power_pb:
             for k in range(number_orders):
@@ -633,15 +626,13 @@ class gainhandler:
 
                 logging.info('***ACQUISTION***: Power Scan Done.')
 
-            self.process_eegs_pb.enabled = False
-            self.process_power_pb.enabled = False
-            if self.gain_di and self.loss_di and self.smooth_di:
-                self.fit_pb.enabled = True
-                if widget ==self.process_power_pb: self.fit_pb.text='Fit Power Scan'
-                if widget == self.process_eegs_pb: self.fit_pb.text = 'Fit Laser Scan'
-            self.cancel_pb.enabled = True
-
-
+        self.process_eegs_pb.enabled = False
+        self.process_power_pb.enabled = False
+        if self.gain_di and self.loss_di and self.smooth_di:
+            self.fit_pb.enabled = True
+            if widget == self.process_power_pb: self.fit_pb.text = 'Fit Power Scan'
+            if widget == self.process_eegs_pb: self.fit_pb.text = 'Fit Laser Scan'
+        self.cancel_pb.enabled = True
 
     def fit_or_cancel(self, widget):
 
@@ -650,23 +641,37 @@ class gainhandler:
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
 
         data_size = temp_data.shape[1]
-        eels_dispersion = - 2 * temp_calib[1].offset /data_size
+        eels_dispersion = - 2 * temp_calib[1].offset / data_size
         oversample = eels_dispersion / temp_calib[1].scale
 
+        if widget == self.fit_pb:
 
-        if widget==self.fit_pb:
+            try:
+                number_orders = int(self.many_replicas.text)
+            except:
+                number_orders = 1
+                logging.info(
+                    '***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
             logging.info('***ACQUISITION***: Attempting to fit data..')
-            #fit array is the fitting data from smooth, a_array is the intensity of the zlp, a1_array is the intensity
+
+            # fit array is the fitting data from smooth, a_array is the intensity of the zlp, a1_array is the intensity
             # of the first replica, a2_array is the intensity of the second replica and sigma_array is the sigma
             # that can be used to check for FWHM
 
-            fit_array, a_array, a1_array, a2_array, sigma_array = self.data_proc.fit_data(temp_data,
-                                                                                          temp_dict['pts'],
-                                                                                          temp_dict['start_wav'],
-                                                                                          temp_dict['final_wav'],
-                                                                                          temp_dict['step_wav'],
-                                                                                          self.final_disp,
-                                                                                          self.zlp_fwhm)
+            fit_array, a_array, a1_array, a2_array, a3_array, sigma_array = self.data_proc.fit_data(temp_data,
+                                                                                                    temp_dict['pts'],
+                                                                                                    temp_dict[
+                                                                                                        'start_wav'],
+                                                                                                    temp_dict[
+                                                                                                        'final_wav'],
+                                                                                                    temp_dict[
+                                                                                                        'step_wav'],
+                                                                                                    self.final_disp,
+                                                                                                    self.zlp_fwhm,
+                                                                                                    number_orders)
+
+            self.eff_dispersion_fit_value.text = format(2 * numpy.mean(sigma_array) * numpy.sqrt(2. * numpy.log(2)),
+                                                        '.4f') + ' eV '
 
             self.fit_di = DataItemLaserCreation('fit_' + temp_dict['title'], fit_array, "SMOOTHED_DATA",
                                                 temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
@@ -678,7 +683,6 @@ class gainhandler:
             self.document_controller.document_model.append_data_item(self.fit_di.data_item)
 
             if self.fit_pb.text == 'Fit Power Scan':
-
                 power_array_itp, a_array_itp, power_inc = self.data_proc.as_power_func(a_array[:-1], self.rpa_avg)
                 self.int_di = DataItemLaserCreation('Power_fit_int_' + temp_dict['title'], a_array_itp,
                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
@@ -706,15 +710,23 @@ class gainhandler:
                                                      temp_dict['control'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
 
+                power_array_itp, a3_array_itp, power_inc = self.data_proc.as_power_func(a3_array[:-1], self.rpa_avg)
+                self.int3_di = DataItemLaserCreation('Power_fit_int3_' + temp_dict['title'], a3_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
 
                 self.document_controller.document_model.append_data_item(self.int_di.data_item)
-                self.document_controller.document_model.append_data_item(self.int1_di.data_item)
-                self.document_controller.document_model.append_data_item(self.int2_di.data_item)
-
+                if a1_array.any(): self.document_controller.document_model.append_data_item(self.int1_di.data_item)
+                if a2_array.any():self.document_controller.document_model.append_data_item(self.int2_di.data_item)
+                if a3_array.any():self.document_controller.document_model.append_data_item(self.int3_di.data_item)
 
             logging.info('***ACQUISITION***: Fit Done.')
 
-        elif widget==self.cancel_pb:
+        elif widget == self.cancel_pb:
             logging.info('***ACQUISITION***: Not attempting to fit data.')
 
         for pbs in self.actions_list:
@@ -849,8 +861,10 @@ class gainView:
         self.servo_step_label = ui.create_label(name='servo_step_label', text='Servo Step (°): ')
         self.servo_step_value = ui.create_line_edit(name='servo_step_value', text='@binding(instrument.servo_step_f)')
         self.servo_p_points_label = ui.create_label(name='servo_p_points_label', text='P-Points: ')
-        self.servo_p_points_value = ui.create_label(name='servo_p_points_value', text='@binding(instrument.servo_pts_f)')
-        self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, self.servo_p_points_label, self.servo_p_points_value, ui.create_stretch(), spacing=12)
+        self.servo_p_points_value = ui.create_label(name='servo_p_points_value',
+                                                    text='@binding(instrument.servo_pts_f)')
+        self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, self.servo_p_points_label,
+                                            self.servo_p_points_value, ui.create_stretch(), spacing=12)
 
         self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
             self.servo_row, self.servo_step_row))
@@ -997,18 +1011,24 @@ class gainView:
 
         self.eff_dispersion = ui.create_label(name='eff_dispersion', text='Measured Dispersion: ')
         self.eff_dispersion_value = ui.create_label(name='eff_dispersion_value', text='eff disp?')
-        self.eff_fwhm = ui.create_label(name = 'eff_fwhm', text='Measured FWHM: ')
+        self.eff_fwhm = ui.create_label(name='eff_fwhm', text='Measured FWHM: ')
         self.eff_fwhm_value = ui.create_label(name='eff_fwhm_value')
-        self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, self.eff_fwhm, self.eff_fwhm_value, ui.create_stretch(),
+        self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, self.eff_fwhm,
+                                              self.eff_fwhm_value, ui.create_stretch(),
                                               spacing=12)
 
         self.fit_pb = ui.create_push_button(text='Fit', on_clicked='fit_or_cancel', name='fit_pb')
         self.cancel_pb = ui.create_push_button(text='Cancel', on_clicked='fit_or_cancel', name='cancel_pb')
         self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, ui.create_stretch(), spacing=12)
 
+        self.eff_dispersion_fit = ui.create_label(name='eff_dispersion_fit', text='Measured Dispersion (Fit): ')
+        self.eff_dispersion_fit_value = ui.create_label(name='eff_dispersion_fit_value', text='eff disp fit?')
+        self.info_fit_row = ui.create_row(self.eff_dispersion_fit, self.eff_dispersion_fit_value, ui.create_stretch(),
+                                          spacing=12)
+
         self.actions_group = ui.create_group(title='Actions', content=ui.create_column(
             self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row,
-            self.info_process_row, self.fit_row, ui.create_stretch())
+            self.info_process_row, self.fit_row, self.info_fit_row, ui.create_stretch())
                                              )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(

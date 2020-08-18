@@ -53,24 +53,41 @@ class gainData:
         temp_di_data = numpy.asarray(temp_di_data)
         return temp_wl_data, temp_pw_data, temp_di_data
 
-    def fit_data(self, data, pts, start, end, step, disp, fwhm):
+    def fit_data(self, data, pts, start, end, step, disp, fwhm, orders):
         ene = 0
         def _gaussian_fit(x, *p):
             A, sigma, A_1, A_2, A_3, fond, x_off = p
-            return A * numpy.exp(-(x - x_off) ** 2 / (2. * sigma ** 2)) +\
+            func = A * numpy.exp(-(x - x_off) ** 2 / (2. * sigma ** 2)) +\
                    A_1 * numpy.exp(-(x - ene - x_off) ** 2 / (2. * sigma ** 2)) +\
-                   A_1 * numpy.exp(-(x + ene - x_off) ** 2 / (2. * sigma ** 2)) +\
-                   A_2 * numpy.exp(-(x + 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) +\
-                   A_2 * numpy.exp(-(x - 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) + \
-                   0 * numpy.exp(-(x + 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
-                   0 * numpy.exp(-(x - 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
-                   fond
+                   A_1 * numpy.exp(-(x + ene - x_off) ** 2 / (2. * sigma ** 2)) + fond
+            if orders>1:
+                func = func + A_2 * numpy.exp(-(x + 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+                   A_2 * numpy.exp(-(x - 2.*ene - x_off) ** 2 / (2. * sigma ** 2))
+                if orders>2:
+                    func = func + A_3 * numpy.exp(-(x + 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+                   A_3 * numpy.exp(-(x - 3. * ene - x_off) ** 2 / (2. * sigma ** 2))
+
+            return func
+
+            #return A * numpy.exp(-(x - x_off) ** 2 / (2. * sigma ** 2)) +\
+            #       A_1 * numpy.exp(-(x - ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+            #       A_1 * numpy.exp(-(x + ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+            #       A_2 * numpy.exp(-(x + 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) +\
+            #       A_2 * numpy.exp(-(x - 2.*ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+            #       A_3 * numpy.exp(-(x + 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+            #       A_3 * numpy.exp(-(x - 3. * ene - x_off) ** 2 / (2. * sigma ** 2)) + \
+            #       fond
+
 
         fit_array = numpy.zeros(data.shape)
         a_array = numpy.zeros(data.shape[0])
         a1_array = numpy.zeros(data.shape[0])
         a2_array = numpy.zeros(data.shape[0])
+        a3_array = numpy.zeros(data.shape[0])
         sigma_array = numpy.zeros(data.shape[0])
+
+        for k in orders:
+
 
         wavs = numpy.linspace(start, end, pts-1)
         energies_loss = numpy.divide(1239.8, wavs)
@@ -81,9 +98,10 @@ class gainData:
             ene = energies_loss[i]
             p0 = [max(fit_array[i]), 1, 0., 0., 0., data.min(), 0.]
             coeff, var_matrix = curve_fit(_gaussian_fit, x, data[i], p0=p0)
-            a_array[i], a1_array[i], a2_array[i], sigma_array[i] = coeff[0], coeff[2], coeff[3], coeff[1]
+            a_array[i], a1_array[i], a2_array[i], a3_array[i], sigma_array[i] = coeff[0], coeff[2], coeff[3], coeff[4], coeff[1]
             fit_array[i] = _gaussian_fit(x, *coeff)
-        return fit_array, a_array, a1_array, a2_array, sigma_array
+            print(f'***ACQUISITION***: Fitting Data: ' + format(i/fit_array.shape[0]*100, '.0f') + '%')
+        return fit_array, a_array, a1_array, a2_array, a3_array, sigma_array
 
 
     def align_zlp(self, raw_array, pts, avg, pixels, disp, mode='max'):
@@ -118,7 +136,7 @@ class gainData:
                     proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
                     x = numpy.linspace((-pixels/2.+1)*disp, (pixels/2.)*disp, pixels)
                     p0 = [max(proc_array[i]), 0., 1]
-                    coeff, var_matrix = curve_fit(_gaussian, x, proc_array[i], p0 = p0)
+                    coeff, var_matrix = curve_fit(_gaussian, x, proc_array[i], p0=p0)
                     if i==(len(proc_array)-1):
                         zlp_fit[j] = coeff[2]
             return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2))

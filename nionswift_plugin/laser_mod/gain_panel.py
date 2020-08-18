@@ -330,6 +330,7 @@ class gainhandler:
             self.zlp_value.text = ''
             self.eff_dispersion_value.text = ''
             self.eff_fwhm_value.text = ''
+            self.eff_dispersion_fit_value.text = ''
 
             try:
                 self.file_type_value.text = self.__current_DI.description['which']
@@ -648,6 +649,9 @@ class gainhandler:
 
             try:
                 number_orders = int(self.many_replicas.text)
+                if number_orders > 4:
+                    number_orders = 4
+                    logging.info('***ACQUISITION***: Maximum number of orders is 4. Using 4 instead.')
             except:
                 number_orders = 1
                 logging.info(
@@ -658,7 +662,7 @@ class gainhandler:
             # of the first replica, a2_array is the intensity of the second replica and sigma_array is the sigma
             # that can be used to check for FWHM
 
-            fit_array, a_array, a1_array, a2_array, a3_array, sigma_array = self.data_proc.fit_data(temp_data,
+            fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array = self.data_proc.fit_data(temp_data,
                                                                                                     temp_dict['pts'],
                                                                                                     temp_dict[
                                                                                                         'start_wav'],
@@ -680,7 +684,54 @@ class gainhandler:
                                                 temp_dict['control'], is_live=False,
                                                 eels_dispersion=eels_dispersion, hor_pixels=data_size,
                                                 oversample=oversample)
+
             self.document_controller.document_model.append_data_item(self.fit_di.data_item)
+
+            if self.fit_pb.text == 'Fit Laser Scan':
+
+                if self.normalize_check_box.checked:
+                    a_array = numpy.divide(a_array[:-1], self.rpa_avg)
+                    a1_array = numpy.divide(a1_array[:-1], self.rpa_avg)
+                    a2_array = numpy.divide(a2_array[:-1], self.rpa_avg)
+                    a3_array = numpy.divide(a3_array[:-1], self.rpa_avg)
+                    a4_array = numpy.divide(a4_array[:-1], self.rpa_avg)
+                    logging.info('***ACQUISITION***: Data Normalized by power.')
+
+                self.int_di = DataItemLaserCreation('_fit_int_' + temp_dict['title'], a_array,
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
+
+                self.int1_di = DataItemLaserCreation('_fit_int1_' + temp_dict['title'], a_array,
+                                                    "sEEGS/sEELS", temp_dict['start_wav'],
+                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                    temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False)
+
+                self.int2_di = DataItemLaserCreation('_fit_int2_' + temp_dict['title'], a_array,
+                                                    "sEEGS/sEELS", temp_dict['start_wav'],
+                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                    temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False)
+
+                self.int3_di = DataItemLaserCreation('_fit_int3_' + temp_dict['title'], a_array,
+                                                    "sEEGS/sEELS", temp_dict['start_wav'],
+                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                    temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False)
+
+                self.int4_di = DataItemLaserCreation('_fit_int4_' + temp_dict['title'], a_array,
+                                                    "sEEGS/sEELS", temp_dict['start_wav'],
+                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                    temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False)
+
 
             if self.fit_pb.text == 'Fit Power Scan':
                 power_array_itp, a_array_itp, power_inc = self.data_proc.as_power_func(a_array[:-1], self.rpa_avg)
@@ -719,10 +770,20 @@ class gainhandler:
                                                      temp_dict['control'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
 
-                self.document_controller.document_model.append_data_item(self.int_di.data_item)
-                if a1_array.any(): self.document_controller.document_model.append_data_item(self.int1_di.data_item)
-                if a2_array.any():self.document_controller.document_model.append_data_item(self.int2_di.data_item)
-                if a3_array.any():self.document_controller.document_model.append_data_item(self.int3_di.data_item)
+                power_array_itp, a4_array_itp, power_inc = self.data_proc.as_power_func(a4_array[:-1], self.rpa_avg)
+                self.int4_di = DataItemLaserCreation('Power_fit_int4_' + temp_dict['title'], a4_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
+
+            self.document_controller.document_model.append_data_item(self.int_di.data_item)
+            if a1_array.any(): self.document_controller.document_model.append_data_item(self.int1_di.data_item)
+            if a2_array.any():self.document_controller.document_model.append_data_item(self.int2_di.data_item)
+            if a3_array.any():self.document_controller.document_model.append_data_item(self.int3_di.data_item)
+            if a4_array.any(): self.document_controller.document_model.append_data_item(self.int4_di.data_item)
 
             logging.info('***ACQUISITION***: Fit Done.')
 

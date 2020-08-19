@@ -133,7 +133,10 @@ class gainDevice(Observable.Observable):
         if not self.__OrsayScanInstrument:
             logging.info('***LASER***: Could not find SCAN module. Check for issues')
         else:
-            fast_blanker_status_f = False
+            #Obviously turn off blanker at beginning. Not sure if i have eels before clicking init. Check this!!
+            self.sht_f=False
+            self.fast_blanker_status_f=False
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
     def sht(self):

@@ -331,6 +331,7 @@ class gainhandler:
             self.eff_dispersion_value.text = ''
             self.eff_fwhm_value.text = ''
             self.eff_dispersion_fit_value.text = ''
+            self.energy_window_value.text = ''
 
             try:
                 self.file_type_value.text = self.__current_DI.description['which']
@@ -399,7 +400,6 @@ class gainhandler:
         cam_pixels = len(self.__current_DI.data[0])
         eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
         temp_title_name = 'Aligned'  # keep adding stuff as far as you doing (or not doing) stuff with your data.
-        # Always use a temp one
 
         if self.normalize_current_check_box.checked:
             for i in range(len(self.__current_DI.data)):
@@ -409,15 +409,17 @@ class gainhandler:
         # ## HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT
         # FOR CALIBRATION ***
         if widget == self.align_zlp_max:
-            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
+            self.aligned_cam_array, zlp_fwhm, energy_window = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
                                                                         temp_dict['averages'], cam_pixels,
                                                                         eels_dispersion, 'max')
             temp_title_name += '_max'
         elif widget == self.align_zlp_fit:
-            self.aligned_cam_array, zlp_fwhm = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
+            self.aligned_cam_array, zlp_fwhm, energy_window = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
                                                                         temp_dict['averages'], cam_pixels,
                                                                         eels_dispersion, 'fit')
             temp_title_name += '_fit'
+
+        self.energy_window_value.text = format(energy_window, '.3f') + ' eV'
 
         self.zlp_fwhm = zlp_fwhm
         self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[
@@ -1042,7 +1044,9 @@ class gainView:
 
         self.zlp_label = ui.create_label(text='FWHM of ZLP: ', name='zlp_label')
         self.zlp_value = ui.create_label(text='fwhm?', name='zlp_value')
-        self.zlp_row = ui.create_row(self.zlp_label, self.zlp_value, ui.create_stretch())
+        self.energy_window = ui.create_label(text='Window (Fit): ', name='energy_window')
+        self.energy_window_value = ui.create_label(text='energyW?', name='energy_window_value')
+        self.zlp_row = ui.create_row(self.zlp_label, self.zlp_value, self.energy_window, self.energy_window_value, ui.create_stretch(), spacing=12)
 
         self.savgol_window_label = ui.create_label(text='Smoothing Window: ', name='savgol_window_label')
         self.savgol_window_value = ui.create_line_edit(name='savgol_window_value')

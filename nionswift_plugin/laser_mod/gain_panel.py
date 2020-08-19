@@ -147,7 +147,7 @@ class gainhandler:
 
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(False, ['init_pb']))  # not working as something is calling this guy
-        self.normalize_check_box.checked = True
+        self.normalize_check_box.checked = False
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
         self.recheck_check_box.checked = True
@@ -697,35 +697,35 @@ class gainhandler:
                     a4_array = numpy.divide(a4_array[:-1], self.rpa_avg)
                     logging.info('***ACQUISITION***: Data Normalized by power.')
 
-                self.int_di = DataItemLaserCreation('_fit_int_' + temp_dict['title'], a_array,
+                self.int_di = DataItemLaserCreation('_fit_int_' + temp_dict['title'], a_array[:-1],
                                                      "sEEGS/sEELS", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False)
 
-                self.int1_di = DataItemLaserCreation('_fit_int1_' + temp_dict['title'], a_array,
+                self.int1_di = DataItemLaserCreation('_fit_int1_' + temp_dict['title'], a1_array[:-1],
                                                     "sEEGS/sEELS", temp_dict['start_wav'],
                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                     temp_dict['step_wav'], temp_dict['delay'],
                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                     temp_dict['control'], is_live=False)
 
-                self.int2_di = DataItemLaserCreation('_fit_int2_' + temp_dict['title'], a_array,
+                self.int2_di = DataItemLaserCreation('_fit_int2_' + temp_dict['title'], a2_array[:-1],
                                                     "sEEGS/sEELS", temp_dict['start_wav'],
                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                     temp_dict['step_wav'], temp_dict['delay'],
                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                     temp_dict['control'], is_live=False)
 
-                self.int3_di = DataItemLaserCreation('_fit_int3_' + temp_dict['title'], a_array,
+                self.int3_di = DataItemLaserCreation('_fit_int3_' + temp_dict['title'], a3_array[:-1],
                                                     "sEEGS/sEELS", temp_dict['start_wav'],
                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                     temp_dict['step_wav'], temp_dict['delay'],
                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                     temp_dict['control'], is_live=False)
 
-                self.int4_di = DataItemLaserCreation('_fit_int4_' + temp_dict['title'], a_array,
+                self.int4_di = DataItemLaserCreation('_fit_int4_' + temp_dict['title'], a4_array[:-1],
                                                     "sEEGS/sEELS", temp_dict['start_wav'],
                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                     temp_dict['step_wav'], temp_dict['delay'],

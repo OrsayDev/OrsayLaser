@@ -59,7 +59,7 @@ class gainDevice(Observable.Observable):
         self.end_data=Event.Event()
 
         self.__start_wav = 575.0
-        self.__finish_wav = 600.0
+        self.__finish_wav = 595.0
         self.__step_wav = 0.5
         self.__cur_wav = self.__start_wav
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
@@ -72,7 +72,7 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
         self.__servo_pts = 0
         self.__servo_wobbler = False
-        self.__ctrl_type = 0
+        self.__ctrl_type = 1
         self.__delay=1800 * 1e-9
         self.__width=50 * 1e-9
         self.__fb_status=False

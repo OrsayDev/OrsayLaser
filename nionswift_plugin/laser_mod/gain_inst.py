@@ -63,7 +63,7 @@ class gainDevice(Observable.Observable):
         self.__step_wav = 0.5
         self.__cur_wav = self.__start_wav
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
-        self.__avg = 5
+        self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
         self.__power = 0.
         self.__power_ref = 0.

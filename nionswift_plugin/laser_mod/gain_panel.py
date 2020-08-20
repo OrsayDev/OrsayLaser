@@ -130,6 +130,8 @@ class gainhandler:
         self.append_data_listener = self.instrument.append_data.listen(self.append_data)
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
 
+        self.det_acq_listener = self.instrument.det_acq.listen(self.show_det)
+
         self.__current_DI = None
         self.__current_DI_POW = None
         self.__current_DI_WAV = None
@@ -233,6 +235,19 @@ class gainhandler:
     def prepare_free_widget_enable(self,
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb", 'align_zlp_max']))
+
+    def show_det(self, xdata, mode, index, show):
+        print(xdata)
+        print(mode)
+        print(index)
+        print(show)
+        self.data_item = DataItem.DataItem()
+        self.data_item.set_xdata(xdata[0])
+        self.data_item.define_property("title", mode)
+        #self.data_item.define_property("description", self.acq_parameters)
+        #self.data_item.define_property("caption", self.acq_parameters)
+        if show: self.document_controller.document_model.append_data_item(self.data_item)
+
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur):
         if self.current_acquition != nacq:
@@ -982,7 +997,7 @@ class gainView:
                                                           on_check_state_changed='change_periodic_pic',
                                                           text='Periodic DET?')
         self.periodic_pics_label = ui.create_label(name='periodic_pics_label', text='How many (per acq.): ')
-        self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value')
+        self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value', text='@binding(instrument.many_per_pic_f)')
         self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.periodic_pics_checkbox, self.periodic_pics_label, self.periodic_pics_value, ui.create_stretch(), spacing=12)
 
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(

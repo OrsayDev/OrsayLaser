@@ -59,6 +59,8 @@ class gainDevice(Observable.Observable):
         self.append_data=Event.Event()
         self.end_data=Event.Event()
 
+        self.det_acq = Event.Event()
+
         self.__start_wav = 575.0
         self.__finish_wav = 595.0
         self.__step_wav = 0.5
@@ -82,7 +84,7 @@ class gainDevice(Observable.Observable):
         self.__acq_number = 0 #this is a strange variable. This mesures how many gain acquire you did in order to create new displays every new acquisition
         self.__powermeter_avg = PW_AVG
         self.__servo_step = 2
-        self.__n_perc_pic = 0
+        self.__nper_pic = 0
 
         self.__camera = None
         self.__data = None
@@ -178,6 +180,18 @@ class gainDevice(Observable.Observable):
         if not self.__status:
             self.free_event.fire("all")
 
+    def grab_det(self, mode, index, show):
+        #this gets frame parameters
+        det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
+        # this multiplies pixels(x) * pixels(y) * pixel_time
+        frame_time = self.__OrsayScanInstrument.calculate_frame_time(det_frame_parameters)
+        #note that i dont know if i defined pixel_time super correctely in orsay_scan_device. I know the number is
+        #relatively nice, but i need to check the definition
+        det_di = self.__OrsayScanInstrument.grab_next_to_start()
+        self.__OrsayScanInstrument.stop_playing()
+        time.sleep(frame_time * 1.2) #20% more of the time for a single frame
+        self.det_acq.fire(det_di, mode, index, show)
+
     def acq(self):
         self.__thread = threading.Thread(target=self.acqThread)
         self.__thread.start()
@@ -193,6 +207,7 @@ class gainDevice(Observable.Observable):
         self.__thread.start()
 
     def acq_prThread(self):
+        self.grab_det("init", 0, True)
         self.run_status_f =  self.__power_ramp = self.sht_f = True
         self.__abort_force=False
         self.__servo_pos_initial = self.__servo_pos
@@ -701,9 +716,19 @@ class gainDevice(Observable.Observable):
     @per_pic_f.setter
     def per_pic_f(self, value):
         self.__per_pic = value
-        #print(self.__OrsayScanInstrument.scan_device._Device__is_scanning)
-        #print(dir(self.__OrsayScanInstrument.scan_device))
-        print(dir(self.__OrsayScanInstrument))
-        self.__OrsayScanInstrument.grab_next_to_start()
+
+    @property
+    def many_per_pic_f(self):
+        return self.__nper_pic
+
+    @many_per_pic_f.setter
+    def many_per_pic_f(self, value):
+        try:
+            self.__nper_pic = int(value)
+        except:
+            logging.info('***LASER***: Please enter an integer for detectors grab. Using 0 instead.')
+        
+        #a = self.__OrsayScanInstrument.grab_next_to_start() #this is perfect
+        #self.__OrsayScanInstrument.stop_playing()
 
 

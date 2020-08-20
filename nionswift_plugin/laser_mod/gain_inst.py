@@ -18,6 +18,7 @@ DEBUG_laser = settings["LASER"]["DEBUG"]
 DEBUG_ps = settings["PS"]["DEBUG"]
 DEBUG_servo = settings["SERVO"]["DEBUG"]
 CAMERA = settings["CAMERA"]["WHICH"]
+SCAN = settings["SCAN"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 PW_AVG = settings["PW"]["AVG"]
 
@@ -81,6 +82,7 @@ class gainDevice(Observable.Observable):
         self.__acq_number = 0 #this is a strange variable. This mesures how many gain acquire you did in order to create new displays every new acquisition
         self.__powermeter_avg = PW_AVG
         self.__servo_step = 2
+        self.__n_perc_pic = 0
 
         self.__camera = None
         self.__data = None
@@ -89,6 +91,7 @@ class gainDevice(Observable.Observable):
         self.__status = False
         self.__abort_force = False
         self.__power_ramp=False
+        self.__per_pic = True
 
         self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__laser = laser.SirahCredoLaser(self.__sendmessage)
@@ -129,9 +132,19 @@ class gainDevice(Observable.Observable):
             logging.info(self.__camera.hardware_source_id)
 
 
-        self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id("orsay_scan_device")
+        self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(SCAN)
         if not self.__OrsayScanInstrument:
-            logging.info('***LASER***: Could not find SCAN module. Check for issues')
+            logging.info('***LASER***: Could not find SCAN module. Check for issues.')
+            logging.info('***LASER***: If usim available, grabbing usim Scan Device.')
+            self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id("usim_scan_device")
+            if not self.__OrsayScanInstrument: logging.info('***LASER***: Could not find USIM SCAN module. Check nionswift website for instructions.')
+
+
+            ## CLARITY:
+            ## self.__OrsayScanInstrument is the same as the way I did with the camera. If i have put a if hards.hardware_source_id == "usim_scan_device": self.__scan = hards, the dir(self.__scan) and dir(self.__OrsayScanInstrument) are identical
+
+
+
         else:
             #Obviously turn off blanker at beginning. Not sure if i have eels before clicking init. Check this!!
             self.sht_f=False
@@ -200,7 +213,7 @@ class gainDevice(Observable.Observable):
             j=0
             i+=1
         self.sht_f = False
-        logging.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
+        logging.info("***ACQUISITION***: Finishing laser/servo measurement. Acquiring conventional EELS for reference.")
         while(j < j_max and not self.__abort_force):
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
             self.combo_data_f = True
@@ -251,7 +264,6 @@ class gainDevice(Observable.Observable):
             if (
                     self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):  # check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release()  # if yes, you can advance
-                logging.info('***LASER***: Moving to next wavelength...')
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
 
@@ -561,6 +573,7 @@ class gainDevice(Observable.Observable):
             self.__servo_pts = int(self.__servo_pos/self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
             self.property_changed_event.fire("power_f")
+            self.property_changed_event.fire("servo_f") #this updates my label
             self.free_event.fire('all')
 
     @property
@@ -680,4 +693,17 @@ class gainDevice(Observable.Observable):
             self.__pwmeter.pw_set_avg(self.__powermeter_avg)
         except:
             logging.info("***POWERMETER***: Please enter an integer.")
+
+    @property
+    def per_pic_f(self):
+        return self.__per_pic
+
+    @per_pic_f.setter
+    def per_pic_f(self, value):
+        self.__per_pic = value
+        #print(self.__OrsayScanInstrument.scan_device._Device__is_scanning)
+        #print(dir(self.__OrsayScanInstrument.scan_device))
+        print(dir(self.__OrsayScanInstrument))
+        self.__OrsayScanInstrument.grab_next_to_start()
+
 

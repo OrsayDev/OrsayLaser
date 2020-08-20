@@ -212,6 +212,11 @@ class gainhandler:
         self.instrument.property_changed_event.fire('servo_f')
         self.instrument.free_event.fire("all")
 
+    def change_periodic_pic(self, widget, check_state):
+        self.periodic_pics_value.enabled = (check_state=='checked')
+        self.periodic_pics_label.enabled = (check_state=='checked')
+
+
     async def do_enable(self, enabled=True, not_affected_widget_name_list=None):
         for var in self.__dict__:
             if var not in not_affected_widget_name_list:
@@ -914,12 +919,14 @@ class gainView:
                                                    width=25)
         self.more_servo_pb = ui.create_push_button(text=">>", name="more_servo_pb", on_clicked="more_servo_push",
                                                    width=25)
+        self.current_servo_label = ui.create_label(text='Current: ')
+        self.current_servo_value = ui.create_label(name='current_servo_value', text='@binding(instrument.servo_f)')
         self.servo_wobbler_cb = ui.create_check_box(text='Wobbler Servo', name='servo_wobbler_cb',
                                                     checked='@binding(instrument.servo_wobbler_f)')
 
-        self.servo_row = ui.create_row(self.servo_label, ui.create_spacing(12), self.servo_slider,
-                                       ui.create_spacing(12), self.less_servo_pb, ui.create_spacing(5),
-                                       self.more_servo_pb, ui.create_stretch(), self.servo_wobbler_cb)
+        self.servo_row = ui.create_row(self.servo_label, self.servo_slider, self.less_servo_pb, self.more_servo_pb,
+                                       self.current_servo_label, self.current_servo_value, ui.create_stretch(),
+                                       self.servo_wobbler_cb, spacing=12)
 
         self.servo_step_label = ui.create_label(name='servo_step_label', text='Servo Step (°): ')
         self.servo_step_value = ui.create_line_edit(name='servo_step_value', text='@binding(instrument.servo_step_f)')
@@ -965,13 +972,18 @@ class gainView:
 
         ## ACQUISTION BUTTONS
 
-        self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push")
-        self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push")
-        self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push")
-        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, spacing=12)
+        self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
+        self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push", width=150)
+        self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push", width=150)
+        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, ui.create_stretch(), spacing=12)
 
-        self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push")
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, spacing=12)
+        self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=150)
+        self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox', checked='@binding(instrument.per_pic_f)',
+                                                          on_check_state_changed='change_periodic_pic',
+                                                          text='Periodic DET?')
+        self.periodic_pics_label = ui.create_label(name='periodic_pics_label', text='How many (per acq.): ')
+        self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value')
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.periodic_pics_checkbox, self.periodic_pics_label, self.periodic_pics_value, ui.create_stretch(), spacing=12)
 
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(
             self.buttons_row00, self.buttons_row01))

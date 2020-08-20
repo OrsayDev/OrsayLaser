@@ -85,7 +85,7 @@ class gainDevice(Observable.Observable):
         self.__acq_number = 0 #this is a strange variable. This mesures how many gain acquire you did in order to create new displays every new acquisition
         self.__powermeter_avg = PW_AVG
         self.__servo_step = 2
-        self.__nper_pic = 0
+        self.__nper_pic = 2
 
         self.__camera = None
         self.__data = None
@@ -210,14 +210,15 @@ class gainDevice(Observable.Observable):
         self.__thread.start()
 
     def acq_prThread(self):
-        self.grab_det("init", self.__acq_number, 0, True)
         self.run_status_f =  self.__power_ramp = self.sht_f = True
         self.__abort_force=False
         self.__servo_pos_initial = self.__servo_pos
         i_max = int(self.__servo_pos/self.__servo_step)
         j_max = self.__avg
         pics_array = numpy.linspace(0, i_max, min(self.__nper_pic+2, i_max+1), dtype=int)
+        pics_array=pics_array[1:] #exclude zero
         self.call_data.fire(self.__acq_number, i_max+1, j_max, self.__start_wav, self.__start_wav, 0.0, 1, self.__delay, self.__width, self.__diode)
+        self.grab_det("init", self.__acq_number, 0, True) #after call_data.fire
         self.__controlRout.pw_control_thread_on()
         i=0
         j=0
@@ -239,7 +240,6 @@ class gainDevice(Observable.Observable):
             self.combo_data_f = True
             self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
             j+=1
-
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
         self.servo_f=self.__servo_pos_initial #putting back at the initial position
@@ -258,10 +258,11 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
-            self.call_data.fire(self.__acq_number, self.pts_f+1, self.avg_f, self.__start_wav, self.__finish_wav, self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
             self.__acq_number+=1
-
-
+            self.call_data.fire(self.__acq_number, self.pts_f+1, self.avg_f, self.__start_wav, self.__finish_wav, self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
+            self.grab_det("init", self.__acq_number, 0, True) #after call_data.fire
+            pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic+2, self.__pts+1), dtype=int)
+            pics_array=pics_array[1:] #exclude zero
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on()
@@ -281,6 +282,8 @@ class gainDevice(Observable.Observable):
                 self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
                 j += 1
             j = 0
+            if i in pics_array:
+                self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (
                     self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):  # check if laser changes have finished and thread step is over
@@ -306,6 +309,7 @@ class gainDevice(Observable.Observable):
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
                 self.__laser.set_scan_thread_release()
         self.run_status_f = False  # acquistion is over
+        self.grab_det("end", self.__acq_number, 0, True)
         self.start_wav_f=self.__start_wav
         self.end_data.fire()
 

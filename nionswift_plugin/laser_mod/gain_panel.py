@@ -243,7 +243,9 @@ class gainhandler:
         for i, xdata in enumerate(xdatas):
             data_item = DataItem.DataItem()
             data_item.set_xdata(xdata)
-            if mode=='init' or mode=='end': data_item.define_property("title", mode+'_det'+str(i)+' '+str(nacq))
+            #this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
+            #so, in order for this to work you need to create laser wavelength before creating my haadf/bf DI
+            if mode=='init' or mode=='end': data_item.define_property("title", mode+'_det'+str(i)+' '+str(nacq-1))
             #this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
             if mode=='middle': data_item.define_property("title", mode+str(npic)+'_det'+str(i)+' '+str(nacq-1)) 
 

@@ -8,6 +8,7 @@ import threading
 import os
 import json
 import time
+import numpy
 
 abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
 with open(abs_path) as savfile:
@@ -180,7 +181,8 @@ class gainDevice(Observable.Observable):
         if not self.__status:
             self.free_event.fire("all")
 
-    def grab_det(self, mode, index, show):
+    def grab_det(self, mode, index, npic, show):
+        logging.info("***ACQUISITION***: Scanning Full Image.")
         #this gets frame parameters
         det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
         # this multiplies pixels(x) * pixels(y) * pixel_time
@@ -190,7 +192,7 @@ class gainDevice(Observable.Observable):
         det_di = self.__OrsayScanInstrument.grab_next_to_start()
         self.__OrsayScanInstrument.stop_playing()
         time.sleep(frame_time * 1.2) #20% more of the time for a single frame
-        self.det_acq.fire(det_di, mode, index, show)
+        self.det_acq.fire(det_di, mode, index, npic, show)
 
     def acq(self):
         self.__thread = threading.Thread(target=self.acqThread)
@@ -203,18 +205,19 @@ class gainDevice(Observable.Observable):
         self.run_status_f=False #force free GUI
 
     def acq_pr(self):
+        self.__acq_number+=1
         self.__thread = threading.Thread(target=self.acq_prThread)
         self.__thread.start()
 
     def acq_prThread(self):
-        self.grab_det("init", 0, True)
+        self.grab_det("init", self.__acq_number, 0, True)
         self.run_status_f =  self.__power_ramp = self.sht_f = True
         self.__abort_force=False
         self.__servo_pos_initial = self.__servo_pos
         i_max = int(self.__servo_pos/self.__servo_step)
         j_max = self.__avg
+        pics_array = numpy.linspace(0, i_max, min(self.__nper_pic+2, i_max+1), dtype=int)
         self.call_data.fire(self.__acq_number, i_max+1, j_max, self.__start_wav, self.__start_wav, 0.0, 1, self.__delay, self.__width, self.__diode)
-        self.__acq_number+=1
         self.__controlRout.pw_control_thread_on()
         i=0
         j=0
@@ -226,6 +229,8 @@ class gainDevice(Observable.Observable):
                 j+=1
             self.servo_f = self.servo_f - self.__servo_step
             j=0
+            if i in pics_array:
+                self.grab_det("middle", self.__acq_number, i, True)
             i+=1
         self.sht_f = False
         logging.info("***ACQUISITION***: Finishing laser/servo measurement. Acquiring conventional EELS for reference.")
@@ -240,6 +245,7 @@ class gainDevice(Observable.Observable):
         self.servo_f=self.__servo_pos_initial #putting back at the initial position
         self.combo_data_f = True
         self.__power_ramp = False
+        self.grab_det("end", self.__acq_number, 0, True)
         self.end_data.fire()
         self.run_status_f=False
 

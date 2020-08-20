@@ -236,17 +236,18 @@ class gainhandler:
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
         self.event_loop.create_task(self.do_enable(True, ["init_pb", 'align_zlp_max']))
 
-    def show_det(self, xdata, mode, index, show):
-        print(xdata)
-        print(mode)
-        print(index)
-        print(show)
-        self.data_item = DataItem.DataItem()
-        self.data_item.set_xdata(xdata[0])
-        self.data_item.define_property("title", mode)
-        #self.data_item.define_property("description", self.acq_parameters)
-        #self.data_item.define_property("caption", self.acq_parameters)
-        if show: self.document_controller.document_model.append_data_item(self.data_item)
+    def show_det(self, xdatas, mode, nacq, npic, show):
+        while self.document_controller.document_model.get_data_item_by_title('Laser Wavelength ' + str(nacq)) is not None:
+            nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
+
+        for i, xdata in enumerate(xdatas):
+            data_item = DataItem.DataItem()
+            data_item.set_xdata(xdata)
+            if mode=='init' or mode=='end': data_item.define_property("title", mode+'_det'+str(i)+' '+str(nacq))
+            #this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
+            if mode=='middle': data_item.define_property("title", mode+str(npic)+'_det'+str(i)+' '+str(nacq-1)) 
+
+            if show: self.document_controller.document_model.append_data_item(data_item)
 
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur):
@@ -267,7 +268,7 @@ class gainhandler:
 
             while self.document_controller.document_model.get_data_item_by_title(
                     'Laser Wavelength ' + str(nacq)) is not None:
-                nacq += 1  # this puts always a new set even if swift crashes
+                nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
 
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")

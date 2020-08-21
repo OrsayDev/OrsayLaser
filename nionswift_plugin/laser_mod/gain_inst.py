@@ -86,6 +86,7 @@ class gainDevice(Observable.Observable):
         self.__powermeter_avg = PW_AVG
         self.__servo_step = 2
         self.__nper_pic = 2
+        self.__dye = 0
 
         self.__camera = None
         self.__data = None
@@ -738,7 +739,12 @@ class gainDevice(Observable.Observable):
         except:
             logging.info('***LASER***: Please enter an integer for detectors grab. Using 0 instead.')
         
-        #a = self.__OrsayScanInstrument.grab_next_to_start() #this is perfect
-        #self.__OrsayScanInstrument.stop_playing()
+    @property
+    def dye_f(self):
+        return self.__dye
+
+    @dye_f.setter
+    def dye_f(self, value):
+        self.__dye = value
 
 

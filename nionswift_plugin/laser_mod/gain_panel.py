@@ -954,8 +954,13 @@ class gainView:
         self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, self.servo_p_points_label,
                                             self.servo_p_points_value, ui.create_stretch(), spacing=12)
 
+        self.dye_label = ui.create_label(name='dye_label', text='Select Dye: ')
+        self.dye_value = ui.create_combo_box(items=['Pyrromethene 597', 'Pyrromethene 580'], current_index='@binding(instrument.dye_f)', name='dye_value')
+        self.dye_row = ui.create_row(self.dye_label, self.dye_value, ui.create_stretch(), spacing=12)
+
+
         self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
-            self.servo_row, self.servo_step_row))
+            self.servo_row, self.servo_step_row, self.dye_row))
 
         # Fast Blanker
         self.delay_label = ui.create_label(name='delay_label', text='Delay (ns): ')

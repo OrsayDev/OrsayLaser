@@ -289,6 +289,7 @@ class gainDevice(Observable.Observable):
             if (
                     self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):  # check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release()  # if yes, you can advance
+                logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
 

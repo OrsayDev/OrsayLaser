@@ -76,7 +76,8 @@ class SirahCredoLaser:
         byt = self.pos_to_bytes(pos)
         checksum = byt.sum() + 60 + 7 + 1  # head associated with send
         if (checksum > 255):
-            checksum -= 256
+            #checksum -= 256
+            checksum = checksum - 256 * int(checksum/256)
         send_mes = [60, 7, 1, byt[0], byt[1], byt[2], byt[3], 0, 0, 0, 0, checksum, 62]
         ba_send_mes = bytearray(send_mes)
         pos2 = self.bytes_to_pos(byt)

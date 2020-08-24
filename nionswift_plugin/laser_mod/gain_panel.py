@@ -28,6 +28,8 @@ with open(abs_path) as savfile:
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 
+
+
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
                  time_width=None, start_ps_cur=None, ctrl=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
@@ -59,6 +61,11 @@ class DataItemLaserCreation():
             self.calibration.units = '°'
         if which == 'PS':
             self.calibration.units = 'A'
+        if which=='power_as_wav':
+            self.calibration.units = 'μW'
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = step
         if which == 'sEEGS/sEELS_power':
             self.calibration.units = 'A.U.'
             self.dimensional_calibrations[0].units = 'μW'
@@ -161,12 +168,12 @@ class gainhandler:
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled = False
-        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
+        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                                           'process_eegs_pb',
                                                           'process_power_pb', 'fit_pb',
                                                           'cancel_pb']))  # not working as something is
         # calling this guy
-        self.actions_list = [self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb,
+        self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb,
                              self.process_power_pb, self.fit_pb,
                              self.cancel_pb]  # i can put here because GUI was already initialized
 
@@ -234,7 +241,29 @@ class gainhandler:
 
     def prepare_free_widget_enable(self,
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
-        self.event_loop.create_task(self.do_enable(True, ["init_pb", 'align_zlp_max']))
+        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
+                                                          'process_eegs_pb',
+                                                          'process_power_pb', 'fit_pb',
+                                                          'cancel_pb']))
+
+    def show_dye(self, widget):
+
+        if self.dye_value.current_index==0:
+            abs_path = os.path.abspath(os.path.join((__file__ + "/../Dyes"), "Pyrromethene_597.json"))
+            with open(abs_path) as savfile:
+                pyr_597 = json.load(savfile)
+
+            spatial_calibs = pyr_597["spatial_calibrations"][0]
+
+            abs_path = os.path.abspath(os.path.join((__file__ + "/../Dyes"), "Pyrromethene_597.npy"))
+            array_597 = numpy.load(abs_path)
+            di_597 = DataItemLaserCreation('Pyrromethene 597', array_597, "power_as_wav",
+                                           spatial_calibs["offset"], None, None,
+                                          None, spatial_calibs["scale"], None,
+                                          None, None,
+                                          None, is_live=False)
+
+            self.document_controller.document_model.append_data_item(di_597.data_item)
 
     def show_det(self, xdatas, mode, nacq, npic, show):
         while self.document_controller.document_model.get_data_item_by_title('Laser Wavelength ' + str(nacq)) is not None:
@@ -379,7 +408,7 @@ class gainhandler:
                     "Laser Wavelength " + str(temp_acq))
                 self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
                 if self.__current_DI_POW and self.__current_DI_WAV:
-                    self.align_zlp_max.enabled = self.align_zlp_fit.enabled = True
+                    self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = True
 
             elif "Power" in self.file_name_value.text:
                 pass  # something to do with only power?
@@ -387,6 +416,26 @@ class gainhandler:
                 pass  # something to do with only laser wavelength?
         else:
             logging.info('***ACQUISTION***: Could not find referenced Data Item.')
+
+    def power_wav(self, widget):
+        temp_dict = self.__current_DI.description
+        pwav = numpy.reshape(self.__current_DI_POW.data,
+                            (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
+        pwav_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
+
+        for i in range(temp_dict['pts'] - 1):
+            pwav_avg[i] = numpy.average(pwav[i]) - numpy.average(pwav[-1])
+
+        power_avg = DataItemLaserCreation('Avg_Power_'+temp_dict['title'], pwav_avg, "power_as_wav",
+                                                    temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+                                                    temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False)
+
+        self.plot_power_wav = False
+        self.document_controller.document_model.append_data_item(power_avg.data_item)
+        logging.info('***ACQUISITION***: Average Power Data Item Created.')
+
 
     def align_zlp(self, widget):
         temp_dict = self.__current_DI.description
@@ -459,7 +508,7 @@ class gainhandler:
         if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
             # step, we need the data and FWHM
             self.smooth_zlp.enabled = True
-            self.align_zlp_max.enabled = self.align_zlp_fit.enabled = False
+            self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav = False
             logging.info('***ACQUISITION***: Data Item created.')
 
         if self.display_check_box.checked: self.document_controller.document_model.append_data_item(
@@ -956,7 +1005,8 @@ class gainView:
 
         self.dye_label = ui.create_label(name='dye_label', text='Select Dye: ')
         self.dye_value = ui.create_combo_box(items=['Pyrromethene 597', 'Pyrromethene 580'], current_index='@binding(instrument.dye_f)', name='dye_value')
-        self.dye_row = ui.create_row(self.dye_label, self.dye_value, ui.create_stretch(), spacing=12)
+        self.dye_show_button = ui.create_push_button(name='dye_show_button', text='Show Dye', on_clicked='show_dye')
+        self.dye_row = ui.create_row(self.dye_label, self.dye_value, self.dye_show_button, ui.create_stretch(), spacing=12)
 
 
         self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
@@ -1019,7 +1069,8 @@ class gainView:
         ### BEGIN MY SECOND TAB ##
 
         self.grab_pb = ui.create_push_button(text='Grab', name='grab_pb', on_clicked='grab_data_item')
-        self.pb_row = ui.create_row(self.grab_pb, ui.create_stretch())
+        self.plot_power_wav = ui.create_push_button(text='Plot Pw-Wl', name='plot_power_wav', on_clicked='power_wav')
+        self.pb_row = ui.create_row(self.grab_pb, self.plot_power_wav, ui.create_stretch())
 
         self.file_name_label = ui.create_label(text='Title:', name='file_name_label')
         self.file_name_value = ui.create_line_edit(name='file_name_value')

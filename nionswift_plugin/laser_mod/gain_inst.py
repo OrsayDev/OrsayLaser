@@ -231,7 +231,7 @@ class gainDevice(Observable.Observable):
                 j+=1
             self.servo_f = self.servo_f - self.__servo_step
             j=0
-            if i in pics_array:
+            if i in pics_array and self.__per_pic:
                 self.grab_det("middle", self.__acq_number, i, True)
             i+=1
         self.sht_f = False
@@ -283,7 +283,7 @@ class gainDevice(Observable.Observable):
                 self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
                 j += 1
             j = 0
-            if i in pics_array:
+            if i in pics_array and self.__per_pic:
                 self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (

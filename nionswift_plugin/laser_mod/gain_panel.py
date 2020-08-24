@@ -432,7 +432,7 @@ class gainhandler:
                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                     temp_dict['control'], is_live=False)
 
-        self.plot_power_wav = False
+        self.plot_power_wav.enabled = False
         self.document_controller.document_model.append_data_item(power_avg.data_item)
         logging.info('***ACQUISITION***: Average Power Data Item Created.')
 

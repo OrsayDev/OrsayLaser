@@ -54,7 +54,7 @@ class gainData:
         temp_di_data = numpy.asarray(temp_di_data)
         return temp_wl_data, temp_pw_data, temp_di_data
 
-    def fit_data(self, data, pts, start, end, step, disp, fwhm, orders):
+    def fit_data(self, data, pts, start, end, step, disp, fwhm, orders, tol=0.0):
         #if not self.__fixed_energy: ene = 0
         def _gaussian_fit(x, *p):
             A, sigma, A_1, A_2, A_3, A_4, fond, x_off, ene = p
@@ -94,7 +94,7 @@ class gainData:
             if not ene: energy_window = 3.0
             window_pixels = int(energy_window / disp)
             half_pixels = int(fit_array.shape[1] / 2)
-            coeff, var_matrix = curve_fit(_gaussian_fit, x[half_pixels-window_pixels:half_pixels+window_pixels], data[i][half_pixels-window_pixels:half_pixels+window_pixels], p0=p0, bounds=([0., 0., 0., 0., 0., 0., 0., -numpy.inf, ene*0.95-10**(-3)], [numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, ene*1.05+10**(-3)]))
+            coeff, var_matrix = curve_fit(_gaussian_fit, x[half_pixels-window_pixels:half_pixels+window_pixels], data[i][half_pixels-window_pixels:half_pixels+window_pixels], p0=p0, bounds=([0., 0., 0., 0., 0., 0., 0., -numpy.inf, ene*(1.-tol)-10**(-3)], [numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, ene*(1.+tol)+10**(-3)]))
             a_array[i], a1_array[i], a2_array[i], a3_array[i], a4_array[i], sigma_array[i], ene_array[i] = coeff[0], coeff[2], coeff[3], coeff[4], coeff[5], coeff[1], coeff[8]
             fit_array[i] = _gaussian_fit(x, *coeff)
             if ene: print(f'***ACQUISITION***: Fitting Data: ' + format(i/fit_array.shape[0]*100, '.0f') + '%. Current Wavelength is: ' + format(1239.8/ene, '.2f') + ' nm')
@@ -113,15 +113,13 @@ class gainData:
         proc_array = numpy.zeros((pts, pixels))
         zlp_fit = numpy.zeros(avg)
 
-        if 'max' in mode or 'fit' in mode or 'if_plot' in mode:
+        if 'max' in mode or 'fit' in mode:
             logging.info('***ACQUISITION***: MAX is the only method currently available.')
             for i in range(len(proc_array)):
                 for j in range(avg):
                     current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
                     proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
                     x = numpy.linspace((-pixels/2.-1)*disp, (pixels/2.)*disp, pixels)
-                    #print(x[numpy.where(proc_array[i]==numpy.max(proc_array[i]))[0][0]])
-                    # Here we are going to fit between +- 3 eV
                     energy_window = 3.0
                     window_pixels = int(energy_window / disp)
                     half_pixels = int(pixels/2)
@@ -131,29 +129,17 @@ class gainData:
                         zlp_fit[j] = coeff[2]
             return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2)), energy_window
 
-        if 'fit' in mode: #I HAVE SUB PIXEL WITH MAX_INDEX. How to improve further with fit? I am not sure.
-            for i in range(len(proc_array)):
-                for j in range(avg):
-                    current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
-                    proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
-                    x = numpy.linspace((-pixels/2.+1)*disp, (pixels/2.)*disp, pixels)
-                    p0 = [max(proc_array[i]), 0., 1]
-                    coeff, var_matrix = curve_fit(_gaussian, x, proc_array[i], p0=p0)
-                    if i==(len(proc_array)-1):
-                        zlp_fit[j] = coeff[2]
-            return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2))
-
-        if 'f_plot' in mode:
-            for i in range(len(proc_array)):
-                for j in range(avg):
-                    current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
-                    proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
-                    x = numpy.linspace((-pixels/2.+1)*disp, (pixels/2.)*disp, pixels)
-                    p0 = [max(proc_array[i]), 0., 1., 0., -2., 0., 2.]
-                    coeff, var_matrix = curve_fit(_gaussian_two_replicas, x, proc_array[i], p0 = p0)
-                    proc_array[i] = _gaussian_two_replicas(x, *coeff)
-            return proc_array, None
-
+        #if 'fit' in mode: #I HAVE SUB PIXEL WITH MAX_INDEX. How to improve further with fit? I am not sure.
+        #    for i in range(len(proc_array)):
+        #        for j in range(avg):
+        #            current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
+        #            proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
+        #            x = numpy.linspace((-pixels/2.+1)*disp, (pixels/2.)*disp, pixels)
+        #            p0 = [max(proc_array[i]), 0., 1]
+        #            coeff, var_matrix = curve_fit(_gaussian, x, proc_array[i], p0=p0)
+        #            if i==(len(proc_array)-1):
+        #                zlp_fit[j] = coeff[2]
+        #    return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2))
 
     def smooth_zlp(self, raw_array, window_size, poly_order, oversample, x, xx):
         smooth_array = numpy.zeros((raw_array.shape[0], raw_array.shape[1]*oversample))

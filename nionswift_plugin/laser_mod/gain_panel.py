@@ -163,7 +163,7 @@ class gainhandler:
         self.savgol_window_value.text = '3'
         self.savgol_poly_order_value.text = '1'
         self.savgol_oversample_value.text = '1'
-        self.many_replicas.text = '1'
+        self.many_replicas.text = '4'
 
     def init_push(self, widget):
         self.instrument.init()
@@ -382,7 +382,7 @@ class gainhandler:
             self.zlp_value.text = ''
             self.eff_dispersion_value.text = ''
             self.eff_fwhm_value.text = ''
-            self.eff_dispersion_fit_value.text = ''
+            self.eff_fwhm_fit_value.text = ''
             self.energy_window_value.text = ''
 
             try:
@@ -508,7 +508,7 @@ class gainhandler:
         if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
             # step, we need the data and FWHM
             self.smooth_zlp.enabled = True
-            self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav = False
+            self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = False
             logging.info('***ACQUISITION***: Data Item created.')
 
         if self.display_check_box.checked: self.document_controller.document_model.append_data_item(
@@ -613,6 +613,7 @@ class gainhandler:
 
         for k in range(number_orders):
             for i in range(len(temp_data) - 1):
+                #here we find maximum and minimum of gain and loss based on index.
                 cpg_meas[k][i] = int(
                     numpy.where(temp_data[i] == numpy.max(temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]))[0])
                 cpl_meas[k][i] = int(
@@ -736,7 +737,7 @@ class gainhandler:
             # of the first replica, a2_array is the intensity of the second replica and sigma_array is the sigma
             # that can be used to check for FWHM
 
-            fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array = self.data_proc.fit_data(temp_data,
+            fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array, ene_array = self.data_proc.fit_data(temp_data,
                                                                                                     temp_dict['pts'],
                                                                                                     temp_dict[
                                                                                                         'start_wav'],
@@ -748,8 +749,10 @@ class gainhandler:
                                                                                                     self.zlp_fwhm,
                                                                                                     number_orders)
 
-            self.eff_dispersion_fit_value.text = format(2 * numpy.mean(sigma_array) * numpy.sqrt(2. * numpy.log(2)),
+            self.eff_fwhm_fit_value.text = format(2 * numpy.mean(sigma_array) * numpy.sqrt(2. * numpy.log(2)),
                                                         '.4f') + ' eV '
+
+            print(numpy.mean(ene_array[:-1]))
 
             self.fit_di = DataItemLaserCreation('fit_' + temp_dict['title'], fit_array, "SMOOTHED_DATA",
                                                 temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
@@ -1170,11 +1173,15 @@ class gainView:
 
         self.fit_pb = ui.create_push_button(text='Fit', on_clicked='fit_or_cancel', name='fit_pb')
         self.cancel_pb = ui.create_push_button(text='Cancel', on_clicked='fit_or_cancel', name='cancel_pb')
-        self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, ui.create_stretch(), spacing=12)
+        self.tolerance_energy = ui.create_label(name='tolerance_energy', text='Tolerance in Energy (%): ')
+        self.tolerance_energy_value = ui.create_line_edit(name='tolerance_energy_value')
+        self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, self.tolerance_energy, self.tolerance_energy_value, ui.create_stretch(), spacing=12)
 
-        self.eff_dispersion_fit = ui.create_label(name='eff_dispersion_fit', text='Measured Dispersion (Fit): ')
-        self.eff_dispersion_fit_value = ui.create_label(name='eff_dispersion_fit_value', text='eff disp fit?')
-        self.info_fit_row = ui.create_row(self.eff_dispersion_fit, self.eff_dispersion_fit_value, ui.create_stretch(),
+        self.eff_dispersion_fit = ui.create_label(name='eff_dispersion_fit', text='Measured Disp. (Fit): ')
+        self.eff_dispersion_fit_value = ui.create_label(name='eff_dispersion_fit_value', text='eff disp (fit)?')
+        self.eff_fwhm_fit = ui.create_label(name='eff_fwhm_fit', text='Measured FWHM (Fit): ')
+        self.eff_fwhm_fit_value = ui.create_label(name='eff_fwhm_fit_value', text='eff fwhm (fit?)')
+        self.info_fit_row = ui.create_row(self.eff_dispersion_fit, self.eff_dispersion_fit_value, self.eff_fwhm_fit, self.eff_fwhm_fit_value, ui.create_stretch(),
                                           spacing=12)
 
         self.actions_group = ui.create_group(title='Actions', content=ui.create_column(

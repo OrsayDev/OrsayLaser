@@ -10,6 +10,7 @@ class gainData:
 
     def __init__(self):
         pass
+        self.__fixed_energy = False
 
     def send_raw_MetaData(self, rd):
         index = [] #max position for alignment
@@ -54,9 +55,9 @@ class gainData:
         return temp_wl_data, temp_pw_data, temp_di_data
 
     def fit_data(self, data, pts, start, end, step, disp, fwhm, orders):
-        ene = 0
+        #if not self.__fixed_energy: ene = 0
         def _gaussian_fit(x, *p):
-            A, sigma, A_1, A_2, A_3, A_4, fond, x_off = p
+            A, sigma, A_1, A_2, A_3, A_4, fond, x_off, ene = p
             func = A * numpy.exp(-(x - x_off) ** 2 / (2. * sigma ** 2)) +\
                    A_1 * numpy.exp(-(x - ene - x_off) ** 2 / (2. * sigma ** 2)) +\
                    A_1 * numpy.exp(-(x + ene - x_off) ** 2 / (2. * sigma ** 2)) + fond
@@ -79,6 +80,7 @@ class gainData:
         a3_array = numpy.zeros(data.shape[0])
         a4_array = numpy.zeros(data.shape[0])
         sigma_array = numpy.zeros(data.shape[0])
+        ene_array = numpy.zeros(data.shape[0])
 
         wavs = numpy.linspace(start, end, pts-1)
         energies_loss = numpy.divide(1239.8, wavs)
@@ -87,16 +89,16 @@ class gainData:
         for i in range(fit_array.shape[0]):
             x = numpy.linspace(-(fit_array.shape[1] / 2.) * disp, (fit_array.shape[1] / 2.) * disp, fit_array.shape[1])
             ene = energies_loss[i]
-            p0 = [max(fit_array[i]), 1, 0., 0., 0., 0., data.min(), 0.]
+            p0 = [max(fit_array[i]), 1, 0., 0., 0., 0., data.min(), 0., ene]
             if ene: energy_window = (orders+1) * ene
             if not ene: energy_window = 3.0
             window_pixels = int(energy_window / disp)
             half_pixels = int(fit_array.shape[1] / 2)
-            coeff, var_matrix = curve_fit(_gaussian_fit, x[half_pixels-window_pixels:half_pixels+window_pixels], data[i][half_pixels-window_pixels:half_pixels+window_pixels], p0=p0)
-            a_array[i], a1_array[i], a2_array[i], a3_array[i], a4_array[i], sigma_array[i] = coeff[0], coeff[2], coeff[3], coeff[4], coeff[5], coeff[1]
+            coeff, var_matrix = curve_fit(_gaussian_fit, x[half_pixels-window_pixels:half_pixels+window_pixels], data[i][half_pixels-window_pixels:half_pixels+window_pixels], p0=p0, bounds=([0., 0., 0., 0., 0., 0., 0., -numpy.inf, ene*0.95-10**(-3)], [numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, numpy.inf, ene*1.05+10**(-3)]))
+            a_array[i], a1_array[i], a2_array[i], a3_array[i], a4_array[i], sigma_array[i], ene_array[i] = coeff[0], coeff[2], coeff[3], coeff[4], coeff[5], coeff[1], coeff[8]
             fit_array[i] = _gaussian_fit(x, *coeff)
             if ene: print(f'***ACQUISITION***: Fitting Data: ' + format(i/fit_array.shape[0]*100, '.0f') + '%. Current Wavelength is: ' + format(1239.8/ene, '.2f') + ' nm')
-        return fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array
+        return fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array, ene_array
 
     def align_zlp(self, raw_array, pts, avg, pixels, disp, mode='max'):
 

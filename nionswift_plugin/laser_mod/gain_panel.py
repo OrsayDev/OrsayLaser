@@ -159,8 +159,6 @@ class gainhandler:
         self.normalize_check_box.checked = False #in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
-        self.recheck_check_box.checked = False #in process_data
-        self.recheck_check_box.enabled = False #in process_data. Disabled because this is bad. Dispersion must be good from the beginning
         self.savgol_window_value.text = '3'
         self.savgol_poly_order_value.text = '1'
         self.savgol_oversample_value.text = '1'
@@ -382,9 +380,6 @@ class gainhandler:
             self.file_x_disp_value.text = str(self.__current_DI.dimensional_calibrations[1].scale) + ' ' + \
                                           self.__current_DI.dimensional_calibrations[1].units
             self.zlp_value.text = ''
-            self.eff_dispersion_value.text = ''
-            self.eff_fwhm_value.text = ''
-            self.eff_fwhm_fit_value.text = ''
             self.energy_window_value.text = ''
 
             try:
@@ -572,8 +567,6 @@ class gainhandler:
                 self.process_power_pb.enabled = True
                 self.normalize_check_box.enabled = False
             self.smooth_zlp.enabled = False
-            self.recheck_check_box.checked = False
-            self.recheck_check_box.enabled = False #in process_data. Disabled because this is bad. Dispersion must be good from the beginning
             logging.info('***ACQUISITION***: Smooth Successful. Data Item created.')
 
         if self.display_smooth_check_box.checked: self.document_controller.document_model.append_data_item(
@@ -624,25 +617,10 @@ class gainhandler:
                 cpl_meas[k][i] = int(
                     numpy.where(temp_data[i] == numpy.max(temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]))[0])
 
-        if self.recheck_check_box.checked:
-            new_disp = numpy.average(
-                numpy.divide(numpy.subtract(energies_loss, energies_gain), numpy.subtract(cpl_meas, cpg_meas)))
-            self.eff_dispersion_value.text = format(new_disp, '.4f') + ' eV'
-            ihp = int(round(self.zlp_fwhm / new_disp / 2.))
-            self.eff_fwhm_value.text = format(self.zlp_fwhm / temp_calib[1].scale * new_disp, '.4f') + ' eV'
-        else:
-            self.eff_dispersion_value.text = 'XX?'
-            new_disp = None
-
-        self.final_disp = new_disp if new_disp is not None else temp_calib[1].scale
-        self.zlp_fwhm = self.zlp_fwhm / temp_calib[1].scale * new_disp if new_disp is not None else self.zlp_fwhm
-
         for k in range(number_orders):
             for i in range(len(temp_data) - 1):
-                garray = temp_data[i][cpg_meas[k][i] - ihp:cpg_meas[k][i] + ihp] if self.recheck_check_box.checked else \
-                    temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
-                larray = temp_data[i][cpl_meas[k][i] - ihp:cpl_meas[k][i] + ihp] if self.recheck_check_box.checked else \
-                    temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
+                garray = temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
+                larray = temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
 
                 gain_array[k][i] = numpy.sum(garray)
                 loss_array[k][i] = numpy.sum(larray)
@@ -754,17 +732,10 @@ class gainhandler:
                                                                                                         'final_wav'],
                                                                                                     temp_dict[
                                                                                                         'step_wav'],
-                                                                                                    self.final_disp,
+                                                                                                    temp_calib[1].scale,
                                                                                                     self.zlp_fwhm,
                                                                                                     number_orders, tol)
 
-            self.eff_fwhm_fit_value.text = format(2 * numpy.mean(sigma_array) * numpy.sqrt(2. * numpy.log(2)),
-                                                        '.4f') + ' eV '
-
-            print(ene_array[:-1])
-            print(ene_array[:-1].shape)
-            print(energies_loss)
-            print(energies_loss.shape)
 
             self.fit_di = DataItemLaserCreation('fit_' + temp_dict['title'], fit_array, "SMOOTHED_DATA",
                                                 temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
@@ -1166,22 +1137,13 @@ class gainView:
         self.process_eegs_pb = ui.create_push_button(text='Process Laser Scan', on_clicked='process_data',
                                                      name='process_eegs_pb')
         self.normalize_check_box = ui.create_check_box(text='Norm. by Power? ', name='normalize_check_box')
-        self.recheck_check_box = ui.create_check_box(text='Re-Disp? ', name='recheck_check_box')
         self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data',
                                                       name='process_power_pb')
         self.many_replicas_label = ui.create_label(name='many_replicas_label', text='# Orders?: ')
         self.many_replicas = ui.create_line_edit(name='many_replicas')
         self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box,
-                                            self.recheck_check_box, self.many_replicas_label, self.many_replicas,
+                                            self.many_replicas_label, self.many_replicas,
                                             spacing=3)
-
-        self.eff_dispersion = ui.create_label(name='eff_dispersion', text='Measured Dispersion: ')
-        self.eff_dispersion_value = ui.create_label(name='eff_dispersion_value', text='eff disp?')
-        self.eff_fwhm = ui.create_label(name='eff_fwhm', text='Measured FWHM: ')
-        self.eff_fwhm_value = ui.create_label(name='eff_fwhm_value')
-        self.info_process_row = ui.create_row(self.eff_dispersion, self.eff_dispersion_value, self.eff_fwhm,
-                                              self.eff_fwhm_value, ui.create_stretch(),
-                                              spacing=12)
 
         self.fit_pb = ui.create_push_button(text='Fit', on_clicked='fit_or_cancel', name='fit_pb')
         self.cancel_pb = ui.create_push_button(text='Cancel', on_clicked='fit_or_cancel', name='cancel_pb')
@@ -1189,16 +1151,9 @@ class gainView:
         self.tolerance_energy_value = ui.create_line_edit(name='tolerance_energy_value')
         self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, self.tolerance_energy, self.tolerance_energy_value, ui.create_stretch(), spacing=12)
 
-        self.eff_dispersion_fit = ui.create_label(name='eff_dispersion_fit', text='Measured Disp. (Fit): ')
-        self.eff_dispersion_fit_value = ui.create_label(name='eff_dispersion_fit_value', text='eff disp (fit)?')
-        self.eff_fwhm_fit = ui.create_label(name='eff_fwhm_fit', text='Measured FWHM (Fit): ')
-        self.eff_fwhm_fit_value = ui.create_label(name='eff_fwhm_fit_value', text='eff fwhm (fit?)')
-        self.info_fit_row = ui.create_row(self.eff_dispersion_fit, self.eff_dispersion_fit_value, self.eff_fwhm_fit, self.eff_fwhm_fit_value, ui.create_stretch(),
-                                          spacing=12)
-
         self.actions_group = ui.create_group(title='Actions', content=ui.create_column(
             self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row,
-            self.info_process_row, self.fit_row, self.info_fit_row, ui.create_stretch())
+            self.fit_row, ui.create_stretch())
                                              )
 
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(

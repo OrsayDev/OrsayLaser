@@ -579,6 +579,7 @@ class gainhandler:
         temp_calib = self.smooth_di.data_item.dimensional_calibrations
         temp_gain_title_name = 'sEEGS'
         temp_loss_title_name = 'sEELS'
+        temp_zlp_title_name = 'zlp'
         try:
             number_orders = int(self.many_replicas.text)
         except:
@@ -588,6 +589,7 @@ class gainhandler:
 
         gain_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
         loss_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
+        zlp_array = numpy.zeros(temp_dict['pts']-1)
 
         energies_loss = numpy.zeros((number_orders, temp_dict['pts'] - 1))
         energies_gain = numpy.zeros((number_orders, temp_dict['pts'] - 1))
@@ -618,12 +620,16 @@ class gainhandler:
                     numpy.where(temp_data[i] == numpy.max(temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]))[0])
 
         for k in range(number_orders):
-            for i in range(len(temp_data) - 1):
+            for i in range(len(temp_data) - 1): #excluding last point because laser is off
                 garray = temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
                 larray = temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
+                if not k: zlpi = int((cpg[k][i] + cpl[k][i])/2) #zlp_index. Must be close to half if its aligned
+                if not k: zlparray = temp_data[i][zlpi-ihp:zlpi+ihp] #do this when k==0 to save time
+
 
                 gain_array[k][i] = numpy.sum(garray)
                 loss_array[k][i] = numpy.sum(larray)
+                if not k: zlp_array[i] = numpy.sum(zlparray) #do this when k==0 to save time
 
                 self.rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
@@ -633,6 +639,7 @@ class gainhandler:
 
         temp_gain_title_name += '_order_' + temp_dict['title']
         temp_loss_title_name += '_order_' + temp_dict['title']
+        temp_zlp_title_name += '_order_' + temp_dict['title']
 
         if widget == self.process_eegs_pb:
             for k in range(number_orders):
@@ -640,6 +647,7 @@ class gainhandler:
                 if self.normalize_check_box.checked:
                     gain_array[k] = numpy.divide(gain_array[k], self.rpa_avg)
                     loss_array[k] = numpy.divide(loss_array[k], self.rpa_avg)
+                    if not k: zlp_array = numpy.divide(zlp_array, self.rpa_avg)
                     logging.info('***ACQUISITION***: Data Normalized by power.')
 
                 self.gain_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_gain_title_name, gain_array[k],
@@ -655,13 +663,39 @@ class gainhandler:
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False)
+                
+                if not k: self.zlp_di = DataItemLaserCreation('_' + str(k) + '_' + temp_zlp_title_name, zlp_array,
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
 
                 self.document_controller.document_model.append_data_item(self.gain_di.data_item)
                 self.document_controller.document_model.append_data_item(self.loss_di.data_item)
+                if not k: self.document_controller.document_model.append_data_item(self.zlp_di.data_item)
             logging.info('***ACQUISITION***: sEEGS/sEELS Done.')
 
         if widget == self.process_power_pb:
             for k in range(number_orders):
+                
+                if not k: #only when k==0 to save time
+                    power_array_itp, zlp_array_itp, power_inc = self.data_proc.as_power_func(zlp_array, self.rpa_avg)
+                    self.zlp_di = DataItemLaserCreation('Power_' + str(k) + '_' + temp_gain_title_name, zlp_array_itp,
+                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False,
+                                                     power_min=power_array_itp.min(), power_inc=power_inc)
+
+                    self.document_controller.document_model.append_data_item(self.zlp_di.data_item)
+
+
+
+
+
+
                 power_array_itp, gain_array_itp, power_inc = self.data_proc.as_power_func(gain_array[k], self.rpa_avg)
                 self.gain_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_gain_title_name, gain_array_itp,
                                                      "sEEGS/sEELS_power", temp_dict['start_wav'],

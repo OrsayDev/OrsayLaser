@@ -49,6 +49,106 @@ else:
 from . import control_routine as ctrlRout
 
 
+class LaserServerHandler():
+
+    def __init__(self):
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect(('127.0.0.1', 65432))
+
+    def set_hardware_wl(self, wl):
+        header = b'set_hardware_wl'
+        msg = header + bytes(4)
+        msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 01.')
+
+    def get_hardware_wl(self):
+        header = b'get_hardware_wl'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data=self.s.recv(512)
+        return (float(data.decode()), 0)
+
+    def setWL(self, wl, cur_wl):
+        header = b'setWL'
+        msg = header + bytes(4)
+        msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        msg = msg + format(cur_wl, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 03.')
+
+    def abort_control(self):
+        header = b'abort_control'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 04.')
+
+    def set_scan_thread_locked(self):
+        header = b'set_scan_thread_locked'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data == b'1':
+            return True
+        elif data == b'0':
+            return False
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 05.')
+
+    def set_scan_thread_release(self):
+        header = b'set_scan_thread_release'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 06.')
+
+    def set_scan_thread_check(self):
+        header = b'set_scan_thread_check'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data == b'1':
+            return True
+        elif data == b'0':
+            return False
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 07.')
+
+    def set_scan_thread_hardware_status(self):
+        header = b'set_scan_thread_hardware_status'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data == b'2':
+            return 2
+        elif data == b'3':
+            return 3
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 08.')
+
+    def set_scan(self, cur, step, pts):
+        header = b'set_scan'
+        msg = header + bytes(4)
+        msg = msg + format(cur, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        msg = msg + format(step, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        msg = msg + format(pts, '.0f').rjust(8, '0').encode() #int is 8 bytes here
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 09.')
+
+
 class gainDevice(Observable.Observable):
 
     def __init__(self):
@@ -98,7 +198,8 @@ class gainDevice(Observable.Observable):
         self.__per_pic = True
 
         self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__laser = laser.SirahCredoLaser(self.__sendmessage)
+        #self.__laser = laser.SirahCredoLaser(self.__sendmessage)
+        self.__laser = LaserServerHandler(self.__sendmessage)
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
@@ -117,8 +218,6 @@ class gainDevice(Observable.Observable):
 
 
     def init(self):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect(('127.0.0.1', 65432))
 
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont find, use usim eels
             if hasattr(hards, 'hardware_source_id'):
@@ -178,16 +277,9 @@ class gainDevice(Observable.Observable):
         self.q_f = val
 
     def upt(self):
-        #this stuff works. Super nice
-
-        #self.s.sendall(b'dummy_function')
+        #self.s.sendall(b'get_hardware_wl'+bytes(4))
         #data=self.s.recv(1024)
-        #print(data)
-
-        self.s.sendall(b'get_hardware_wl'+bytes(4))
-        data=self.s.recv(1024)
-        print(float(data.decode()))
-
+        #print(float(data.decode()))
 
         self.property_changed_event.fire("cur_wav_f")
         self.property_changed_event.fire("power_f")

@@ -90,9 +90,11 @@ class ServerSirahCredoLaser:
             print(f"Connection from {adress} has been stablished.")
             with clientsocket:
                 while True:
-                    data = clientsocket.recv(1024)
+                    data = clientsocket.recv(512)
                     if not data:
                         break
+
+                    print(data)
 
                     if b"set_hardware_wl" in data:                 #set_hardware_wl(self, wl). no return
                         if data[15:19] == bytes(4):
@@ -128,6 +130,7 @@ class ServerSirahCredoLaser:
                     if b"set_scan_thread_release" in data:         #set_scan_thread_release(self). no return
                         if data[23:27] == bytes(4):
                             self.set_scan_thread_release()
+                            return_data = 'None'.encode()
                     
                     if b"set_scan_thread_check" in data:           #set_scan_thread_check(self). return
                         if data[21:25] == bytes(4):
@@ -150,6 +153,7 @@ class ServerSirahCredoLaser:
                             cur = float(data[12:28].decode()) #16 bytes
                             step = float(data[32:48]) #16 bytes
                             pts = int(data[52:60]) #8 bytes
+                            return_data = 'None'.encode()
 
                         
                     clientsocket.sendall(return_data)

@@ -117,10 +117,8 @@ class gainDevice(Observable.Observable):
 
 
     def init(self):
-        print("connecting to server")
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((socket.gethostname(), 1234))
-        print("connected to server")
+        self.s.connect(('127.0.0.1', 65432))
 
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont find, use usim eels
             if hasattr(hards, 'hardware_source_id'):
@@ -182,9 +180,13 @@ class gainDevice(Observable.Observable):
     def upt(self):
         #this stuff works. Super nice
 
-        self.s.sendall(b'hello world')
+        #self.s.sendall(b'dummy_function')
+        #data=self.s.recv(1024)
+        #print(data)
+
+        self.s.sendall(b'get_hardware_wl'+bytes(4))
         data=self.s.recv(1024)
-        print(data)
+        print(float(data.decode()))
 
 
         self.property_changed_event.fire("cur_wav_f")

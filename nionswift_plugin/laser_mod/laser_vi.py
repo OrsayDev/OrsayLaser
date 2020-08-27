@@ -5,7 +5,6 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
-#import socket
 
 __author__ = "Yves Auad"
 
@@ -88,8 +87,5 @@ class SirahCredoLaser:
             self.thread = pool.submit(self.set_scan_thread, cur, index, step)
         
         #self.set_scan_thread_release()
-    #def test_func(self):
-        #clientsocket, adress = self.s.accept()
-        #print(f"connection from {adress} has been stablished")
 
 

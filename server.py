@@ -78,15 +78,11 @@ class ServerSirahCredoLaser:
                 logging.info("Laser abort control function.")
                 self.sendmessage(4)
 
-    def set_scan(self, cur, step, pts):
+    def set_scan(self, cur: float, step: float, pts: int):
         self.abort_ctrl = False
         pool = ThreadPoolExecutor(1)
         for index in range(pts):
             self.thread = pool.submit(self.set_scan_thread, cur, index, step)
-
-    def dummy_function(self, data_in, data_out):
-        return bytes(data_out)
-
 
     def main_loop(self):
         while True:
@@ -98,46 +94,63 @@ class ServerSirahCredoLaser:
                     if not data:
                         break
 
-                    if b"dummy_function" in data:
-                        return_data = self.dummy_function(data, 4)
-                        print(return_data)
-
-                    if b"set_hardware_wl" in data:                 #set_hardware_wl(self, wl):
+                    if b"set_hardware_wl" in data:                 #set_hardware_wl(self, wl). no return
                         if data[15:19] == bytes(4):
-                            wl = data[19: 19+16]
+                            wl = float(data[19: 35].decode()) #16 bytes
                             self.set_hardware_wl(wl)
                             return_data = 'None'.encode()
-                    if b"get_hardware_wl" in data:                 #get_hardware_wl(self):
+                    
+                    if b"get_hardware_wl" in data:                 #get_hardware_wl(self). return
                         if data[15:19] == bytes(4):
                             return_data = format(self.get_hardware_wl()[0], '.8f').rjust(16, '0').encode()
-                            print(return_data)
-                    if b"set_startWL" in data:                     #set_startWL(self, wl: float, cur_wl: float):
-                        if data[11:15] == bytes(4):
-                            pass
-                    if b"setWL" in data:                           #setWL(self, wavelength: float, current_wavelength: float):
-                        if data[5:9] == bytes(4):
-                            pass
-                    if b"abort_control" in data:                   #abort_control(self):
+                    
+                    if b"setWL" in data:                           #setWL(self, wavelength: float, current_wavelength: float). no return
+                        if data[5:9] == bytes(4) and data[25:29] == bytes(4):
+                            wl = float(data[9:25].decode()) #16 bytes
+                            cur_wl = float(data[29:45].decode()) # 16 bytes
+                            self.setWL(wl, cur_wl)
+                            return_data = 'None'.encode()
+
+                    
+                    if b"abort_control" in data:                   #abort_control(self). No return
                         if data[13:17] == bytes(4):
-                            pass
-                    if b"set_scan_thread_locked" in data:                 #set_scan_thread_locked(self):
+                            self.abort_control()
+                            return_data = 'None'.encode()
+                    
+                    if b"set_scan_thread_locked" in data:                 #set_scan_thread_locked(self). return
                         if data[22:26] == bytes(4):
-                            pass
-                    if b"set_scan_thread_release" in data:         #set_scan_thread_release(self):
+                            return_data = self.set_scan_thread_locked()
+                            if return_data:
+                                return_data = b'1'
+                            else:
+                                return_data = b'0'
+                    
+                    if b"set_scan_thread_release" in data:         #set_scan_thread_release(self). no return
                         if data[23:27] == bytes(4):
-                            pass
-                    if b"set_scan_thread_check" in data:           #set_scan_thread_check(self):
+                            self.set_scan_thread_release()
+                    
+                    if b"set_scan_thread_check" in data:           #set_scan_thread_check(self). return
                         if data[21:25] == bytes(4):
-                            pass
-                    if b"set_scan_thread_hardware_status" in data: #set_scan_thread_hardware_status(self):
+                            return_data = self.set_scan_thread_check()
+                            if return_data:
+                                return_data = b'1'
+                            else:
+                                return_data = b'0'
+
+                    if b"set_scan_thread_hardware_status" in data: #set_scan_thread_hardware_status(self). return
                         if data[31:35] == bytes(4):
-                            pass
-                    if b"set_scan_thread" in data:                 #set_scan_thread(self, cur, i_pts, step):
-                        if data[15:19] == bytes(4):
-                            pass
-                    if b"set_scan" in data:                        #set_scan(self, cur, step, pts):
-                        if data[8:12] == bytes(4):
-                            pass
+                            return_data = self.set_scan_thread_hardware_status()
+                            if return_data == 2:
+                                return_data = b'2'
+                            else:
+                                return_data = b'3'
+                    
+                    if b"set_scan" in data:                        #set_scan(self, cur, step, pts). no return
+                        if data[8:12] == bytes(4) and data[28:32] == bytes(4) and data[48:52] == bytes(4):
+                            cur = float(data[12:28].decode()) #16 bytes
+                            step = float(data[32:48]) #16 bytes
+                            pts = int(data[52:60]) #8 bytes
+
                         
                     clientsocket.sendall(return_data)
 

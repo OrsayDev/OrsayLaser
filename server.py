@@ -22,6 +22,7 @@ class ServerSirahCredoLaser:
         self.thread = None
         self.thread_wl = 575.0
         self.lock=threading.Lock()
+        self.ready = threading.Event()
 
     def set_hardware_wl(self, wl):
         self.thread_wl=wl
@@ -36,6 +37,7 @@ class ServerSirahCredoLaser:
         latency = round(abs(cur_wl - wl)*1.0/20.0 + 0.25, 5)
         time.sleep(latency)
         time.sleep(5)
+        self.ready.set()
         #return b'message_02'
         #self.sendmessage(2)
 
@@ -46,7 +48,10 @@ class ServerSirahCredoLaser:
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
+            #self.laser_thread.join()
+            self.ready.wait()
             return b'message_02'
+
 
     def abort_control(self):
         self.abort_ctrl = True
@@ -85,6 +90,8 @@ class ServerSirahCredoLaser:
         pool = ThreadPoolExecutor(1)
         for index in range(pts):
             self.thread = pool.submit(self.set_scan_thread, cur, index, step)
+
+
 
     def main_loop(self):
         while True:

@@ -80,7 +80,12 @@ class LaserServerHandler():
         msg = msg + bytes(4)
         self.s.sendall(msg)
         data = self.s.recv(512)
-        if data.decode() != 'None':
+        #if data.decode() != 'None':
+        if data == b'message_01':
+            return 1
+        elif data == b'message_02':
+            return 2
+        else:
             logging.info('***SIRAH SERVER***: Bad communication. Error 03.')
 
     def abort_control(self):
@@ -421,14 +426,14 @@ class gainDevice(Observable.Observable):
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
     def sendMessageFactory(self):
         def sendMessage(message):
-            if message == 1:
-                logging.info("***LASER***: start WL is current WL")
-                self.run_status_f=False
-                self.combo_data_f = False
-            if message == 2:
-                logging.info("***LASER***: Current WL updated")
-                self.run_status_f=False
-                self.combo_data_f = False
+            #if message == 1:
+            #    logging.info("***LASER***: start WL is current WL")
+            #    self.run_status_f=False
+            #    self.combo_data_f = False
+            #if message == 2:
+            #    logging.info("***LASER***: Current WL updated")
+            #    self.run_status_f=False
+            #    self.combo_data_f = False
             if message == 3:
                 logging.info(
                     "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
@@ -504,7 +509,15 @@ class gainDevice(Observable.Observable):
             self.property_changed_event.fire("pts_f")
             self.property_changed_event.fire("tpts_f")
             self.run_status_f=True
-            self.__laser.setWL(self.__start_wav, self.__cur_wav)
+            response = self.__laser.setWL(self.__start_wav, self.__cur_wav)
+            if response==1:
+                logging.info("***LASER***: start WL is current WL")
+                self.run_status_f=False
+                self.combo_data_f = False
+            elif response==2:
+                logging.info("***LASER***: Current WL updated")
+                self.run_status_f=True
+                self.combo_data_f = False
 
     @property
     def finish_wav_f(self) -> float:

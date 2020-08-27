@@ -197,9 +197,9 @@ class gainDevice(Observable.Observable):
         self.__power_ramp=False
         self.__per_pic = True
 
-        self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        #self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         #self.__laser = laser.SirahCredoLaser(self.__sendmessage)
-        self.__laser = LaserServerHandler(self.__sendmessage)
+        self.__laser = LaserServerHandler()
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)

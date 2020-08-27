@@ -25,7 +25,6 @@ class ServerSirahCredoLaser:
 
     def set_hardware_wl(self, wl):
         self.thread_wl=wl
-        print(self.thread_wl)
         latency = round(float(5)*1.0/20.0+ 0.5*abs(numpy.random.randn(1)[0])   , 5)
         time.sleep(latency)
 
@@ -37,15 +36,17 @@ class ServerSirahCredoLaser:
         latency = round(abs(cur_wl - wl)*1.0/20.0 + 0.25, 5)
         time.sleep(latency)
         time.sleep(5)
-        self.sendmessage(2)
+        #return b'message_02'
+        #self.sendmessage(2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
         if (float(current_wavelength) == float(wavelength)):
-            self.sendmessage(1)
+            #self.sendmessage(1)
+            return b'message_01'
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength))
             self.laser_thread.start()
-
+            return b'message_02'
 
     def abort_control(self):
         self.abort_ctrl = True
@@ -64,10 +65,10 @@ class ServerSirahCredoLaser:
 
     def set_scan_thread_hardware_status(self):
         if self.lock.locked():
-            return 2 #motor holding. You can advance
+            return 2 #motor holding. You can avance
         else:
             self.sendmessage(3)
-            return 3 #motor moving. Dont advance boys
+            return 3 #motor moving. Do not avance
     
     def set_scan_thread(self, cur, i_pts, step):
         if not self.abort_ctrl:
@@ -77,6 +78,7 @@ class ServerSirahCredoLaser:
             with self.lock:
                 logging.info("Laser abort control function.")
                 self.sendmessage(4)
+                #return b'message_04'
 
     def set_scan(self, cur: float, step: float, pts: int):
         self.abort_ctrl = False
@@ -110,8 +112,7 @@ class ServerSirahCredoLaser:
                         if data[5:9] == bytes(4) and data[25:29] == bytes(4):
                             wl = float(data[9:25].decode()) #16 bytes
                             cur_wl = float(data[29:45].decode()) # 16 bytes
-                            self.setWL(wl, cur_wl)
-                            return_data = 'None'.encode()
+                            return_data = self.setWL(wl, cur_wl)
 
                     
                     if b"abort_control" in data:                   #abort_control(self). No return
@@ -154,7 +155,6 @@ class ServerSirahCredoLaser:
                             step = float(data[32:48]) #16 bytes
                             pts = int(data[52:60]) #8 bytes
                             return_data = 'None'.encode()
-
                         
                     clientsocket.sendall(return_data)
 

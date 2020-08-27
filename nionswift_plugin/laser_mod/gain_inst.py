@@ -9,6 +9,7 @@ import os
 import json
 import time
 import numpy
+import socket
 
 abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
 with open(abs_path) as savfile:
@@ -116,6 +117,10 @@ class gainDevice(Observable.Observable):
 
 
     def init(self):
+        print("connecting to server")
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((socket.gethostname(), 1234))
+        print("connected to server")
 
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont find, use usim eels
             if hasattr(hards, 'hardware_source_id'):
@@ -175,6 +180,12 @@ class gainDevice(Observable.Observable):
         self.q_f = val
 
     def upt(self):
+        #this stuff works. Super nice
+
+        self.s.sendall(b'hello world')
+        data=self.s.recv(1024)
+        print(data)
+
 
         self.property_changed_event.fire("cur_wav_f")
         self.property_changed_event.fire("power_f")

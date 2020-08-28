@@ -8,7 +8,7 @@ import serial
 import os
 import json
 
-abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
+abs_path = os.path.abspath(os.path.join((__file__+"/../"), "nionswift_plugin/laser_mod/global_settings.json"))
 with open(abs_path) as savfile:
     settings = json.load(savfile)
 

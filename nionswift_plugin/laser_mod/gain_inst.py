@@ -11,7 +11,7 @@ import time
 import numpy
 import socket
 
-abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
+abs_path = os.path.abspath(os.path.join((__file__ + "/../"), "global_settings.json"))
 with open(abs_path) as savfile:
     settings = json.load(savfile)
 
@@ -32,9 +32,9 @@ else:
     from . import power as power
 
 if DEBUG_laser:
-    from . import laser_vi as laser
+    pass
 else:
-    from . import laser as laser
+    pass
 
 if DEBUG_ps:
     from . import power_supply_vi as ps
@@ -68,7 +68,7 @@ class LaserServerHandler():
         header = b'get_hardware_wl'
         msg = header + bytes(4)
         self.s.sendall(msg)
-        data=self.s.recv(512)
+        data = self.s.recv(512)
         return (float(data.decode()), 0)
 
     def setWL(self, wl, cur_wl):
@@ -150,7 +150,7 @@ class LaserServerHandler():
         msg = msg + bytes(4)
         msg = msg + format(step, '.8f').rjust(16, '0').encode()
         msg = msg + bytes(4)
-        msg = msg + format(pts, '.0f').rjust(8, '0').encode() #int is 8 bytes here
+        msg = msg + format(pts, '.0f').rjust(8, '0').encode()  # int is 8 bytes here
         self.s.sendall(msg)
         data = self.s.recv(512)
         if data.decode() != 'None':
@@ -165,9 +165,9 @@ class gainDevice(Observable.Observable):
         self.communicating_event = Event.Event()
         self.busy_event = Event.Event()
 
-        self.call_data=Event.Event()
-        self.append_data=Event.Event()
-        self.end_data=Event.Event()
+        self.call_data = Event.Event()
+        self.append_data = Event.Event()
+        self.end_data = Event.Event()
 
         self.det_acq = Event.Event()
 
@@ -186,12 +186,13 @@ class gainDevice(Observable.Observable):
         self.__servo_pts = 0
         self.__servo_wobbler = False
         self.__ctrl_type = 1
-        self.__delay=1800 * 1e-9
-        self.__width=50 * 1e-9
-        self.__fb_status=False
+        self.__delay = 1800 * 1e-9
+        self.__width = 50 * 1e-9
+        self.__fb_status = False
         self.__counts = 0
         self.__frequency = 10000
-        self.__acq_number = 0 #this is a strange variable. This mesures how many gain acquire you did in order to create new displays every new acquisition
+        self.__acq_number = 0  # this is a strange variable. This mesures how many gain acquire you did in order to
+        # create new displays every new acquisition
         self.__powermeter_avg = PW_AVG
         self.__servo_step = 2
         self.__nper_pic = 2
@@ -203,11 +204,9 @@ class gainDevice(Observable.Observable):
         self.__thread = None
         self.__status = False
         self.__abort_force = False
-        self.__power_ramp=False
+        self.__power_ramp = False
         self.__per_pic = True
 
-        #self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        #self.__laser = laser.SirahCredoLaser(self.__sendmessage)
         self.__laser = LaserServerHandler()
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
@@ -223,18 +222,19 @@ class gainDevice(Observable.Observable):
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
 
         self.__OrsayScanInstrument = None
-        self.__camera=None
-
+        self.__camera = None
 
     def init(self):
 
-        for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont find, use usim eels
+        for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
+            # find, use usim eels
             if hasattr(hards, 'hardware_source_id'):
                 if hards.hardware_source_id == CAMERA:
                     self.__camera = hards
 
         if self.__camera == None:
-            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont find, use usim eels
+            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+                # find, use usim eels
                 if hasattr(hards, 'hardware_source_id'):
                     if hards.hardware_source_id == 'usim_eels_camera':
                         self.__camera = hards
@@ -245,24 +245,24 @@ class gainDevice(Observable.Observable):
             logging.info('***LASER***: Camera properly loaded. EELS/EEGS acquistion is good to go.')
             logging.info(self.__camera.hardware_source_id)
 
-
-        self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(SCAN)
+        self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
+            SCAN)
         if not self.__OrsayScanInstrument:
             logging.info('***LASER***: Could not find SCAN module. Check for issues.')
             logging.info('***LASER***: If usim available, grabbing usim Scan Device.')
-            self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id("usim_scan_device")
-            if not self.__OrsayScanInstrument: logging.info('***LASER***: Could not find USIM SCAN module. Check nionswift website for instructions.')
+            self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
+                "usim_scan_device")
+            if not self.__OrsayScanInstrument: logging.info(
+                '***LASER***: Could not find USIM SCAN module. Check nionswift website for instructions.')
 
-
-            ## CLARITY:
-            ## self.__OrsayScanInstrument is the same as the way I did with the camera. If i have put a if hards.hardware_source_id == "usim_scan_device": self.__scan = hards, the dir(self.__scan) and dir(self.__OrsayScanInstrument) are identical
-
-
+            # # CLARITY: # self.__OrsayScanInstrument is the same as the way I did with the camera. If i have put a
+            # if hards.hardware_source_id == "usim_scan_device": self.__scan = hards, the dir(self.__scan) and dir(
+            # self.__OrsayScanInstrument) are identical
 
         else:
-            #Obviously turn off blanker at beginning. Not sure if i have eels before clicking init. Check this!!
-            self.sht_f=False
-            self.fast_blanker_status_f=False
+            # Obviously turn off blanker at beginning. Not sure if i have eels before clicking init. Check this!!
+            self.sht_f = False
+            self.fast_blanker_status_f = False
             self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
@@ -286,10 +286,6 @@ class gainDevice(Observable.Observable):
         self.q_f = val
 
     def upt(self):
-        #self.s.sendall(b'get_hardware_wl'+bytes(4))
-        #data=self.s.recv(1024)
-        #print(float(data.decode()))
-
         self.property_changed_event.fire("cur_wav_f")
         self.property_changed_event.fire("power_f")
         if not self.__status:
@@ -297,15 +293,15 @@ class gainDevice(Observable.Observable):
 
     def grab_det(self, mode, index, npic, show):
         logging.info("***ACQUISITION***: Scanning Full Image.")
-        #this gets frame parameters
+        # this gets frame parameters
         det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
         # this multiplies pixels(x) * pixels(y) * pixel_time
         frame_time = self.__OrsayScanInstrument.calculate_frame_time(det_frame_parameters)
-        #note that i dont know if i defined pixel_time super correctely in orsay_scan_device. I know the number is
-        #relatively nice, but i need to check the definition
+        # note that i dont know if i defined pixel_time super correctely in orsay_scan_device. I know the number is
+        # relatively nice, but i need to check the definition
         det_di = self.__OrsayScanInstrument.grab_next_to_start()
         self.__OrsayScanInstrument.stop_playing()
-        time.sleep(frame_time * 1.2) #20% more of the time for a single frame
+        time.sleep(frame_time * 1.2)  # 20% more of the time for a single frame
         self.det_acq.fire(det_di, mode, index, npic, show)
 
     def acq(self):
@@ -316,52 +312,53 @@ class gainDevice(Observable.Observable):
         logging.info("Abort scanning. Going back to origin...")
         self.__abort_force = True
         self.__laser.abort_control()  # abort laser thread as well.
-        self.run_status_f=False #force free GUI
+        self.run_status_f = False  # force free GUI
 
     def acq_pr(self):
-        self.__acq_number+=1
+        self.__acq_number += 1
         self.__thread = threading.Thread(target=self.acq_prThread)
         self.__thread.start()
 
     def acq_prThread(self):
-        self.run_status_f =  self.__power_ramp = self.sht_f = True
-        self.__abort_force=False
+        self.run_status_f = self.__power_ramp = self.sht_f = True
+        self.__abort_force = False
         self.__servo_pos_initial = self.__servo_pos
-        i_max = int(self.__servo_pos/self.__servo_step)
+        i_max = int(self.__servo_pos / self.__servo_step)
         j_max = self.__avg
-        pics_array = numpy.linspace(0, i_max, min(self.__nper_pic+2, i_max+1), dtype=int)
-        pics_array=pics_array[1:] #exclude zero
-        self.call_data.fire(self.__acq_number, i_max+1, j_max, self.__start_wav, self.__start_wav, 0.0, 1, self.__delay, self.__width, self.__diode)
-        self.grab_det("init", self.__acq_number, 0, True) #after call_data.fire
+        pics_array = numpy.linspace(0, i_max, min(self.__nper_pic + 2, i_max + 1), dtype=int)
+        pics_array = pics_array[1:]  # exclude zero
+        self.call_data.fire(self.__acq_number, i_max + 1, j_max, self.__start_wav, self.__start_wav, 0.0, 1,
+                            self.__delay, self.__width, self.__diode)
+        self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
         self.__controlRout.pw_control_thread_on()
-        i=0
-        j=0
+        i = 0
+        j = 0
         while (i < i_max and not self.__abort_force):
             while (j < j_max and not self.__abort_force):
                 last_cam_acq = self.__camera.grab_next_to_finish()[0]
                 self.combo_data_f = True
                 self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
-                j+=1
+                j += 1
             self.servo_f = self.servo_f - self.__servo_step
-            j=0
+            j = 0
             if i in pics_array and self.__per_pic:
                 self.grab_det("middle", self.__acq_number, i, True)
-            i+=1
+            i += 1
         self.sht_f = False
         logging.info("***ACQUISITION***: Finishing laser/servo measurement. Acquiring conventional EELS for reference.")
-        while(j < j_max and not self.__abort_force):
+        while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
             self.combo_data_f = True
             self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
-            j+=1
+            j += 1
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
-        self.servo_f=self.__servo_pos_initial #putting back at the initial position
+        self.servo_f = self.__servo_pos_initial  # putting back at the initial position
         self.combo_data_f = True
         self.__power_ramp = False
         self.grab_det("end", self.__acq_number, 0, True)
         self.end_data.fire()
-        self.run_status_f=False
+        self.run_status_f = False
 
     def acqThread(self):
         self.run_status_f = True
@@ -372,16 +369,18 @@ class gainDevice(Observable.Observable):
         if (self.__laser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
-            self.__acq_number+=1
-            self.call_data.fire(self.__acq_number, self.pts_f+1, self.avg_f, self.__start_wav, self.__finish_wav, self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
-            self.grab_det("init", self.__acq_number, 0, True) #after call_data.fire
-            pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic+2, self.__pts+1), dtype=int)
-            pics_array=pics_array[1:] #exclude zero
+            self.__acq_number += 1
+            self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
+                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
+            self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
+            pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
+            pics_array = pics_array[1:]  # exclude zero
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on()
         else:
-            logging.info("***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
+            logging.info(
+                "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
 
         i = 0  # e-point counter
@@ -391,8 +390,8 @@ class gainDevice(Observable.Observable):
 
         while (i < i_max and not self.__abort_force):  # i means our laser WL's
             while (j < j_max and not self.__abort_force):  # j is our averages
-                last_cam_acq = self.__camera.grab_next_to_finish()[0] #get camera then check laser.
-                self.combo_data_f = True #check laser now
+                last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
+                self.combo_data_f = True  # check laser now
                 self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
                 j += 1
             j = 0
@@ -409,41 +408,31 @@ class gainDevice(Observable.Observable):
         self.sht_f = False
         logging.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         while (j < j_max and not self.__abort_force):
-            last_cam_acq = self.__camera.grab_next_to_finish()[0] 
+            last_cam_acq = self.__camera.grab_next_to_finish()[0]
             self.combo_data_f = True
             self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
             j += 1
 
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
-        if self.__ctrl_type==1: self.servo_f=self.__servo_pos_initial #Even if this is not controlled it doesnt matter
-        if self.__ctrl_type==2: pass #here you can put the initial current of the powersupply. Not implemented yet
-        self.combo_data_f = True #if its controlled then you update servo or powersupply right
+        if self.__ctrl_type == 1: self.servo_f = self.__servo_pos_initial  # Even if this is not controlled it doesnt
+        # matter
+        if self.__ctrl_type == 2: pass  # here you can put the initial current of the powersupply. Not implemented yet
+        self.combo_data_f = True  # if its controlled then you update servo or powersupply right
         while (
-        not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be looped here indefinitely than fuck the hardware
+                not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
+            # looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
                 self.__laser.set_scan_thread_release()
         self.run_status_f = False  # acquistion is over
         self.grab_det("end", self.__acq_number, 0, True)
-        self.start_wav_f=self.__start_wav
+        self.start_wav_f = self.__start_wav
         self.end_data.fire()
 
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
+
     def sendMessageFactory(self):
         def sendMessage(message):
-            #if message == 1:
-            #    logging.info("***LASER***: start WL is current WL")
-            #    self.run_status_f=False
-            #    self.combo_data_f = False
-            #if message == 2:
-            #    logging.info("***LASER***: Current WL updated")
-            #    self.run_status_f=False
-            #    self.combo_data_f = False
-            #if message == 3:
-            #    logging.info(
-            #        "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
-            #        "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
-            #        "hardware.")
             if message == 5:
                 logging.info("***LASER***: Could not write in laser serial port. Check port.")
             if message == 6:
@@ -485,7 +474,7 @@ class gainDevice(Observable.Observable):
             if message == 101:
                 self.property_changed_event.fire("power_f")
                 if self.__ctrl_type == 1 and not self.__power_ramp:
-                    self.servo_f=self.servo_f+1 if self.__power<self.__power_ref else self.servo_f-1
+                    self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180
                     if self.__servo_pos < 0: self.__servo_pos = 0
                 if self.__ctrl_type == 2:
@@ -498,19 +487,18 @@ class gainDevice(Observable.Observable):
         return sendMessage
 
     def Laser_stop_all(self):
-        self.sht_f=False
-        self.fast_blanker_status_f=False
+        self.sht_f = False
+        self.fast_blanker_status_f = False
         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
             threading.Timer(0.25, self.property_changed_event.fire, args=('cur_wav_f',)).start()
-            self.property_changed_event.fire("cur_wav_f") #dont need a thread.
+            self.property_changed_event.fire("cur_wav_f")  # dont need a thread.
             time.sleep(0.5)
             self.wavelength_ready()
         else:
-            self.run_status_f = False #this already frees GUI
-
+            self.run_status_f = False  # this already frees GUI
 
     @property
     def start_wav_f(self) -> float:
@@ -523,15 +511,15 @@ class gainDevice(Observable.Observable):
         if not self.__status:
             self.property_changed_event.fire("pts_f")
             self.property_changed_event.fire("tpts_f")
-            self.run_status_f=True
+            self.run_status_f = True
             response = self.__laser.setWL(self.__start_wav, self.__cur_wav)
-            if response==1:
+            if response == 1:
                 logging.info("***LASER***: start WL is current WL")
-                self.run_status_f=False
+                self.run_status_f = False
                 self.combo_data_f = False
-            elif response==2:
+            elif response == 2:
                 logging.info("***LASER***: Current WL being updated...")
-                self.run_status_f=True
+                self.run_status_f = True
                 self.combo_data_f = False
                 threading.Timer(1.0, self.wavelength_ready, args=()).start()
 
@@ -577,7 +565,7 @@ class gainDevice(Observable.Observable):
         self.__pts = int((float(self.__finish_wav) - float(self.__start_wav)) / float(self.__step_wav) + 1)
         return self.__pts
 
-    @property  # we dont set cur_wav using setters/getters but rather using our routines. This allow us to be more specific for our purposes
+    @property  # we dont set cur_wav but rather start wav.
     def cur_wav_f(self) -> float:
         self.__cur_wav = self.__laser.get_hardware_wl()[0]
         self.__pwmeter.pw_set_wl(self.__cur_wav)
@@ -596,25 +584,24 @@ class gainDevice(Observable.Observable):
     @property
     def power_f(self):
         if DEBUG_pw:
-            self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (self.__servo_pos + 1) / 180 if self.sht_f=='OPEN' else self.__pwmeter.pw_read()
+            self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
         else:
             self.__power = self.__pwmeter.pw_read()
         return format(self.__power, '.2f')
-
 
     @property
     def locked_power_f(self):
         self.__power_ref = self.__power
         return format(self.__power_ref, '.2f')
 
-
     @property
     def cur_d_f(self) -> int:
-        return int(self.__diode*100)
+        return int(self.__diode * 100)
 
     @cur_d_f.setter
     def cur_d_f(self, value: int):
-        self.__diode = value/100
+        self.__diode = value / 100
         cvalue = format(float(self.__diode), '.2f')  # how to format and send to my hardware
         if self.__diode < MAX_CURRENT:
             self.__ps.comm('C1:' + str(cvalue) + '\n')
@@ -636,13 +623,14 @@ class gainDevice(Observable.Observable):
 
     @cur_d_edit_f.setter
     def cur_d_edit_f(self, value):
-        self.__diode=float(value)
+        self.__diode = float(value)
 
         if not self.__status:
             self.property_changed_event.fire("power_f")
             self.property_changed_event.fire("cur_d1_f")
             self.property_changed_event.fire("cur_d2_f")
-            self.property_changed_event.fire("cur_d_f") #He will call slider setter so no need to actually update value
+            self.property_changed_event.fire(
+                "cur_d_f")  # He will call slider setter so no need to actually update value
             self.property_changed_event.fire("cur_d_edit_f")
             self.free_event.fire("all")
 
@@ -699,7 +687,7 @@ class gainDevice(Observable.Observable):
     @property
     def ascii_f(self):
         return '-'
-    
+
     @property
     def servo_wobbler_f(self):
         return self.__servo_wobbler
@@ -712,7 +700,7 @@ class gainDevice(Observable.Observable):
         else:
             self.__servo.wobbler_off()
             time.sleep(1.1 / 2.)
-            self.servo_f=self.__servo_pos
+            self.servo_f = self.__servo_pos
         self.property_changed_event.fire('servo_wobbler_f')
         self.free_event.fire('all')
 
@@ -729,10 +717,10 @@ class gainDevice(Observable.Observable):
         self.__servo_pos = value
         self.__servo.set_pos(self.__servo_pos)
         if not self.__status:
-            self.__servo_pts = int(self.__servo_pos/self.__servo_step)
+            self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
             self.property_changed_event.fire("power_f")
-            self.property_changed_event.fire("servo_f") #this updates my label
+            self.property_changed_event.fire("servo_f")  # this updates my label
             self.free_event.fire('all')
 
     @property
@@ -747,7 +735,7 @@ class gainDevice(Observable.Observable):
         except:
             logging.info('***SERVO***: Please enter an integer.')
         if not self.__status:
-            self.__servo_pts = int(self.__servo_pos/self.__servo_step)
+            self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
             self.free_event.fire('all')
 
@@ -769,9 +757,10 @@ class gainDevice(Observable.Observable):
 
     @fast_blanker_status_f.setter
     def fast_blanker_status_f(self, value):
-        self.__fb_status=value
+        self.__fb_status = value
         if value:
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width, delay=self.__delay)
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+                                                                            delay=self.__delay)
             self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 5000000, False, -1)
             self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
         else:
@@ -782,26 +771,27 @@ class gainDevice(Observable.Observable):
 
     @property
     def laser_delay_f(self):
-        return int(self.__delay*1e9)
+        return int(self.__delay * 1e9)
 
     @laser_delay_f.setter
     def laser_delay_f(self, value):
-        self.__delay = float(value)/1e9
-        if not DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width, delay=self.__delay)
+        self.__delay = float(value) / 1e9
+        if not DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+                                                                                      delay=self.__delay)
         self.property_changed_event.fire('laser_delay_f')
         self.free_event.fire('all')
 
     @property
     def laser_width_f(self):
-        return int(self.__width*1e9)
+        return int(self.__width * 1e9)
 
     @laser_width_f.setter
     def laser_width_f(self, value):
-        self.__width=float(value)/1e9
-        if not DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width, delay=self.__delay)
+        self.__width = float(value) / 1e9
+        if not DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+                                                                                      delay=self.__delay)
         self.property_changed_event.fire('laser_width_f')
         self.free_event.fire('all')
-
 
     @property
     def laser_counts_f(self):
@@ -819,17 +809,17 @@ class gainDevice(Observable.Observable):
     def laser_frequency_f(self, value):
         self.__frequency = int(value)
         if self.fast_blanker_status_f:
-            self.fast_blanker_status_f=False
+            self.fast_blanker_status_f = False
             time.sleep(0.1)
-            self.fast_blanker_status_f=True
+            self.fast_blanker_status_f = True
         self.property_changed_event.fire('laser_frequency_f')
         self.free_event.fire('all')
 
     @property
     def combo_data_f(self):
-        if self.__ctrl_type==1 or self.__power_ramp:
+        if self.__ctrl_type == 1 or self.__power_ramp:
             return [self.__cur_wav, self.__power, self.__servo_pos]
-        if self.__ctrl_type==2:
+        if self.__ctrl_type == 2:
             return [self.__cur_wav, self.__power, self.__diode]
         else:
             return [self.__cur_wav, self.__power]
@@ -837,8 +827,8 @@ class gainDevice(Observable.Observable):
     @combo_data_f.setter
     def combo_data_f(self, value):
         self.property_changed_event.fire("cur_wav_f")
-        if self.__ctrl_type==1 or self.__power_ramp: self.property_changed_event.fire("servo_f")
-        if self.__ctrl_type==2: self.property_changed_event.fire("cur_d_f")
+        if self.__ctrl_type == 1 or self.__power_ramp: self.property_changed_event.fire("servo_f")
+        if self.__ctrl_type == 2: self.property_changed_event.fire("cur_d_f")
         if not value and not self.__status: self.free_event.fire('all')
 
     @property
@@ -871,7 +861,7 @@ class gainDevice(Observable.Observable):
             self.__nper_pic = int(value)
         except:
             logging.info('***LASER***: Please enter an integer for detectors grab. Using 0 instead.')
-        
+
     @property
     def dye_f(self):
         return self.__dye
@@ -879,5 +869,3 @@ class gainDevice(Observable.Observable):
     @dye_f.setter
     def dye_f(self, value):
         self.__dye = value
-
-

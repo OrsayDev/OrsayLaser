@@ -89,4 +89,3 @@ class SirahCredoLaser:
         #self.set_scan_thread_release()
 
 
-

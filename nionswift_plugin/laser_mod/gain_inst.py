@@ -9,6 +9,7 @@ import os
 import json
 import time
 import numpy
+import socket
 
 abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
 with open(abs_path) as savfile:
@@ -46,6 +47,111 @@ else:
     from . import servo as servo
 
 from . import control_routine as ctrlRout
+
+
+class LaserServerHandler():
+
+    def __init__(self):
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect(('127.0.0.1', 65432))
+
+    def set_hardware_wl(self, wl):
+        header = b'set_hardware_wl'
+        msg = header + bytes(4)
+        msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 01.')
+
+    def get_hardware_wl(self):
+        header = b'get_hardware_wl'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data=self.s.recv(512)
+        return (float(data.decode()), 0)
+
+    def setWL(self, wl, cur_wl):
+        header = b'setWL'
+        msg = header + bytes(4)
+        msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        msg = msg + format(cur_wl, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        #if data.decode() != 'None':
+        if data == b'message_01':
+            return 1
+        elif data == b'message_02':
+            return 2
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 03.')
+
+    def abort_control(self):
+        header = b'abort_control'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 04.')
+
+    def set_scan_thread_locked(self):
+        header = b'set_scan_thread_locked'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data == b'1':
+            return True
+        elif data == b'0':
+            return False
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 05.')
+
+    def set_scan_thread_release(self):
+        header = b'set_scan_thread_release'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 06.')
+
+    def set_scan_thread_check(self):
+        header = b'set_scan_thread_check'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data == b'1':
+            return True
+        elif data == b'0':
+            return False
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 07.')
+
+    def set_scan_thread_hardware_status(self):
+        header = b'set_scan_thread_hardware_status'
+        msg = header + bytes(4)
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data == b'2':
+            return 2
+        elif data == b'3':
+            return 3
+        else:
+            logging.info('***SIRAH SERVER***: Bad communication. Error 08.')
+
+    def set_scan(self, cur, step, pts):
+        header = b'set_scan'
+        msg = header + bytes(4)
+        msg = msg + format(cur, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        msg = msg + format(step, '.8f').rjust(16, '0').encode()
+        msg = msg + bytes(4)
+        msg = msg + format(pts, '.0f').rjust(8, '0').encode() #int is 8 bytes here
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() != 'None':
+            logging.info('***SIRAH SERVER***: Bad communication. Error 09.')
 
 
 class gainDevice(Observable.Observable):
@@ -97,8 +203,9 @@ class gainDevice(Observable.Observable):
         self.__power_ramp=False
         self.__per_pic = True
 
-        self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__laser = laser.SirahCredoLaser(self.__sendmessage)
+        #self.__sendmessage = laser.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        #self.__laser = laser.SirahCredoLaser(self.__sendmessage)
+        self.__laser = LaserServerHandler()
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
@@ -176,6 +283,9 @@ class gainDevice(Observable.Observable):
         self.q_f = val
 
     def upt(self):
+        #self.s.sendall(b'get_hardware_wl'+bytes(4))
+        #data=self.s.recv(1024)
+        #print(float(data.decode()))
 
         self.property_changed_event.fire("cur_wav_f")
         self.property_changed_event.fire("power_f")
@@ -318,14 +428,14 @@ class gainDevice(Observable.Observable):
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
     def sendMessageFactory(self):
         def sendMessage(message):
-            if message == 1:
-                logging.info("***LASER***: start WL is current WL")
-                self.run_status_f=False
-                self.combo_data_f = False
-            if message == 2:
-                logging.info("***LASER***: Current WL updated")
-                self.run_status_f=False
-                self.combo_data_f = False
+            #if message == 1:
+            #    logging.info("***LASER***: start WL is current WL")
+            #    self.run_status_f=False
+            #    self.combo_data_f = False
+            #if message == 2:
+            #    logging.info("***LASER***: Current WL updated")
+            #    self.run_status_f=False
+            #    self.combo_data_f = False
             if message == 3:
                 logging.info(
                     "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
@@ -401,7 +511,15 @@ class gainDevice(Observable.Observable):
             self.property_changed_event.fire("pts_f")
             self.property_changed_event.fire("tpts_f")
             self.run_status_f=True
-            self.__laser.setWL(self.__start_wav, self.__cur_wav)
+            response = self.__laser.setWL(self.__start_wav, self.__cur_wav)
+            if response==1:
+                logging.info("***LASER***: start WL is current WL")
+                self.run_status_f=False
+                self.combo_data_f = False
+            elif response==2:
+                logging.info("***LASER***: Current WL updated")
+                self.run_status_f=True
+                self.combo_data_f = False
 
     @property
     def finish_wav_f(self) -> float:

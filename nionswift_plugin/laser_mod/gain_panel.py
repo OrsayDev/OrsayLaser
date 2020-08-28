@@ -28,8 +28,6 @@ with open(abs_path) as savfile:
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 
-
-
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
                  time_width=None, start_ps_cur=None, ctrl=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
@@ -61,7 +59,7 @@ class DataItemLaserCreation():
             self.calibration.units = '°'
         if which == 'PS':
             self.calibration.units = 'A'
-        if which=='power_as_wav':
+        if which == 'power_as_wav':
             self.calibration.units = 'μW'
             self.dimensional_calibrations[0].units = 'nm'
             self.dimensional_calibrations[0].offset = start
@@ -123,7 +121,6 @@ class gainhandler:
 
     def __init__(self, instrument: gain_inst.gainDevice, document_controller):
 
-        # self.event_loop=event_loop #MATHIEU
         self.event_loop = document_controller.event_loop
         self.document_controller = document_controller
         self.instrument = instrument
@@ -155,8 +152,9 @@ class gainhandler:
         self.current_acquition = None
 
     def init_handler(self):
-        self.event_loop.create_task(self.do_enable(False, ['init_server_push', 'server_ping_push', 'init_pb']))  # not working as something is calling this guy
-        self.normalize_check_box.checked = False #in process_data
+        self.event_loop.create_task(self.do_enable(False, ['init_server_push', 'server_ping_push',
+                                                           'init_pb']))  # not working as something is calling this guy
+        self.normalize_check_box.checked = False  # in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
         self.savgol_window_value.text = '3'
@@ -168,16 +166,16 @@ class gainhandler:
     def init_push(self, widget):
         self.instrument.init()
         self.init_pb.enabled = False
-        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
-                                                          'process_eegs_pb',
-                                                          'process_power_pb', 'fit_pb',
-                                                          'cancel_pb']))  # not working as something is
+        self.event_loop.create_task(
+            self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
+                                  'process_eegs_pb',
+                                  'process_power_pb', 'fit_pb',
+                                  'cancel_pb']))  # not working as something is
         # calling this guy
-        self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp, self.process_eegs_pb,
+        self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp,
+                             self.process_eegs_pb,
                              self.process_power_pb, self.fit_pb,
                              self.cancel_pb]  # i can put here because GUI was already initialized
-
-
 
     def server_ping_push(self, widget):
         self.instrument.server_ping()
@@ -226,9 +224,8 @@ class gainhandler:
         self.instrument.free_event.fire("all")
 
     def change_periodic_pic(self, widget, check_state):
-        self.periodic_pics_value.enabled = (check_state=='checked')
-        self.periodic_pics_label.enabled = (check_state=='checked')
-
+        self.periodic_pics_value.enabled = (check_state == 'checked')
+        self.periodic_pics_label.enabled = (check_state == 'checked')
 
     async def do_enable(self, enabled=True, not_affected_widget_name_list=None):
         for var in self.__dict__:
@@ -245,14 +242,15 @@ class gainhandler:
 
     def prepare_free_widget_enable(self,
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
-        self.event_loop.create_task(self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
-                                                          'process_eegs_pb',
-                                                          'process_power_pb', 'fit_pb',
-                                                          'cancel_pb']))
+        self.event_loop.create_task(
+            self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
+                                  'process_eegs_pb',
+                                  'process_power_pb', 'fit_pb',
+                                  'cancel_pb']))
 
     def show_dye(self, widget):
 
-        if self.dye_value.current_index==0:
+        if self.dye_value.current_index == 0:
             abs_path = os.path.abspath(os.path.join((__file__ + "/../Dyes"), "Pyrromethene_597.json"))
             with open(abs_path) as savfile:
                 pyr_597 = json.load(savfile)
@@ -263,27 +261,29 @@ class gainhandler:
             array_597 = numpy.load(abs_path)
             di_597 = DataItemLaserCreation('Pyrromethene 597', array_597, "power_as_wav",
                                            spatial_calibs["offset"], None, None,
-                                          None, spatial_calibs["scale"], None,
-                                          None, None,
-                                          None, is_live=False)
+                                           None, spatial_calibs["scale"], None,
+                                           None, None,
+                                           None, is_live=False)
 
             self.document_controller.document_model.append_data_item(di_597.data_item)
 
     def show_det(self, xdatas, mode, nacq, npic, show):
-        while self.document_controller.document_model.get_data_item_by_title('Laser Wavelength ' + str(nacq)) is not None:
+        while self.document_controller.document_model.get_data_item_by_title(
+                'Laser Wavelength ' + str(nacq)) is not None:
             nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
 
         for i, xdata in enumerate(xdatas):
             data_item = DataItem.DataItem()
             data_item.set_xdata(xdata)
-            #this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
-            #so, in order for this to work you need to create laser wavelength before creating my haadf/bf DI
-            if mode=='init' or mode=='end': data_item.define_property("title", mode+'_det'+str(i)+' '+str(nacq-1))
-            #this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
-            if mode=='middle': data_item.define_property("title", mode+str(npic)+'_det'+str(i)+' '+str(nacq-1)) 
+            # this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
+            # so, in order for this to work you need to create laser wavelength before creating my haadf/bf DI
+            if mode == 'init' or mode == 'end': data_item.define_property("title",
+                                                                          mode + '_det' + str(i) + ' ' + str(nacq - 1))
+            # this nacq-1 is bad. Because Laser Wavelength DI would already be created, this is the easy solution.
+            if mode == 'middle': data_item.define_property("title",
+                                                           mode + str(npic) + '_det' + str(i) + ' ' + str(nacq - 1))
 
             if show: self.document_controller.document_model.append_data_item(data_item)
-
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur):
         if self.current_acquition != nacq:
@@ -410,7 +410,7 @@ class gainhandler:
                 self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
                 if self.__current_DI_POW and self.__current_DI_WAV:
                     self.align_zlp_max.enabled = self.plot_power_wav.enabled = True
-                    self.align_zlp_fit.enabled = False #fit not yet implemented
+                    self.align_zlp_fit.enabled = False  # fit not yet implemented
 
             elif "Power" in self.file_name_value.text:
                 pass  # something to do with only power?
@@ -422,22 +422,21 @@ class gainhandler:
     def power_wav(self, widget):
         temp_dict = self.__current_DI.description
         pwav = numpy.reshape(self.__current_DI_POW.data,
-                            (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
+                             (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
         pwav_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
 
         for i in range(temp_dict['pts'] - 1):
             pwav_avg[i] = numpy.average(pwav[i]) - numpy.average(pwav[-1])
 
-        power_avg = DataItemLaserCreation('Avg_Power_'+temp_dict['title'], pwav_avg, "power_as_wav",
-                                                    temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
-                                                    temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
-                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                    temp_dict['control'], is_live=False)
+        power_avg = DataItemLaserCreation('Avg_Power_' + temp_dict['title'], pwav_avg, "power_as_wav",
+                                          temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+                                          temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+                                          temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                          temp_dict['control'], is_live=False)
 
         self.plot_power_wav.enabled = False
         self.document_controller.document_model.append_data_item(power_avg.data_item)
         logging.info('***ACQUISITION***: Average Power Data Item Created.')
-
 
     def align_zlp(self, widget):
         temp_dict = self.__current_DI.description
@@ -485,14 +484,15 @@ class gainhandler:
         # FOR CALIBRATION ***
         if widget == self.align_zlp_max:
             self.aligned_cam_array, zlp_fwhm, energy_window = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
-                                                                        temp_dict['averages'], cam_pixels,
-                                                                        eels_dispersion, 'max')
-            #temp_title_name += 'max_' #we have only way to align by now
+                                                                                       temp_dict['averages'],
+                                                                                       cam_pixels,
+                                                                                       eels_dispersion, 'max')
+            # temp_title_name += 'max_' #we have only way to align by now
 
         elif widget == self.align_zlp_fit:
-            pass #not yet implemented
+            pass  # not yet implemented
 
-        #here is the window of the fitting of the ZLP with no laser ON
+        # here is the window of the fitting of the ZLP with no laser ON
         self.energy_window_value.text = format(energy_window, '.3f') + ' eV'
 
         self.zlp_fwhm = zlp_fwhm
@@ -565,9 +565,9 @@ class gainhandler:
                                                oversample=oversample)
 
         if self.smooth_di:  # you free next step if smooth is OK
-            if temp_dict['step_wav']: #this means step is not zero. If step is zero then we have a power measurement.
+            if temp_dict['step_wav']:  # this means step is not zero. If step is zero then we have a power measurement.
                 self.process_eegs_pb.enabled = True
-            else: #power measurement. Normalize makes no sense because we cant normalize by power here.
+            else:  # power measurement. Normalize makes no sense because we cant normalize by power here.
                 self.process_power_pb.enabled = True
                 self.normalize_check_box.enabled = False
             self.smooth_zlp.enabled = False
@@ -593,7 +593,7 @@ class gainhandler:
 
         gain_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
         loss_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
-        zlp_array = numpy.zeros(temp_dict['pts']-1)
+        zlp_array = numpy.zeros(temp_dict['pts'] - 1)
 
         energies_loss = numpy.zeros((number_orders, temp_dict['pts'] - 1))
         energies_gain = numpy.zeros((number_orders, temp_dict['pts'] - 1))
@@ -617,23 +617,22 @@ class gainhandler:
 
         for k in range(number_orders):
             for i in range(len(temp_data) - 1):
-                #here we find maximum and minimum of gain and loss based on index.
+                # here we find maximum and minimum of gain and loss based on index.
                 cpg_meas[k][i] = int(
                     numpy.where(temp_data[i] == numpy.max(temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]))[0])
                 cpl_meas[k][i] = int(
                     numpy.where(temp_data[i] == numpy.max(temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]))[0])
 
         for k in range(number_orders):
-            for i in range(len(temp_data) - 1): #excluding last point because laser is off
+            for i in range(len(temp_data) - 1):  # excluding last point because laser is off
                 garray = temp_data[i][cpg[k][i] - ihp:cpg[k][i] + ihp]
                 larray = temp_data[i][cpl[k][i] - ihp:cpl[k][i] + ihp]
-                if not k: zlpi = int((cpg[k][i] + cpl[k][i])/2) #zlp_index. Must be close to half if its aligned
-                if not k: zlparray = temp_data[i][zlpi-ihp:zlpi+ihp] #do this when k==0 to save time
-
+                if not k: zlpi = int((cpg[k][i] + cpl[k][i]) / 2)  # zlp_index. Must be close to half if its aligned
+                if not k: zlparray = temp_data[i][zlpi - ihp:zlpi + ihp]  # do this when k==0 to save time
 
                 gain_array[k][i] = numpy.sum(garray)
                 loss_array[k][i] = numpy.sum(larray)
-                if not k: zlp_array[i] = numpy.sum(zlparray) #do this when k==0 to save time
+                if not k: zlp_array[i] = numpy.sum(zlparray)  # do this when k==0 to save time
 
                 self.rpa_avg[i] = numpy.average(rpa[i]) - numpy.average(rpa[-1])
 
@@ -667,13 +666,14 @@ class gainhandler:
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False)
-                
+
                 if not k: self.zlp_di = DataItemLaserCreation('_' + str(k) + '_' + temp_zlp_title_name, zlp_array,
-                                                     "sEEGS/sEELS", temp_dict['start_wav'],
-                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
-                                                     temp_dict['step_wav'], temp_dict['delay'],
-                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                     temp_dict['control'], is_live=False)
+                                                              "sEEGS/sEELS", temp_dict['start_wav'],
+                                                              temp_dict['final_wav'], temp_dict['pts'],
+                                                              temp_dict['averages'],
+                                                              temp_dict['step_wav'], temp_dict['delay'],
+                                                              temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                              temp_dict['control'], is_live=False)
 
                 self.document_controller.document_model.append_data_item(self.gain_di.data_item)
                 self.document_controller.document_model.append_data_item(self.loss_di.data_item)
@@ -682,23 +682,18 @@ class gainhandler:
 
         if widget == self.process_power_pb:
             for k in range(number_orders):
-                
-                if not k: #only when k==0 to save time
+
+                if not k:  # only when k==0 to save time
                     power_array_itp, zlp_array_itp, power_inc = self.data_proc.as_power_func(zlp_array, self.rpa_avg)
                     self.zlp_di = DataItemLaserCreation('Power_' + str(k) + '_' + temp_gain_title_name, zlp_array_itp,
-                                                     "sEEGS/sEELS_power", temp_dict['start_wav'],
-                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
-                                                     temp_dict['step_wav'], temp_dict['delay'],
-                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                     temp_dict['control'], is_live=False,
-                                                     power_min=power_array_itp.min(), power_inc=power_inc)
+                                                        "sEEGS/sEELS_power", temp_dict['start_wav'],
+                                                        temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                        temp_dict['step_wav'], temp_dict['delay'],
+                                                        temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                        temp_dict['control'], is_live=False,
+                                                        power_min=power_array_itp.min(), power_inc=power_inc)
 
                     self.document_controller.document_model.append_data_item(self.zlp_di.data_item)
-
-
-
-
-
 
                 power_array_itp, gain_array_itp, power_inc = self.data_proc.as_power_func(gain_array[k], self.rpa_avg)
                 self.gain_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_gain_title_name, gain_array_itp,
@@ -740,7 +735,7 @@ class gainhandler:
         data_size = temp_data.shape[1]
         eels_dispersion = - 2 * temp_calib[1].offset / data_size
         oversample = eels_dispersion / temp_calib[1].scale
-        
+
         wavs = numpy.linspace(temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'] - 1)
         energies_loss = numpy.divide(1239.8, wavs)
         tol = float(self.tolerance_energy_value.text)
@@ -762,18 +757,18 @@ class gainhandler:
             # of the first replica, a2_array is the intensity of the second replica and sigma_array is the sigma
             # that can be used to check for FWHM
 
-            fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array, ene_array = self.data_proc.fit_data(temp_data,
-                                                                                                    temp_dict['pts'],
-                                                                                                    temp_dict[
-                                                                                                        'start_wav'],
-                                                                                                    temp_dict[
-                                                                                                        'final_wav'],
-                                                                                                    temp_dict[
-                                                                                                        'step_wav'],
-                                                                                                    temp_calib[1].scale,
-                                                                                                    self.zlp_fwhm,
-                                                                                                    number_orders, tol)
-
+            fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array, ene_array = self.data_proc.fit_data(
+                temp_data,
+                temp_dict['pts'],
+                temp_dict[
+                    'start_wav'],
+                temp_dict[
+                    'final_wav'],
+                temp_dict[
+                    'step_wav'],
+                temp_calib[1].scale,
+                self.zlp_fwhm,
+                number_orders, tol)
 
             self.fit_di = DataItemLaserCreation('fit_' + temp_dict['title'], fit_array, "SMOOTHED_DATA",
                                                 temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
@@ -796,40 +791,39 @@ class gainhandler:
                     logging.info('***ACQUISITION***: Data Normalized by power.')
 
                 self.int_di = DataItemLaserCreation('_fit_int_' + temp_dict['title'], a_array[:-1],
+                                                    "sEEGS/sEELS", temp_dict['start_wav'],
+                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                    temp_dict['step_wav'], temp_dict['delay'],
+                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                    temp_dict['control'], is_live=False)
+
+                self.int1_di = DataItemLaserCreation('_fit_int1_' + temp_dict['title'], a1_array[:-1],
                                                      "sEEGS/sEELS", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False)
 
-                self.int1_di = DataItemLaserCreation('_fit_int1_' + temp_dict['title'], a1_array[:-1],
-                                                    "sEEGS/sEELS", temp_dict['start_wav'],
-                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
-                                                    temp_dict['step_wav'], temp_dict['delay'],
-                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                    temp_dict['control'], is_live=False)
-
                 self.int2_di = DataItemLaserCreation('_fit_int2_' + temp_dict['title'], a2_array[:-1],
-                                                    "sEEGS/sEELS", temp_dict['start_wav'],
-                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
-                                                    temp_dict['step_wav'], temp_dict['delay'],
-                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                    temp_dict['control'], is_live=False)
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
 
                 self.int3_di = DataItemLaserCreation('_fit_int3_' + temp_dict['title'], a3_array[:-1],
-                                                    "sEEGS/sEELS", temp_dict['start_wav'],
-                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
-                                                    temp_dict['step_wav'], temp_dict['delay'],
-                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                    temp_dict['control'], is_live=False)
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
 
                 self.int4_di = DataItemLaserCreation('_fit_int4_' + temp_dict['title'], a4_array[:-1],
-                                                    "sEEGS/sEELS", temp_dict['start_wav'],
-                                                    temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
-                                                    temp_dict['step_wav'], temp_dict['delay'],
-                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                    temp_dict['control'], is_live=False)
-
+                                                     "sEEGS/sEELS", temp_dict['start_wav'],
+                                                     temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
+                                                     temp_dict['step_wav'], temp_dict['delay'],
+                                                     temp_dict['time_width'], temp_dict['start_ps_cur'],
+                                                     temp_dict['control'], is_live=False)
 
             if self.fit_pb.text == 'Fit Power Scan':
                 power_array_itp, a_array_itp, power_inc = self.data_proc.as_power_func(a_array[:-1], self.rpa_avg)
@@ -879,8 +873,8 @@ class gainhandler:
 
             self.document_controller.document_model.append_data_item(self.int_di.data_item)
             if a1_array.any(): self.document_controller.document_model.append_data_item(self.int1_di.data_item)
-            if a2_array.any():self.document_controller.document_model.append_data_item(self.int2_di.data_item)
-            if a3_array.any():self.document_controller.document_model.append_data_item(self.int3_di.data_item)
+            if a2_array.any(): self.document_controller.document_model.append_data_item(self.int2_di.data_item)
+            if a3_array.any(): self.document_controller.document_model.append_data_item(self.int3_di.data_item)
             if a4_array.any(): self.document_controller.document_model.append_data_item(self.int4_di.data_item)
 
             logging.info('***ACQUISITION***: Fit Done.')
@@ -905,7 +899,8 @@ class gainView:
     def __init__(self, instrument: gain_inst.gainDevice):
         ui = Declarative.DeclarativeUI()
 
-        self.server_ping_pb = ui.create_push_button(text="Server Ping", name="server_ping_pb", on_clicked="server_ping_push")
+        self.server_ping_pb = ui.create_push_button(text="Server Ping", name="server_ping_pb",
+                                                    on_clicked="server_ping_push")
         self.init_pb = ui.create_push_button(text="Init", name="init_pb", on_clicked="init_push")
         self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, ui.create_stretch())
 
@@ -1030,10 +1025,11 @@ class gainView:
                                             self.servo_p_points_value, ui.create_stretch(), spacing=12)
 
         self.dye_label = ui.create_label(name='dye_label', text='Select Dye: ')
-        self.dye_value = ui.create_combo_box(items=['Pyrromethene 597', 'Pyrromethene 580'], current_index='@binding(instrument.dye_f)', name='dye_value')
+        self.dye_value = ui.create_combo_box(items=['Pyrromethene 597', 'Pyrromethene 580'],
+                                             current_index='@binding(instrument.dye_f)', name='dye_value')
         self.dye_show_button = ui.create_push_button(name='dye_show_button', text='Show Dye', on_clicked='show_dye')
-        self.dye_row = ui.create_row(self.dye_label, self.dye_value, self.dye_show_button, ui.create_stretch(), spacing=12)
-
+        self.dye_row = ui.create_row(self.dye_label, self.dye_value, self.dye_show_button, ui.create_stretch(),
+                                     spacing=12)
 
         self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
             self.servo_row, self.servo_step_row, self.dye_row))
@@ -1077,12 +1073,15 @@ class gainView:
         self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, ui.create_stretch(), spacing=12)
 
         self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=150)
-        self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox', checked='@binding(instrument.per_pic_f)',
+        self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox',
+                                                          checked='@binding(instrument.per_pic_f)',
                                                           on_check_state_changed='change_periodic_pic',
                                                           text='Periodic DET?')
         self.periodic_pics_label = ui.create_label(name='periodic_pics_label', text='How many (per acq.): ')
-        self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value', text='@binding(instrument.many_per_pic_f)')
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.periodic_pics_checkbox, self.periodic_pics_label, self.periodic_pics_value, ui.create_stretch(), spacing=12)
+        self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value',
+                                                       text='@binding(instrument.many_per_pic_f)')
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.periodic_pics_checkbox, self.periodic_pics_label,
+                                           self.periodic_pics_value, ui.create_stretch(), spacing=12)
 
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(
             self.buttons_row00, self.buttons_row01))
@@ -1158,7 +1157,8 @@ class gainView:
         self.zlp_value = ui.create_label(text='fwhm?', name='zlp_value')
         self.energy_window = ui.create_label(text='Window (Fit): ', name='energy_window')
         self.energy_window_value = ui.create_label(text='energyW?', name='energy_window_value')
-        self.zlp_row = ui.create_row(self.zlp_label, self.zlp_value, self.energy_window, self.energy_window_value, ui.create_stretch(), spacing=12)
+        self.zlp_row = ui.create_row(self.zlp_label, self.zlp_value, self.energy_window, self.energy_window_value,
+                                     ui.create_stretch(), spacing=12)
 
         self.savgol_window_label = ui.create_label(text='Smoothing Window: ', name='savgol_window_label')
         self.savgol_window_value = ui.create_line_edit(name='savgol_window_value')
@@ -1189,7 +1189,8 @@ class gainView:
         self.cancel_pb = ui.create_push_button(text='Cancel', on_clicked='fit_or_cancel', name='cancel_pb')
         self.tolerance_energy = ui.create_label(name='tolerance_energy', text='Tolerance in Energy: ')
         self.tolerance_energy_value = ui.create_line_edit(name='tolerance_energy_value')
-        self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, self.tolerance_energy, self.tolerance_energy_value, ui.create_stretch(), spacing=12)
+        self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, self.tolerance_energy, self.tolerance_energy_value,
+                                     ui.create_stretch(), spacing=12)
 
         self.actions_group = ui.create_group(title='Actions', content=ui.create_column(
             self.pb_actions_row, self.zlp_row, self.savgol_row, self.smooth_row, self.pb_process_row,

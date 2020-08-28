@@ -129,7 +129,8 @@ class SirahCredoLaser:
         return self.lock.locked()
 
     def set_scan_thread_release(self):
-        self.lock.release()
+        if self.lock.locked():
+            self.lock.release()
 
     def set_scan_thread_check(self):
         if self.thread == None:

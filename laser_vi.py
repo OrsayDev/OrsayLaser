@@ -15,6 +15,8 @@ class SirahCredoLaser:
         self.thread_wl = 575.0
         self.lock = threading.Lock()
 
+        self.sucessfull = True
+
     def set_hardware_wl(self, wl):
         self.thread_wl = wl
         latency = round(float(5) * 1.0 / 20.0 + 0.5 * abs(numpy.random.randn(1)[0]), 5)
@@ -44,7 +46,8 @@ class SirahCredoLaser:
         return self.lock.locked()
 
     def set_scan_thread_release(self):
-        self.lock.release()
+        if self.lock.locked():
+            self.lock.release()
 
     def set_scan_thread_check(self):
         if self.thread == None:

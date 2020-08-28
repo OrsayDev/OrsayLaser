@@ -15,6 +15,16 @@
   "SERVO": {
     "DEBUG": 1
   },
+  "SOCKET_CLIENT": {
+    "HOST": "127.0.0.1",
+    "PORT": 65432
+  },
+  "SOCKET_SERVER": {
+    "HOST": "127.0.0.1",
+    "PORT": 65432,
+    "WHERE": ["LUMIERE", "LOCALHOST"],
+    "HOST_OPTIONS": ["129.175.82.159", "127.0.0.1"]
+  },
   "CAMERA": {"WHICH": "orsay_camera_eels", "AVAILABLE": ["usim_eels_camera", "orsay_camera_eire", "orsay_camera_eels"]},
   "SCAN": {"WHICH": "orsay_scan_device", "AVAILABLE": ["usim_eels_camera", "orsay_scan_device"]}
 }

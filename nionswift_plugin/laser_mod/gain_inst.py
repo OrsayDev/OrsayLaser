@@ -23,6 +23,8 @@ CAMERA = settings["CAMERA"]["WHICH"]
 SCAN = settings["SCAN"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 PW_AVG = settings["PW"]["AVG"]
+CLIENT_HOST = settings["SOCKET_CLIENT"]["HOST"]
+CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 
 DEBUG = DEBUG_pw and DEBUG_laser and DEBUG_ps and DEBUG_servo
 
@@ -53,7 +55,15 @@ class LaserServerHandler():
 
     def __init__(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect(('127.0.0.1', 65432))
+        self.s.connect((CLIENT_HOST, CLIENT_PORT))
+
+    def server_ping(self):
+        header = b'server_ping'
+        msg = header
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        if data.decode() == 'Server Alive':
+            logging.info('***SERVER***: Server ON.')
 
     def set_hardware_wl(self, wl):
         header = b'set_hardware_wl'
@@ -62,7 +72,7 @@ class LaserServerHandler():
         self.s.sendall(msg)
         data = self.s.recv(512)
         if data.decode() != 'None':
-            logging.info('***SIRAH SERVER***: Bad communication. Error 01.')
+            logging.info('***SERVER***: Bad communication. Error 01.')
 
     def get_hardware_wl(self):
         header = b'get_hardware_wl'
@@ -85,7 +95,7 @@ class LaserServerHandler():
         elif data == b'message_02':
             return 2
         else:
-            logging.info('***SIRAH SERVER***: Bad communication. Error 03.')
+            logging.info('***SERVER***: Bad communication. Error 03.')
 
     def abort_control(self):
         header = b'abort_control'
@@ -93,7 +103,7 @@ class LaserServerHandler():
         self.s.sendall(msg)
         data = self.s.recv(512)
         if data.decode() != 'None':
-            logging.info('***SIRAH SERVER***: Bad communication. Error 04.')
+            logging.info('***SERVER***: Bad communication. Error 04.')
 
     def set_scan_thread_locked(self):
         header = b'set_scan_thread_locked'
@@ -105,7 +115,7 @@ class LaserServerHandler():
         elif data == b'0':
             return False
         else:
-            logging.info('***SIRAH SERVER***: Bad communication. Error 05.')
+            logging.info('***SERVER***: Bad communication. Error 05.')
 
     def set_scan_thread_release(self):
         header = b'set_scan_thread_release'
@@ -113,7 +123,7 @@ class LaserServerHandler():
         self.s.sendall(msg)
         data = self.s.recv(512)
         if data.decode() != 'None':
-            logging.info('***SIRAH SERVER***: Bad communication. Error 06.')
+            logging.info('***SERVER***: Bad communication. Error 06.')
 
     def set_scan_thread_check(self):
         header = b'set_scan_thread_check'
@@ -125,7 +135,7 @@ class LaserServerHandler():
         elif data == b'0':
             return False
         else:
-            logging.info('***SIRAH SERVER***: Bad communication. Error 07.')
+            logging.info('***SERVER***: Bad communication. Error 07.')
 
     def set_scan_thread_hardware_status(self):
         header = b'set_scan_thread_hardware_status'
@@ -141,7 +151,7 @@ class LaserServerHandler():
                 "hardware.")
             return 3
         else:
-            logging.info('***SIRAH SERVER***: Bad communication. Error 08.')
+            logging.info('***SERVER***: Bad communication. Error 08.')
 
     def set_scan(self, cur, step, pts):
         header = b'set_scan'
@@ -154,7 +164,7 @@ class LaserServerHandler():
         self.s.sendall(msg)
         data = self.s.recv(512)
         if data.decode() != 'None':
-            logging.info('***SIRAH SERVER***: Bad communication. Error 09.')
+            logging.info('***SERVER***: Bad communication. Error 09.')
 
 
 class gainDevice(Observable.Observable):
@@ -223,6 +233,9 @@ class gainDevice(Observable.Observable):
 
         self.__OrsayScanInstrument = None
         self.__camera = None
+
+    def server_ping(self):
+        self.__laser.server_ping()
 
     def init(self):
 
@@ -309,7 +322,7 @@ class gainDevice(Observable.Observable):
         self.__thread.start()
 
     def abt(self):
-        logging.info("Abort scanning. Going back to origin...")
+        logging.info('***LASER***: Abort scanning. Going back to origin.')
         self.__abort_force = True
         self.__laser.abort_control()  # abort laser thread as well.
         self.run_status_f = False  # force free GUI
@@ -399,7 +412,8 @@ class gainDevice(Observable.Observable):
                 self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (
-                    self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):  # check if laser changes have finished and thread step is over
+                    self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):
+                # check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release()  # if yes, you can advance
                 logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
@@ -417,14 +431,14 @@ class gainDevice(Observable.Observable):
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
         if self.__ctrl_type == 1: self.servo_f = self.__servo_pos_initial  # Even if this is not controlled it doesnt
         # matter
-        if self.__ctrl_type == 2: pass  # here you can put the initial current of the powersupply. Not implemented yet
-        self.combo_data_f = True  # if its controlled then you update servo or powersupply right
+        if self.__ctrl_type == 2: pass  # here you can put the initial current of the power supply. Not implemented yet
+        self.combo_data_f = True  # if its controlled then you update servo or power supply right
         while (
                 not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
             # looped here indefinitely than fuck the hardware
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
                 self.__laser.set_scan_thread_release()
-        self.run_status_f = False  # acquistion is over
+        self.run_status_f = False  # acquisition is over
         self.grab_det("end", self.__acq_number, 0, True)
         self.start_wav_f = self.__start_wav
         self.end_data.fire()
@@ -472,7 +486,6 @@ class gainDevice(Observable.Observable):
                 if self.__ctrl_type == 2:
                     self.__diode = self.__diode + 0.02 if self.__power < self.__power_ref else self.__diode - 0.02
                     self.cur_d_f = self.__diode
-
             if message == 102:
                 logging.info('***CONTROL***: Control OFF but it was never on.')
 
@@ -486,7 +499,7 @@ class gainDevice(Observable.Observable):
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
             threading.Timer(0.25, self.property_changed_event.fire, args=('cur_wav_f',)).start()
-            self.property_changed_event.fire("cur_wav_f")  # dont need a thread.
+            self.property_changed_event.fire("cur_wav_f")  # don't need a thread.
             time.sleep(0.5)
             self.wavelength_ready()
         else:
@@ -558,7 +571,7 @@ class gainDevice(Observable.Observable):
         return self.__pts
 
     @property  # we dont set cur_wav but rather start wav.
-    def cur_wav_f(self) -> float:
+    def cur_wav_f(self) -> str:
         self.__cur_wav = self.__laser.get_hardware_wl()[0]
         self.__pwmeter.pw_set_wl(self.__cur_wav)
         return format(self.__cur_wav, '.4f')
@@ -577,7 +590,7 @@ class gainDevice(Observable.Observable):
     def power_f(self):
         if DEBUG_pw:
             self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
+                    self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
         else:
             self.__power = self.__pwmeter.pw_read()
         return format(self.__power, '.2f')
@@ -640,7 +653,7 @@ class gainDevice(Observable.Observable):
 
     @sht_f.setter
     def sht_f(self, value: bool):
-        if value == True:
+        if value:
             self.__ps.comm('SHT:1\n')
         else:
             self.__ps.comm('SHT:0\n')
@@ -654,7 +667,7 @@ class gainDevice(Observable.Observable):
 
     @d_f.setter
     def d_f(self, value: bool):
-        if value == True:
+        if value:
             self.__ps.comm('D:1\n')
         else:
             self.__ps.comm('D:0\n')
@@ -669,7 +682,7 @@ class gainDevice(Observable.Observable):
 
     @q_f.setter
     def q_f(self, value: bool):
-        if value == True:
+        if value:
             self.__ps.comm('G:1\n')
         else:
             self.__ps.comm('G:0\n')

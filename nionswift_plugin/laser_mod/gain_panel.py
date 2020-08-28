@@ -155,7 +155,7 @@ class gainhandler:
         self.current_acquition = None
 
     def init_handler(self):
-        self.event_loop.create_task(self.do_enable(False, ['init_pb']))  # not working as something is calling this guy
+        self.event_loop.create_task(self.do_enable(False, ['init_server_push', 'server_ping_push', 'init_pb']))  # not working as something is calling this guy
         self.normalize_check_box.checked = False #in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
@@ -177,8 +177,12 @@ class gainhandler:
                              self.process_power_pb, self.fit_pb,
                              self.cancel_pb]  # i can put here because GUI was already initialized
 
+
+
+    def server_ping_push(self, widget):
+        self.instrument.server_ping()
+
     def upt_push(self, widget):
-        # self.grab()
         self.instrument.upt()
 
     def acq_push(self, widget):
@@ -901,7 +905,9 @@ class gainView:
     def __init__(self, instrument: gain_inst.gainDevice):
         ui = Declarative.DeclarativeUI()
 
+        self.server_ping_pb = ui.create_push_button(text="Server Ping", name="server_ping_pb", on_clicked="server_ping_push")
         self.init_pb = ui.create_push_button(text="Init", name="init_pb", on_clicked="init_push")
+        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, ui.create_stretch())
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")
@@ -1083,7 +1089,7 @@ class gainView:
         ## END FIRST TAB
 
         self.main_tab = ui.create_tab(label='Main', content=ui.create_column(
-            self.init_pb, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
+            self.init_row, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
             self.buttons_group))
 
         ### BEGIN MY SECOND TAB ##

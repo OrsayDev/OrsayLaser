@@ -12,8 +12,6 @@ DEBUG_LASER = settings["LASER"]["DEBUG"]
 SERVER_HOST = settings["SOCKET_SERVER"]["HOST"]
 SERVER_PORT = settings["SOCKET_SERVER"]["PORT"]
 
-print(DEBUG_LASER)
-
 if DEBUG_LASER:
     import laser_vi as laser
 else:

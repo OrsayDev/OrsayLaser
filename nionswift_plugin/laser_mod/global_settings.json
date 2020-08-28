@@ -16,11 +16,11 @@
     "DEBUG": 1
   },
   "SOCKET_CLIENT": {
-    "HOST": "129.175.82.159",
+    "HOST": "127.0.0.1",
     "PORT": 65432
   },
   "SOCKET_SERVER": {
-    "HOST": "129.175.82.159",
+    "HOST": "127.0.0.1",
     "PORT": 65432,
     "WHERE": ["LUMIERE", "LOCALHOST"],
     "HOST_OPTIONS": ["129.175.82.159", "127.0.0.1"]

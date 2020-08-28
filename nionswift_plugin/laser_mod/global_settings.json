@@ -1,6 +1,6 @@
 {
   "LASER": {
-    "DEBUG": 0,
+    "DEBUG": 1,
     "MAX_WAV": 800,
     "MIN_WAV": 532
   },
@@ -22,7 +22,7 @@
   "SOCKET_SERVER": {
     "HOST": "127.0.0.1",
     "PORT": 65432,
-    "WHERE": ["LUMIERE", "LOCALHOST"],
+    "WHERE_OPTIONS": ["LUMIERE", "LOCALHOST"],
     "HOST_OPTIONS": ["129.175.82.159", "127.0.0.1"]
   },
   "CAMERA": {"WHICH": "orsay_camera_eels", "AVAILABLE": ["usim_eels_camera", "orsay_camera_eire", "orsay_camera_eels"]},

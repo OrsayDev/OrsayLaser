@@ -498,9 +498,9 @@ class gainDevice(Observable.Observable):
 
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
-            threading.Timer(0.25, self.property_changed_event.fire, args=('cur_wav_f',)).start()
+            #threading.Timer(0.25, self.property_changed_event.fire, args=('cur_wav_f',)).start()
             self.property_changed_event.fire("cur_wav_f")  # don't need a thread.
-            time.sleep(0.5)
+            time.sleep(0.25)
             self.wavelength_ready()
         else:
             self.run_status_f = False  # this already frees GUI
@@ -526,7 +526,7 @@ class gainDevice(Observable.Observable):
                 logging.info("***LASER***: Current WL being updated...")
                 self.run_status_f = True
                 self.combo_data_f = False
-                threading.Timer(1.0, self.wavelength_ready, args=()).start()
+                threading.Timer(0.25, self.wavelength_ready, args=()).start()
 
     @property
     def finish_wav_f(self) -> float:

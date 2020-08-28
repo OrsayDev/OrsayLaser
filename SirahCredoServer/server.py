@@ -1,6 +1,7 @@
 import socket
 import os
 import json
+import PySimpleGUI as sg
 
 __author__ = "Yves Auad"
 
@@ -22,6 +23,12 @@ class ServerSirahCredoLaser:
 
     def __init__(self):
         print("***SERVER***: Initializing SirahCredoServer...")
+        if DEBUG_LASER:
+            print("***SERVER***: DEBUG MODE.")
+        if SERVER_HOST == '127.0.0.1':
+            print('***SERVER***: Server Running in Local Host.')
+        elif SERVER_HOST == '129.175.82.159':
+            print('***SERVER***: Server Running in VG Lumiere.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind((SERVER_HOST, SERVER_PORT))
@@ -31,9 +38,11 @@ class ServerSirahCredoLaser:
 
         if not self.__sirah.sucessfull:
             self.s.close()  # quits the server is not successful
+            print('***SERVER***: Server not successfully created. Leaving...')
 
     def main_loop(self):
-        while True:
+        #while True:
+        if 1:
             clientsocket, address = self.s.accept()
             print(f"***SERVER***: Connection from {address} has been established.")
             with clientsocket:
@@ -114,6 +123,15 @@ class ServerSirahCredoLaser:
 
                     clientsocket.sendall(return_data)
 
+layout = [[sg.Text("Sirah Credo Server")], [sg.Button("OK")]]
+window = sg.Window("Demo", layout)
+while True:
+    event, values = window.read()
+    if event == "OK":
+        ss = ServerSirahCredoLaser()
+        ss.main_loop()
+    if event == sg.WIN_CLOSED:
+        break
 
-ss = ServerSirahCredoLaser()
-ss.main_loop()
+#ss = ServerSirahCredoLaser()
+#ss.main_loop()

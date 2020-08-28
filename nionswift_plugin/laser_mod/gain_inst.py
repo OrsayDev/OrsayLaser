@@ -80,7 +80,6 @@ class LaserServerHandler():
         msg = msg + bytes(4)
         self.s.sendall(msg)
         data = self.s.recv(512)
-        #if data.decode() != 'None':
         if data == b'message_01':
             return 1
         elif data == b'message_02':
@@ -136,6 +135,10 @@ class LaserServerHandler():
         if data == b'2':
             return 2
         elif data == b'3':
+            logging.info(
+                "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
+                "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
+                "hardware.")
             return 3
         else:
             logging.info('***SIRAH SERVER***: Bad communication. Error 08.')
@@ -434,11 +437,11 @@ class gainDevice(Observable.Observable):
             #    logging.info("***LASER***: Current WL updated")
             #    self.run_status_f=False
             #    self.combo_data_f = False
-            if message == 3:
-                logging.info(
-                    "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
-                    "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
-                    "hardware.")
+            #if message == 3:
+            #    logging.info(
+            #        "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
+            #        "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
+            #        "hardware.")
             if message == 5:
                 logging.info("***LASER***: Could not write in laser serial port. Check port.")
             if message == 6:
@@ -497,6 +500,16 @@ class gainDevice(Observable.Observable):
         self.fast_blanker_status_f=False
         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
+    def wavelength_ready(self):
+        if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
+            threading.Timer(0.25, self.property_changed_event.fire, args=('cur_wav_f',)).start()
+            self.property_changed_event.fire("cur_wav_f") #dont need a thread.
+            time.sleep(0.5)
+            self.wavelength_ready()
+        else:
+            self.run_status_f = False #this already frees GUI
+
+
     @property
     def start_wav_f(self) -> float:
         return self.__start_wav
@@ -515,9 +528,10 @@ class gainDevice(Observable.Observable):
                 self.run_status_f=False
                 self.combo_data_f = False
             elif response==2:
-                logging.info("***LASER***: Current WL updated")
+                logging.info("***LASER***: Current WL being updated...")
                 self.run_status_f=True
                 self.combo_data_f = False
+                threading.Timer(1.0, self.wavelength_ready, args=()).start()
 
     @property
     def finish_wav_f(self) -> float:

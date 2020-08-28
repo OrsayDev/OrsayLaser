@@ -303,13 +303,13 @@ class gainhandler:
 
             if camera_data.data.shape[1] != self.cam_array.shape[1]:
                 self.cam_array = numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
-                logging.info('***ACQUISTION***: Corrected #PIXELS.')
+                logging.info('***ACQUISITION***: Corrected #PIXELS.')
             try:
                 self.cam_di.set_cam_di_calibration(cam_calibration)
-                logging.info('***ACQUISTION***: Calibration OK.')
+                logging.info('***ACQUISITION***: Calibration OK.')
             except:
                 logging.info(
-                    '***ACQUISTION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
+                    '***ACQUISITION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
 
             self.__adjusted = True
 

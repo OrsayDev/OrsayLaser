@@ -195,6 +195,7 @@ class gainDevice(Observable.Observable):
         self.__powermeter_avg = PW_AVG
         self.__servo_step = 2
         self.__nper_pic = 2
+        self.__dye = 0
 
         self.__camera = None
         self.__data = None
@@ -343,7 +344,7 @@ class gainDevice(Observable.Observable):
                 j+=1
             self.servo_f = self.servo_f - self.__servo_step
             j=0
-            if i in pics_array:
+            if i in pics_array and self.__per_pic:
                 self.grab_det("middle", self.__acq_number, i, True)
             i+=1
         self.sht_f = False
@@ -395,12 +396,13 @@ class gainDevice(Observable.Observable):
                 self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
                 j += 1
             j = 0
-            if i in pics_array:
+            if i in pics_array and self.__per_pic:
                 self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (
                     self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):  # check if laser changes have finished and thread step is over
                 self.__laser.set_scan_thread_release()  # if yes, you can advance
+                logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
 
@@ -870,7 +872,12 @@ class gainDevice(Observable.Observable):
         except:
             logging.info('***LASER***: Please enter an integer for detectors grab. Using 0 instead.')
         
-        #a = self.__OrsayScanInstrument.grab_next_to_start() #this is perfect
-        #self.__OrsayScanInstrument.stop_playing()
+    @property
+    def dye_f(self):
+        return self.__dye
+
+    @dye_f.setter
+    def dye_f(self, value):
+        self.__dye = value
 
 

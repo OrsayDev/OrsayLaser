@@ -31,6 +31,9 @@ class ServerSirahCredoLaser:
 
         self.__sirah = laser.SirahCredoLaser()
 
+        if not self.__sirah.sucessfull:
+            self.s.close()
+
 
     def main_loop(self):
         while True:

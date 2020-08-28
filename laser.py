@@ -1,6 +1,4 @@
-import sys
 import numpy
-import logging
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -8,29 +6,18 @@ import serial
 import os
 import json
 
-abs_path = os.path.abspath(os.path.join((__file__+"/../"), "nionswift_plugin/laser_mod/global_settings.json"))
+abs_path = os.path.abspath(os.path.join((__file__ + "/../nionswift_plugin/laser_mod/"), "global_settings.json"))
 with open(abs_path) as savfile:
     settings = json.load(savfile)
 
 MAX_WAV = settings["LASER"]["MAX_WAV"]
 MIN_WAV = settings["LASER"]["MIN_WAV"]
 
-
 __author__ = "Yves Auad"
-
-
-def _isPython3():
-    return sys.version_info[0] >= 3
-
-
-def SENDMYMESSAGEFUNC(sendmessagefunc):
-    return sendmessagefunc
-
 
 class SirahCredoLaser:
 
-    def __init__(self, sendmessage) -> None:
-        self.sendmessage = sendmessage
+    def __init__(self) -> None:
         self.abort_ctrl = False
         self.laser_thread = None
         self.thread = None
@@ -45,8 +32,10 @@ class SirahCredoLaser:
             if not self.ser.is_open:
                 self.ser.open()
                 time.sleep(0.1)
+                self.sucessfull = True
         except:
-            self.sendmessage(7)
+            print("***LASER***: Could not open serial port. Check if connected and port.")
+            self.sucessfull = False
 
     def bytes_to_pos(self, s):
         dec_val = 0
@@ -76,17 +65,15 @@ class SirahCredoLaser:
         byt = self.pos_to_bytes(pos)
         checksum = byt.sum() + 60 + 7 + 1  # head associated with send
         if (checksum > 255):
-            #checksum -= 256
-            checksum = checksum - 256 * int(checksum/256)
+            checksum = checksum - 256 * int(checksum / 256)
         send_mes = [60, 7, 1, byt[0], byt[1], byt[2], byt[3], 0, 0, 0, 0, checksum, 62]
         ba_send_mes = bytearray(send_mes)
         pos2 = self.bytes_to_pos(byt)
-        if (wl > MIN_WAV and wl < MAX_WAV): #REMEMBER YOU WERE CALLED IN THE THREAD BELOW. YOU ARE WITH THE LOCKER!
+        if (wl > MIN_WAV and wl < MAX_WAV):  # REMEMBER YOU WERE CALLED IN THE THREAD BELOW. YOU ARE WITH THE LOCKER!
             try:
                 self.ser.write(ba_send_mes)
             except:
-                self.sendmessage(5)
-
+                print("***LASER***: Could not write in laser serial port. Check port.")
 
     def get_hardware_wl(self):
         mes = [60, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 62]
@@ -104,7 +91,7 @@ class SirahCredoLaser:
             if (status[0] == 2 or status[0] == 3):
                 return (cur_wl, status[0])
             else:
-                self.sendmessage(8)
+                print('***LASER***: Status was not 02 or 03. Problem receiving bytes from laser hardware.')
                 self.ser.close()
                 time.sleep(0.05)
                 self.ser.open()
@@ -120,20 +107,20 @@ class SirahCredoLaser:
                 cur_wl = self.pos_to_wl(pos)
                 return (cur_wl, status[0])
         except:
-            self.sendmessage(6)
-            return (580, None)
+            print("***LASER***: Could not write/read in laser serial port. Check port.")
+            return (580., None)
 
     def set_startWL(self, wl: float, cur: float):
         self.set_hardware_wl(wl)
-        time.sleep( abs((wl-cur)*0.4)+0.2 )
-        self.sendmessage(2)
+        time.sleep(abs((wl - cur) * 0.4) + 0.2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
         if (abs(float(current_wavelength) - float(wavelength)) <= 0.001):
-            self.sendmessage(1)
+            return b'message_01'
         else:
             self.laser_thread = threading.Thread(target=self.set_startWL, args=(wavelength, current_wavelength,))
             self.laser_thread.start()
+            return b'message_02'
 
     def abort_control(self):
         self.abort_ctrl = True
@@ -159,7 +146,7 @@ class SirahCredoLaser:
             self.set_hardware_wl(cur + i_pts * step)
         else:
             with self.lock:
-                logging.info("Laser abort control function.")
+                print("Laser abort control function.")
                 self.sendmessage(4)
 
     def set_scan(self, cur, step, pts):
@@ -168,4 +155,3 @@ class SirahCredoLaser:
         for index in range(pts):
             self.thread = pool.submit(self.set_scan_thread, cur, index, step)
 
-        # self.set_scan_thread_release()

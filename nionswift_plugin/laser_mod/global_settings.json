@@ -1,6 +1,6 @@
 {
   "LASER": {
-    "DEBUG": 1,
+    "DEBUG": 0,
     "MAX_WAV": 800,
     "MIN_WAV": 532
   },

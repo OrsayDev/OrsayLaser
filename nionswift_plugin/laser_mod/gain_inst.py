@@ -433,14 +433,6 @@ class gainDevice(Observable.Observable):
 
     def sendMessageFactory(self):
         def sendMessage(message):
-            if message == 5:
-                logging.info("***LASER***: Could not write in laser serial port. Check port.")
-            if message == 6:
-                logging.info("***LASER***: Could not write/read in laser serial port. Check port.")
-            if message == 7:
-                logging.info("***LASER***: Could not open serial port. Check if connected and port.")
-            if message == 8:
-                logging.info('***LASER***: Status was not 02 or 03. Problem receiving bytes from laser hardware.')
             if message == 21:
                 logging.info('***Power Meter***: Cant write')
             if message == 22:

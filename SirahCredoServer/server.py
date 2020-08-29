@@ -21,7 +21,7 @@ else:
 
 class ServerSirahCredoLaser:
 
-    def __init__(self):
+    def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT, TIMEOUT=10.0):
         print("***SERVER***: Initializing SirahCredoServer...")
         if DEBUG_LASER:
             print("***SERVER***: DEBUG MODE.")
@@ -31,8 +31,10 @@ class ServerSirahCredoLaser:
             print('***SERVER***: Server Running in VG Lumiere.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.s.settimeout(TIMEOUT)
         self.s.bind((SERVER_HOST, SERVER_PORT))
         self.s.listen(5)
+
 
         self.__sirah = laser.SirahCredoLaser()
 
@@ -123,15 +125,26 @@ class ServerSirahCredoLaser:
 
                     clientsocket.sendall(return_data)
 
-layout = [[sg.Text("Sirah Credo Server")], [sg.Button("OK")]]
-window = sg.Window("Demo", layout)
+layout = [
+    [sg.Text('Hanging Timeout (s): '), sg.In('1.00', size=(25, 1), enable_events=True, key='TIMEOUT')],
+    [sg.Text('Host: '), sg.In('127.0.0.1', size=(25, 1), enable_events=True, key='HOST_NAME')],
+    [sg.Text('Port: '), sg.In('65432', size=(25, 1), enable_events=True, key='PORT')],
+    [sg.Button("Start"), sg.Button('Hang', disabled=True)]
+]
+window = sg.Window("Sirah Credo Server", layout, margins=(75, 75))
 while True:
     event, values = window.read()
-    if event == "OK":
-        ss = ServerSirahCredoLaser()
-        ss.main_loop()
+    if event == "Start":
+        ss = ServerSirahCredoLaser(values['HOST_NAME'], int(values['PORT']), float(values['TIMEOUT']))
+        if ss._ServerSirahCredoLaser__sirah.sucessfull:
+            window.FindElement('Hang').Update(disabled=False)
+            window.FindElement('Start').Update(disabled=True)
+    if event == "Hang":
+            try:
+                ss.main_loop()
+            except socket.timeout:
+                print('***SERVER***: Socket timeout. Retry connection.')
+                window.FindElement('Hang').Update(disabled=True)
+                window.FindElement('Start').Update(disabled=False)
     if event == sg.WIN_CLOSED:
         break
-
-#ss = ServerSirahCredoLaser()
-#ss.main_loop()

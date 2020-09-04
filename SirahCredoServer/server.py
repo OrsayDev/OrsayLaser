@@ -134,7 +134,7 @@ layout = [
     [sg.Text('Port: '), sg.In('65432', size=(25, 1), enable_events=True, key='PORT', disabled=True)],
     [sg.Button("Start"), sg.Button('Hang', disabled=True)]
 ]
-window = sg.Window("Sirah Credo Server", layout, margins=(75, 75))
+window = sg.Window("Sirah Credo Server", layout)
 while True:
     event, values = window.read()
 

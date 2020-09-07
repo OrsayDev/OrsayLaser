@@ -56,66 +56,91 @@ class LaserServerHandler():
     def __init__(self, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
+        self.s.settimeout(0.1)
 
     def server_ping(self):
-        header = b'server_ping'
-        msg = header
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data.decode() == 'Server Alive':
-            logging.info('***SERVER***: Server ON.')
+        try:
+            header = b'server_ping'
+            msg = header
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() == 'Server Alive':
+                logging.info('***SERVER***: Server ON.')
+                return True
+            else:
+                return False
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+            return False
+        except:
+            return False
 
     def set_hardware_wl(self, wl):
-        header = b'set_hardware_wl'
-        msg = header + bytes(4)
-        msg = msg + format(wl, '.8f').rjust(16, '0').encode()
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data.decode() != 'None':
-            logging.info('***SERVER***: Bad communication. Error 01.')
+        try:
+            header = b'set_hardware_wl'
+            msg = header + bytes(4)
+            msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 01.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def get_hardware_wl(self):
-        header = b'get_hardware_wl'
-        msg = header + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        return (float(data.decode()), 0)
+        try:
+            header = b'get_hardware_wl'
+            msg = header + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            return (float(data.decode()), 0)
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def setWL(self, wl, cur_wl):
-        header = b'setWL'
-        msg = header + bytes(4)
-        msg = msg + format(wl, '.8f').rjust(16, '0').encode()
-        msg = msg + bytes(4)
-        msg = msg + format(cur_wl, '.8f').rjust(16, '0').encode()
-        msg = msg + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data == b'message_01':
-            return 1
-        elif data == b'message_02':
-            return 2
-        else:
-            logging.info('***SERVER***: Bad communication. Error 03.')
+        try:
+            header = b'setWL'
+            msg = header + bytes(4)
+            msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+            msg = msg + bytes(4)
+            msg = msg + format(cur_wl, '.8f').rjust(16, '0').encode()
+            msg = msg + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data == b'message_01':
+                return 1
+            elif data == b'message_02':
+                return 2
+            else:
+                logging.info('***SERVER***: Bad communication. Error 03.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def abort_control(self):
-        header = b'abort_control'
-        msg = header + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data.decode() != 'None':
-            logging.info('***SERVER***: Bad communication. Error 04.')
+        try:
+            header = b'abort_control'
+            msg = header + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 04.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def set_scan_thread_locked(self):
-        header = b'set_scan_thread_locked'
-        msg = header + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data == b'1':
-            return True
-        elif data == b'0':
-            return False
-        else:
-            logging.info('***SERVER***: Bad communication. Error 05.')
+        try:
+            header = b'set_scan_thread_locked'
+            msg = header + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data == b'1':
+                return True
+            elif data == b'0':
+                return False
+            else:
+                logging.info('***SERVER***: Bad communication. Error 05.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def set_scan_thread_release(self):
         header = b'set_scan_thread_release'
@@ -126,45 +151,54 @@ class LaserServerHandler():
             logging.info('***SERVER***: Bad communication. Error 06.')
 
     def set_scan_thread_check(self):
-        header = b'set_scan_thread_check'
-        msg = header + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data == b'1':
-            return True
-        elif data == b'0':
-            return False
-        else:
-            logging.info('***SERVER***: Bad communication. Error 07.')
+        try:
+            header = b'set_scan_thread_check'
+            msg = header + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data == b'1':
+                return True
+            elif data == b'0':
+                return False
+            else:
+                logging.info('***SERVER***: Bad communication. Error 07.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def set_scan_thread_hardware_status(self):
-        header = b'set_scan_thread_hardware_status'
-        msg = header + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data == b'2':
-            return 2
-        elif data == b'3':
-            logging.info(
-                "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
-                "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
-                "hardware.")
-            return 3
-        else:
-            logging.info('***SERVER***: Bad communication. Error 08.')
+        try:
+            header = b'set_scan_thread_hardware_status'
+            msg = header + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data == b'2':
+                return 2
+            elif data == b'3':
+                logging.info(
+                    "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
+                    "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
+                    "hardware.")
+                return 3
+            else:
+                logging.info('***SERVER***: Bad communication. Error 08.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
     def set_scan(self, cur, step, pts):
-        header = b'set_scan'
-        msg = header + bytes(4)
-        msg = msg + format(cur, '.8f').rjust(16, '0').encode()
-        msg = msg + bytes(4)
-        msg = msg + format(step, '.8f').rjust(16, '0').encode()
-        msg = msg + bytes(4)
-        msg = msg + format(pts, '.0f').rjust(8, '0').encode()  # int is 8 bytes here
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data.decode() != 'None':
-            logging.info('***SERVER***: Bad communication. Error 09.')
+        try:
+            header = b'set_scan'
+            msg = header + bytes(4)
+            msg = msg + format(cur, '.8f').rjust(16, '0').encode()
+            msg = msg + bytes(4)
+            msg = msg + format(step, '.8f').rjust(16, '0').encode()
+            msg = msg + bytes(4)
+            msg = msg + format(pts, '.0f').rjust(8, '0').encode()  # int is 8 bytes here
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 09.')
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
 
 
 class gainDevice(Observable.Observable):
@@ -243,10 +277,15 @@ class gainDevice(Observable.Observable):
         try:
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__laser = LaserServerHandler(self.__host, self.__port)
-            logging.info('***SERVER***: Connection with server successful.')
-            #Ask where is Laser
-            self.property_changed_event.fire("cur_wav_f")
-            return True
+            if self.__laser.server_ping():
+                logging.info('***SERVER***: Connection with server successful.')
+                #Ask where is Laser
+                self.property_changed_event.fire("cur_wav_f")
+                return True
+            else:
+                logging.info(
+                    '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang.')
+                return False
         except ConnectionRefusedError:
             logging.info('***SERVER***: No server was found. Check if server is hanging and it is in the good host.')
             return False

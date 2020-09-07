@@ -158,11 +158,13 @@ while True:
                 window.FindElement('VG_LUMIERE').Update(disabled=True)
                 window.FindElement('USER_DEFINED').Update(disabled=True)
         except OSError:
+            ss.s.close()
             print('***SERVER***: Could not BIND probably. MUST work on LOCALHOST.')
     if event == "Hang":
             try:
                 ss.main_loop()
             except socket.timeout:
+                ss.s.close()
                 print('***SERVER***: Socket timeout. Retry connection.')
                 window.FindElement('Hang').Update(disabled=True)
                 window.FindElement('Start').Update(disabled=False)

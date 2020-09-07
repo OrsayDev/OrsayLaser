@@ -53,7 +53,7 @@ from . import control_routine as ctrlRout
 
 class LaserServerHandler():
 
-    def __init__(self):
+    def __init__(self, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
 
@@ -207,6 +207,8 @@ class gainDevice(Observable.Observable):
         self.__servo_step = 2
         self.__nper_pic = 2
         self.__dye = 0
+        self.__host = CLIENT_HOST
+        self.__port = CLIENT_PORT
 
         self.__camera = None
         self.__data = None
@@ -217,7 +219,7 @@ class gainDevice(Observable.Observable):
         self.__power_ramp = False
         self.__per_pic = True
 
-        self.__laser = LaserServerHandler()
+        self.__laser = None
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
@@ -238,6 +240,16 @@ class gainDevice(Observable.Observable):
         self.__laser.server_ping()
 
     def init(self):
+        try:
+            logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
+            self.__laser = LaserServerHandler(self.__host, self.__port)
+            logging.info('***SERVER***: Connection with server successful.')
+            #Ask where is Laser
+            self.property_changed_event.fire("cur_wav_f")
+            return True
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: No server was found. Check if server is hanging and it is in the good host.')
+            return False
 
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
             # find, use usim eels
@@ -572,9 +584,12 @@ class gainDevice(Observable.Observable):
 
     @property  # we dont set cur_wav but rather start wav.
     def cur_wav_f(self) -> str:
-        self.__cur_wav = self.__laser.get_hardware_wl()[0]
-        self.__pwmeter.pw_set_wl(self.__cur_wav)
-        return format(self.__cur_wav, '.4f')
+        if not self.__laser:
+            return 'None'
+        else:
+            self.__cur_wav = self.__laser.get_hardware_wl()[0]
+            self.__pwmeter.pw_set_wl(self.__cur_wav)
+            return format(self.__cur_wav, '.4f')
 
     @property
     def run_status_f(self):
@@ -874,3 +889,19 @@ class gainDevice(Observable.Observable):
     @dye_f.setter
     def dye_f(self, value):
         self.__dye = value
+
+    @property
+    def host_f(self):
+        return self.__host
+
+    @host_f.setter
+    def host_f(self, value):
+        self.__host = value
+
+    @property
+    def port_f(self):
+        return self.__port
+
+    @port_f.setter
+    def port_f(self, value):
+        self.__port = value

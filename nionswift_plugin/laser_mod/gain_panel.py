@@ -152,7 +152,7 @@ class gainhandler:
         self.current_acquition = None
 
     def init_handler(self):
-        self.event_loop.create_task(self.do_enable(False, ['init_server_push', 'server_ping_push',
+        self.event_loop.create_task(self.do_enable(False, ['server_ping_push', 'host_value', 'port_value',
                                                            'init_pb']))  # not working as something is calling this guy
         self.normalize_check_box.checked = False  # in process_data
         self.normalize_current_check_box.checked = True
@@ -164,15 +164,16 @@ class gainhandler:
         self.tolerance_energy_value.text = '0.00'
 
     def init_push(self, widget):
-        self.instrument.init()
-        self.init_pb.enabled = False
-        self.event_loop.create_task(
-            self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
+        ok = self.instrument.init()
+        if ok:
+            self.init_pb.enabled = False
+            self.event_loop.create_task(
+                self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                   'process_eegs_pb',
                                   'process_power_pb', 'fit_pb',
                                   'cancel_pb']))  # not working as something is
         # calling this guy
-        self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp,
+            self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp,
                              self.process_eegs_pb,
                              self.process_power_pb, self.fit_pb,
                              self.cancel_pb]  # i can put here because GUI was already initialized
@@ -901,8 +902,13 @@ class gainView:
 
         self.server_ping_pb = ui.create_push_button(text="Server Ping", name="server_ping_pb",
                                                     on_clicked="server_ping_push")
-        self.init_pb = ui.create_push_button(text="Init", name="init_pb", on_clicked="init_push")
-        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, ui.create_stretch())
+        self.init_pb = ui.create_push_button(text="Init All", name="init_pb", on_clicked="init_push")
+        self.host_label = ui.create_label(name='host_label', text='Host: ')
+        self.host_value = ui.create_line_edit(name='host_value', text='@binding(instrument.host_f)')
+        self.port_label = ui.create_label(name='port_label', text = 'Port: ')
+        self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)')
+        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
+                                      self.port_label, self.port_value, ui.create_stretch(), spacing=12)
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")

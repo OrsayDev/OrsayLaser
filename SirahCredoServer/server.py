@@ -53,7 +53,7 @@ class ServerSirahCredoLaser:
                     try:
                         data = clientsocket.recv(512)
                     except:
-                        print('***SERVER***: Client disconnected. Hanging for new connection...')
+                        print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
                         break
 
                     if not data:
@@ -164,6 +164,18 @@ while True:
     if event == "Hang":
             try:
                 ss.main_loop()
+
+                try:
+                    ss.s.close()
+                    ss = None
+                except:
+                    print('***SERVER***: Server already reseted. There is no Socket object anymore.')
+                window.FindElement('Hang').Update(disabled=True)
+                window.FindElement('Start').Update(disabled=False)
+                window.FindElement('LOCAL_HOST').Update(disabled=False)
+                window.FindElement('VG_LUMIERE').Update(disabled=False)
+                window.FindElement('USER_DEFINED').Update(disabled=False)
+
             except socket.timeout:
                 ss.s.close()
                 print('***SERVER***: Socket timeout. Retry connection.')

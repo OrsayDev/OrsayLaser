@@ -298,22 +298,6 @@ class gainDevice(Observable.Observable):
         self.__laser.server_ping()
 
     def init(self):
-        self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        try:
-            logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
-            self.__laser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
-            if self.__laser.server_ping():
-                logging.info('***SERVER***: Connection with server successful.')
-                #Ask where is Laser
-                self.property_changed_event.fire("cur_wav_f")
-                return True
-            else:
-                logging.info(
-                    '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
-                return False
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: No server was found. Check if server is hanging and it is in the good host.')
-            return False
 
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
             # find, use usim eels
@@ -354,6 +338,23 @@ class gainDevice(Observable.Observable):
             self.fast_blanker_status_f = False
             self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
+
+        self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        try:
+            logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
+            self.__laser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
+            if self.__laser.server_ping():
+                logging.info('***SERVER***: Connection with server successful.')
+                # Ask where is Laser
+                self.property_changed_event.fire("cur_wav_f")
+                return bool(True and self.__OrsayScanInstrument and self.__camera)
+            else:
+                logging.info(
+                    '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
+                return False
+        except ConnectionRefusedError:
+            logging.info('***SERVER***: No server was found. Check if server is hanging and it is in the good host.')
+            return False
 
     def sht(self):
         if self.sht_f == 'CLOSED':

@@ -155,7 +155,7 @@ class gainhandler:
 
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(False, ['server_ping_push', 'host_value', 'port_value',
-                                                           'init_pb']))  # not working as something is calling this guy
+                                                           'init_pb', 'server_label', 'server_value']))  # not working as something is calling this guy
         self.normalize_check_box.checked = False  # in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
@@ -167,17 +167,21 @@ class gainhandler:
 
     def server_shut(self):
         self.init_pb.enabled = True
+        self.server_value.text = 'OFF'
+        self.host_value.enabled = True
+        self.port_value.enabled = True
         self.init_handler() #this puts the GUI in the same position as the beginning
 
     def init_push(self, widget):
         ok = self.instrument.init()
         if ok:
+            self.server_value.text = 'ON'
             self.init_pb.enabled = False
             self.event_loop.create_task(
                 self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                   'process_eegs_pb',
                                   'process_power_pb', 'fit_pb',
-                                  'cancel_pb']))  # not working as something is
+                                  'cancel_pb', 'host_value', 'port_value']))  # not working as something is
         # calling this guy
             self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp,
                              self.process_eegs_pb,
@@ -914,8 +918,10 @@ class gainView:
         self.host_value = ui.create_line_edit(name='host_value', text='@binding(instrument.host_f)')
         self.port_label = ui.create_label(name='port_label', text = 'Port: ')
         self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)')
+        self.server_label = ui.create_label(name='server_label', text='Server: ')
+        self.server_value = ui.create_label(name='server_value', text='OFF')
         self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
-                                      self.port_label, self.port_value, ui.create_stretch(), spacing=12)
+                                      self.port_label, self.port_value, self.server_label, self.server_value, ui.create_stretch(), spacing=12)
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")

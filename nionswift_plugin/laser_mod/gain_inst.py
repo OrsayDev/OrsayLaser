@@ -395,9 +395,9 @@ class gainDevice(Observable.Observable):
 
     def acq(self):
         # check if laser server is alive
-        self.__laser.server_ping()
-        self.__thread = threading.Thread(target=self.acqThread)
-        self.__thread.start()
+        if self.__laser.server_ping():
+            self.__thread = threading.Thread(target=self.acqThread)
+            self.__thread.start()
 
     def abt(self):
         logging.info('***LASER***: Abort scanning. Going back to origin.')
@@ -408,9 +408,9 @@ class gainDevice(Observable.Observable):
     def acq_pr(self):
         self.__acq_number += 1
         #check if laser server is alive
-        self.__laser.server_ping()
-        self.__thread = threading.Thread(target=self.acq_prThread)
-        self.__thread.start()
+        if self.__laser.server_ping():
+            self.__thread = threading.Thread(target=self.acq_prThread)
+            self.__thread.start()
 
     def acq_prThread(self):
         self.run_status_f = self.__power_ramp = self.sht_f = True

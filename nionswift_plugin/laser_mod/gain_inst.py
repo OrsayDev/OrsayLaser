@@ -51,12 +51,16 @@ else:
 from . import control_routine as ctrlRout
 
 
+def SENDMYMESSAGEFUNC(sendmessagefunc):
+    return sendmessagefunc
+
 class LaserServerHandler():
 
-    def __init__(self, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT):
+    def __init__(self, callback, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
         self.s.settimeout(0.1)
+        self.callback = callback
 
     def server_ping(self):
         try:
@@ -69,8 +73,8 @@ class LaserServerHandler():
                 return True
             else:
                 return False
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+        except ConnectionResetError:
+            self.connection_error_handler()
             return False
         except:
             return False
@@ -84,8 +88,8 @@ class LaserServerHandler():
             data = self.s.recv(512)
             if data.decode() != 'None':
                 logging.info('***SERVER***: Bad communication. Error 01.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+        except ConnectionResetError:
+            self.connection_error_handler()
 
     def get_hardware_wl(self):
         try:
@@ -94,8 +98,10 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             return (float(data.decode()), 0)
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+        except ConnectionResetError:
+            self.connection_error_handler()
+            #this is pump laser wavelength and show us there is an error
+            return (532,000, 0)
 
     def setWL(self, wl, cur_wl):
         try:
@@ -113,8 +119,10 @@ class LaserServerHandler():
                 return 2
             else:
                 logging.info('***SERVER***: Bad communication. Error 03.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+                return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+            return None
 
     def abort_control(self):
         try:
@@ -124,8 +132,8 @@ class LaserServerHandler():
             data = self.s.recv(512)
             if data.decode() != 'None':
                 logging.info('***SERVER***: Bad communication. Error 04.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+        except ConnectionResetError:
+            self.connection_error_handler()
 
     def set_scan_thread_locked(self):
         try:
@@ -139,16 +147,21 @@ class LaserServerHandler():
                 return False
             else:
                 logging.info('***SERVER***: Bad communication. Error 05.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+                return False
+        except ConnectionResetError:
+            self.connection_error_handler()
+            return False
 
     def set_scan_thread_release(self):
-        header = b'set_scan_thread_release'
-        msg = header + bytes(4)
-        self.s.sendall(msg)
-        data = self.s.recv(512)
-        if data.decode() != 'None':
-            logging.info('***SERVER***: Bad communication. Error 06.')
+        try:
+            header = b'set_scan_thread_release'
+            msg = header + bytes(4)
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 06.')
+        except ConnectionResetError:
+            self.connection_error_handler()
 
     def set_scan_thread_check(self):
         try:
@@ -162,8 +175,8 @@ class LaserServerHandler():
                 return False
             else:
                 logging.info('***SERVER***: Bad communication. Error 07.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+        except ConnectionResetError:
+            self.connection_error_handler()
 
     def set_scan_thread_hardware_status(self):
         try:
@@ -181,8 +194,10 @@ class LaserServerHandler():
                 return 3
             else:
                 logging.info('***SERVER***: Bad communication. Error 08.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+                return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+            return None
 
     def set_scan(self, cur, step, pts):
         try:
@@ -197,8 +212,13 @@ class LaserServerHandler():
             data = self.s.recv(512)
             if data.decode() != 'None':
                 logging.info('***SERVER***: Bad communication. Error 09.')
-        except ConnectionRefusedError:
-            logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+        except ConnectionResetError:
+            self.connection_error_handler()
+            self.connection_error_handler()
+
+    def connection_error_handler(self):
+        #server shutdown will be handled in the message below
+        self.callback(666)
 
 
 class gainDevice(Observable.Observable):
@@ -213,6 +233,10 @@ class gainDevice(Observable.Observable):
         self.append_data = Event.Event()
         self.end_data = Event.Event()
 
+        #below is related to handling an unexpected server shutdown
+        self.server_shutdown = Event.Event()
+
+        # this is related to the images taken periodically
         self.det_acq = Event.Event()
 
         self.__start_wav = 575.0
@@ -274,9 +298,10 @@ class gainDevice(Observable.Observable):
         self.__laser.server_ping()
 
     def init(self):
+        self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
         try:
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
-            self.__laser = LaserServerHandler(self.__host, self.__port)
+            self.__laser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
             if self.__laser.server_ping():
                 logging.info('***SERVER***: Connection with server successful.')
                 #Ask where is Laser
@@ -369,6 +394,8 @@ class gainDevice(Observable.Observable):
         self.det_acq.fire(det_di, mode, index, npic, show)
 
     def acq(self):
+        # check if laser server is alive
+        self.__laser.server_ping()
         self.__thread = threading.Thread(target=self.acqThread)
         self.__thread.start()
 
@@ -380,6 +407,8 @@ class gainDevice(Observable.Observable):
 
     def acq_pr(self):
         self.__acq_number += 1
+        #check if laser server is alive
+        self.__laser.server_ping()
         self.__thread = threading.Thread(target=self.acq_prThread)
         self.__thread.start()
 
@@ -539,7 +568,10 @@ class gainDevice(Observable.Observable):
                     self.cur_d_f = self.__diode
             if message == 102:
                 logging.info('***CONTROL***: Control OFF but it was never on.')
-
+            if message == 666:
+                self.__abort_force = True
+                logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
+                self.server_shutdown.fire()
         return sendMessage
 
     def Laser_stop_all(self):

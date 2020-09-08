@@ -33,7 +33,7 @@ class ServerSirahCredoLaser:
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.settimeout(TIMEOUT)
         self.s.bind((SERVER_HOST, SERVER_PORT))
-        self.s.listen(5)
+
 
 
         self.__sirah = laser.SirahCredoLaser()
@@ -43,6 +43,7 @@ class ServerSirahCredoLaser:
             print('***SERVER***: Server not successfully created. Leaving...')
 
     def main_loop(self):
+        self.s.listen(0)
         #while True:
         if 1:
             clientsocket, address = self.s.accept()
@@ -126,7 +127,7 @@ class ServerSirahCredoLaser:
                     clientsocket.sendall(return_data)
 
 layout = [
-    [sg.Text('Hanging Timeout (s): '), sg.In('1.00', size=(25, 1), enable_events=True, key='TIMEOUT')],
+    [sg.Text('Hanging Timeout (s): '), sg.In('10.00', size=(25, 1), enable_events=True, key='TIMEOUT')],
     [sg.Radio("Local Host", "Radio", size=(10, 1), key='LOCAL_HOST', enable_events=True, default=True),
      sg.Radio("VG Lumiere", "Radio", size=(10, 1), key='VG_LUMIERE', enable_events=True),
      sg.Radio("User Defined", "Radio", size=(10, 1), key='USER_DEFINED', enable_events=True)],

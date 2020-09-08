@@ -134,6 +134,8 @@ class gainhandler:
         self.append_data_listener = self.instrument.append_data.listen(self.append_data)
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
 
+        self.server_shutdown_listener = self.instrument.server_shutdown.listen(self.server_shut)
+
         self.det_acq_listener = self.instrument.det_acq.listen(self.show_det)
 
         self.__current_DI = None
@@ -163,6 +165,10 @@ class gainhandler:
         self.many_replicas.text = '4'
         self.tolerance_energy_value.text = '0.00'
 
+    def server_shut(self):
+        self.init_pb.enabled = True
+        self.init_handler() #this puts the GUI in the same position as the beginning
+
     def init_push(self, widget):
         ok = self.instrument.init()
         if ok:
@@ -177,6 +183,7 @@ class gainhandler:
                              self.process_eegs_pb,
                              self.process_power_pb, self.fit_pb,
                              self.cancel_pb]  # i can put here because GUI was already initialized
+
 
     def server_ping_push(self, widget):
         self.instrument.server_ping()

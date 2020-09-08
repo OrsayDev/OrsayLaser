@@ -133,7 +133,7 @@ layout = [
      sg.Radio("User Defined", "Radio", size=(10, 1), key='USER_DEFINED', enable_events=True)],
     [sg.Text('Host: '), sg.In('127.0.0.1', size=(25, 1), enable_events=True, key='HOST_NAME', disabled=True)],
     [sg.Text('Port: '), sg.In('65432', size=(25, 1), enable_events=True, key='PORT', disabled=True)],
-    [sg.Button("Start"), sg.Button('Hang', disabled=True)]
+    [sg.Button("Start"), sg.Button('Hang', disabled=True), sg.Button("Reset")]
 ]
 window = sg.Window("Sirah Credo Server", layout)
 while True:
@@ -172,5 +172,16 @@ while True:
             window.FindElement('LOCAL_HOST').Update(disabled=False)
             window.FindElement('VG_LUMIERE').Update(disabled=False)
             window.FindElement('USER_DEFINED').Update(disabled=False)
+    if event == "Reset":
+        try:
+            ss.s.close()
+            ss = None
+        except:
+            print('***SERVER***: Server already reseted. There is no Socket object anymore.')
+        window.FindElement('Hang').Update(disabled=True)
+        window.FindElement('Start').Update(disabled=False)
+        window.FindElement('LOCAL_HOST').Update(disabled=False)
+        window.FindElement('VG_LUMIERE').Update(disabled=False)
+        window.FindElement('USER_DEFINED').Update(disabled=False)
     if event == sg.WIN_CLOSED:
         break

@@ -309,7 +309,7 @@ class gainDevice(Observable.Observable):
                 return True
             else:
                 logging.info(
-                    '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang.')
+                    '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
                 return False
         except ConnectionRefusedError:
             logging.info('***SERVER***: No server was found. Check if server is hanging and it is in the good host.')

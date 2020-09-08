@@ -155,7 +155,7 @@ class gainhandler:
 
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(False, ['server_ping_push', 'host_value', 'port_value',
-                                                           'init_pb', 'server_label', 'server_value']))  # not working as something is calling this guy
+                                                           'init_pb', 'server_label', 'server_value', 'server_choice']))  # not working as something is calling this guy
         self.normalize_check_box.checked = False  # in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
@@ -188,6 +188,20 @@ class gainhandler:
                              self.process_power_pb, self.fit_pb,
                              self.cancel_pb]  # i can put here because GUI was already initialized
 
+
+    def server_choice_pick(self, widget, current_index):
+        if current_index == 0:
+            self.host_value.text = '127.0.0.1'
+            self.port_value.text = '65432'
+        if current_index == 1:
+            self.host_value.text = '129.175.82.159'
+            self.port_value.text = '65432'
+        if current_index == 2:
+            self.host_value.text = '127.127.127.127'
+            self.port_value.text = '9999'
+
+        self.instrument.host_f = self.host_value.text
+        self.instrument.port_f = int(self.port_value.text)
 
     def server_ping_push(self, widget):
         self.instrument.server_ping()
@@ -920,8 +934,9 @@ class gainView:
         self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)')
         self.server_label = ui.create_label(name='server_label', text='Server: ')
         self.server_value = ui.create_label(name='server_value', text='OFF')
+        self.server_choice = ui.create_combo_box(name='server_choice', items=['Local Host', 'VG Lumiere', 'User-Defined'], on_current_index_changed='server_choice_pick')
         self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
-                                      self.port_label, self.port_value, self.server_label, self.server_value, ui.create_stretch(), spacing=12)
+                                      self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), spacing=12)
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")

@@ -272,7 +272,7 @@ class gainDevice(Observable.Observable):
         self.__data = None
 
         self.__thread = None
-        self.__status = False
+        self.__status = True #we start it true because before init everything must be blocked. We free after a succesfull init
         self.__abort_force = False
         self.__power_ramp = False
         self.__per_pic = True
@@ -346,6 +346,7 @@ class gainDevice(Observable.Observable):
             if self.__laser.server_ping():
                 logging.info('***SERVER***: Connection with server successful.')
                 # Ask where is Laser
+                self.__status = False
                 self.property_changed_event.fire("cur_wav_f")
                 return bool(True and self.__OrsayScanInstrument and self.__camera)
             else:
@@ -859,7 +860,7 @@ class gainDevice(Observable.Observable):
             self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()
             self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
         self.property_changed_event.fire('fast_blanker_status_f')
-        self.free_event.fire('all')
+        if not self.__status: self.free_event.fire('all')
 
     @property
     def laser_delay_f(self):

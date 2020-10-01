@@ -174,6 +174,7 @@ class gainhandler:
 
     def init_push(self, widget):
         ok = self.instrument.init()
+        print(ok)
         if ok:
             self.server_value.text = 'ON'
             self.init_pb.enabled = False

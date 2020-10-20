@@ -212,11 +212,19 @@ class gainhandler:
     def acq_push(self, widget):
         self.instrument.acq()
 
+    #Transmission Tab
+    def acq_trans_push(self, widget):
+        pass
+
     def acq_pr_push(self, widget):
         self.instrument.acq_pr()
 
     def abt_push(self, widget):
         self.instrument.abt()
+
+    #Transmission Tab
+    def abt_trans_push(self, widget):
+        pass
 
     def sht_push(self, widget):
         self.instrument.sht()
@@ -1235,7 +1243,32 @@ class gainView:
             self.pick_group, self.actions_group, ui.create_stretch())
                                      )
 
-        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab)
+        ## END ANALYSYS TAB
+
+         ## BEGIN TRANSMISSION TAB
+
+        self.pm1_label = ui.create_label(name='pm1_label', text='Power 01 (uW): ')
+        #self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
+        self.pm2_label = ui.create_label(name='pm1_label', text='Power 02 (uW): ')
+        self.power02_value_label = ui.create_label(text="@binding(instrument.power02_f)")
+        self.pm_row=ui.create_row(self.pm1_label, self.power_value_label, self.pm2_label, self.power02_value_label, ui.create_stretch(), spacing=12)
+
+        self.trans_label = ui.create_label(name='trans_label', text='Transmission: ')
+        self.trans_value = ui.create_label(name='trans_value', text='@binding(instrument.power_transmission_f)')
+        self.trans_row = ui.create_row(self.trans_label, self.trans_value, ui.create_stretch(), spacing=12)
+
+        #self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
+        self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=150)
+        self.abt_trans_pb = ui.create_push_button(text="Abort Transmission", name="abt_trans_pb", on_clicked="abt_trans_push", width=150)
+        self.buttons_trans_row = ui.create_row(self.upt_pb, self.acq_trans_pb, self.abt_trans_pb, ui.create_stretch(), spacing=12)
+
+        self.trans_tab = ui.create_tab(label='Transmission', content=ui.create_column(
+            self.pm_row, self.trans_row, self.buttons_trans_row, ui.create_stretch())
+                                       )
+
+        ## END TRANSMISSION TAB
+
+        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab, self.trans_tab)
 
         self.ui_view = ui.create_column(self.tabs)
 

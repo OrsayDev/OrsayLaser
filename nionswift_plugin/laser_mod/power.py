@@ -19,17 +19,19 @@ def SENDMYMESSAGEFUNC(sendmessagefunc):
 
 class TLPowerMeter:
     
-    def __init__(self, sendmessage):
+    def __init__(self, sendmessage, which):
         self.sendmessage = sendmessage
         self.pwthread = None
         self.rm = pyvisa.ResourceManager()
+        self.id = which
         try:
-            self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
+            self.tl = self.rm.open_resource(which)
             self.tl.timeout=50
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
             self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
         except:
+            print(self.tl.query('*IDN?'))
             self.sendmessage(24)
 
     
@@ -38,6 +40,7 @@ class TLPowerMeter:
         try:
             self.tl.write(string)
         except:
+            print(self.tl.query('*IDN?'))
             self.sendmessage(21)
 
 
@@ -45,6 +48,7 @@ class TLPowerMeter:
         try:
             return (float(self.tl.query('READ?'))*1e6)
         except:
+            print(self.tl.query('*IDN?'))
             self.sendmessage(22)
             return (float(self.tl.query('FETCH?'))*1e6)
 
@@ -52,19 +56,23 @@ class TLPowerMeter:
         try:
             self.tl.close()
             time.sleep(0.01)
-            self.tl = self.rm.open_resource('USB0::4883::32882::1907040::0::INSTR')
+            self.tl = self.rm.open_resource(self.id)
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
             self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
+            print(self.tl.query('*IDN?'))
             self.sendmessage(25)
         except:
+            print(self.tl.query('*IDN?'))
             self.sendmessage(26)
 
     def pw_set_avg(self, value):
         try:
             self.tl.write('SENS:AVERAGE:COUNT '+str(value))
             print(self.tl.query("SENS:AVERAGE:COUNT?"))
+            print(self.tl.query('*IDN?'))
             self.sendmessage(27)
         except:
+            print(self.tl.query('*IDN?'))
             self.sendmessage(28)
 

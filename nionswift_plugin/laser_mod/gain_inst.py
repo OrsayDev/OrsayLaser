@@ -241,6 +241,8 @@ class gainDevice(Observable.Observable):
         self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
         self.__power = 0.
+        self.__power02 = 0.
+        self.__power_transmission = 0.
         self.__power_ref = 0.
         self.__diode = 0.10
         self.__servo_pos = 0
@@ -270,11 +272,15 @@ class gainDevice(Observable.Observable):
         self.__abort_force = False
         self.__power_ramp = False
         self.__per_pic = True
+        self.__per_pic = True
 
         self.__laser = None
 
         self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage)
+        self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR')
+
+        self.__power02_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
 
         self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
@@ -363,6 +369,7 @@ class gainDevice(Observable.Observable):
 
     def hard_reset(self):
         self.__pwmeter.pw_reset()
+        self.__pwmeter02.pw_reset()
 
     def diode(self, val):
         self.d_f = val
@@ -373,6 +380,8 @@ class gainDevice(Observable.Observable):
     def upt(self):
         self.property_changed_event.fire("cur_wav_f")
         self.property_changed_event.fire("power_f")
+        self.property_changed_event.fire("power02_f")
+        self.property_changed_event.fire("power_transmission_f")
         if not self.__status:
             self.free_event.fire("all")
 
@@ -656,6 +665,7 @@ class gainDevice(Observable.Observable):
         else:
             self.__cur_wav = self.__laser.get_hardware_wl()[0]
             self.__pwmeter.pw_set_wl(self.__cur_wav)
+            self.__pwmeter02.pw_set_wl(self.__cur_wav)
             return format(self.__cur_wav, '.4f')
 
     @property
@@ -675,7 +685,22 @@ class gainDevice(Observable.Observable):
                     self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
         else:
             self.__power = self.__pwmeter.pw_read()
-        return format(self.__power, '.2f')
+        return format(self.__power, '.3f')
+
+    @property
+    def power02_f(self):
+        if DEBUG_pw:
+            self.__power02 = (self.__pwmeter02.pw_read() + (self.__diode/2.) ** 2) * (
+                    self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter02.pw_read()
+        else:
+            self.__power02 = self.__pwmeter02.pw_read()
+        return format(self.__power02, '.3f')
+
+    @property
+    def power_transmission_f(self):
+        self.__power_transmission = self.__power02 / self.__power
+        return format(self.__power_transmission, '.3f')
+
 
     @property
     def locked_power_f(self):
@@ -927,6 +952,7 @@ class gainDevice(Observable.Observable):
         try:
             self.__powermeter_avg = int(value)
             self.__pwmeter.pw_set_avg(self.__powermeter_avg)
+            self.__pwmeter02.pw_set_avg(self.__powermeter_avg)
         except:
             logging.info("***POWERMETER***: Please enter an integer.")
 

@@ -1,10 +1,6 @@
 import sys
-import logging
 import time
-import threading
 import numpy
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
 
 __author__ = "Yves Auad"
 

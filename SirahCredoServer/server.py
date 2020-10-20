@@ -2,6 +2,8 @@ import socket
 import os
 import json
 import PySimpleGUI as sg
+import laser_vi
+import laser
 
 __author__ = "Yves Auad"
 
@@ -9,34 +11,24 @@ abs_path = os.path.abspath(os.path.join((__file__ + "/../../nionswift_plugin/las
 with open(abs_path) as savfile:
     settings = json.load(savfile)
 
-DEBUG_LASER = settings["LASER"]["DEBUG"]
 SERVER_HOST = settings["SOCKET_SERVER"]["HOST"]
 SERVER_PORT = settings["SOCKET_SERVER"]["PORT"]
-
-if DEBUG_LASER:
-    import laser_vi as laser
-else:
-    import laser as laser
 
 
 class ServerSirahCredoLaser:
 
     def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT, TIMEOUT=10.0):
         print("***SERVER***: Initializing SirahCredoServer...")
-        if DEBUG_LASER:
-            print("***SERVER***: DEBUG MODE.")
         if SERVER_HOST == '127.0.0.1':
-            print('***SERVER***: Server Running in Local Host.')
+            self.__sirah = laser_vi.SirahCredoLaser()
+            print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         elif SERVER_HOST == '129.175.82.159':
-            print('***SERVER***: Server Running in VG Lumiere.')
+            self.__sirah = laser.SirahCredoLaser()
+            print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.settimeout(TIMEOUT)
         self.s.bind((SERVER_HOST, SERVER_PORT))
-
-
-
-        self.__sirah = laser.SirahCredoLaser()
 
         if not self.__sirah.sucessfull:
             self.s.close()  # quits the server is not successful

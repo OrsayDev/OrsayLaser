@@ -16,7 +16,6 @@ with open(abs_path) as savfile:
     settings = json.load(savfile)
 
 DEBUG_pw = settings["PW"]["DEBUG"]
-DEBUG_laser = settings["LASER"]["DEBUG"]
 DEBUG_ps = settings["PS"]["DEBUG"]
 DEBUG_servo = settings["SERVO"]["DEBUG"]
 CAMERA = settings["CAMERA"]["WHICH"]
@@ -26,17 +25,12 @@ PW_AVG = settings["PW"]["AVG"]
 CLIENT_HOST = settings["SOCKET_CLIENT"]["HOST"]
 CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 
-DEBUG = DEBUG_pw and DEBUG_laser and DEBUG_ps and DEBUG_servo
+DEBUG = DEBUG_pw and DEBUG_ps and DEBUG_servo
 
 if DEBUG_pw:
     from . import power_vi as power
 else:
     from . import power as power
-
-if DEBUG_laser:
-    pass
-else:
-    pass
 
 if DEBUG_ps:
     from . import power_supply_vi as ps

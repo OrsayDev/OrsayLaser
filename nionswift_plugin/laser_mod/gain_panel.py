@@ -174,7 +174,6 @@ class gainhandler:
 
     def init_push(self, widget):
         ok = self.instrument.init()
-        print(ok)
         if ok:
             self.server_value.text = 'ON'
             self.init_pb.enabled = False
@@ -262,7 +261,7 @@ class gainhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb"]))
+        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb", 'host_value', 'port_value', 'server_choice']))
 
     def prepare_widget_disable(self, value):
         self.event_loop.create_task(self.do_enable(False, ["init_pb"]))

@@ -73,6 +73,9 @@ class LaserServerHandler():
         except:
             return False
 
+    def shutdown(self):
+        self.s.close()
+
     def set_hardware_wl(self, wl):
         try:
             header = b'set_hardware_wl'
@@ -294,8 +297,12 @@ class gainDevice(Observable.Observable):
         self.__OrsayScanInstrument = None
         self.__camera = None
 
-    def server_ping(self):
+    def server_instrument_ping(self):
         self.__laser.server_ping()
+
+    def server_instrument_shutdown(self):
+        if self.__laser:
+            self.__laser.shutdown()
 
     def init(self):
 

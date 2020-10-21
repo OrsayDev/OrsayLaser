@@ -112,7 +112,6 @@ class SirahCredoLaser:
 
     def set_startWL(self, wl: float, cur: float):
         self.set_hardware_wl(wl)
-        time.sleep(abs((wl - cur) * 0.4) + 0.2)
 
     def setWL(self, wavelength: float, current_wavelength: float):
         if (abs(float(current_wavelength) - float(wavelength)) <= 0.001):

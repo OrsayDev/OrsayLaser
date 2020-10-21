@@ -53,7 +53,7 @@ class LaserServerHandler():
     def __init__(self, callback, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
-        self.s.settimeout(0.1)
+        self.s.settimeout(0.5)
         self.callback = callback
 
     def server_ping(self):
@@ -586,9 +586,8 @@ class gainDevice(Observable.Observable):
 
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
-            #threading.Timer(0.25, self.property_changed_event.fire, args=('cur_wav_f',)).start()
             self.property_changed_event.fire("cur_wav_f")  # don't need a thread.
-            time.sleep(0.25)
+            time.sleep(0.05)
             self.wavelength_ready()
         else:
             self.run_status_f = False  # this already frees GUI
@@ -609,12 +608,12 @@ class gainDevice(Observable.Observable):
             if response == 1:
                 logging.info("***LASER***: start WL is current WL")
                 self.run_status_f = False
-                self.combo_data_f = False
+                self.combo_data_f = False #when false, GUI is fre-ed by status
             elif response == 2:
                 logging.info("***LASER***: Current WL being updated...")
                 self.run_status_f = True
-                self.combo_data_f = False
-                threading.Timer(0.25, self.wavelength_ready, args=()).start()
+                self.combo_data_f = False #when false, GUI is fre-ed by status
+                threading.Timer(0.05, self.wavelength_ready, args=()).start()
 
     @property
     def finish_wav_f(self) -> float:

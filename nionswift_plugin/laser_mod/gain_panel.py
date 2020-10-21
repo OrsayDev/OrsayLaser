@@ -206,6 +206,10 @@ class gainhandler:
     def server_ping_push(self, widget):
         self.instrument.server_ping()
 
+    def server_shutdown_push(self, widget):
+        pass
+        print('server_shutdown not yet implemented. Please do it.')
+
     def upt_push(self, widget):
         self.instrument.upt()
 
@@ -943,8 +947,9 @@ class gainView:
         self.server_label = ui.create_label(name='server_label', text='Server: ')
         self.server_value = ui.create_label(name='server_value', text='OFF')
         self.server_choice = ui.create_combo_box(name='server_choice', items=['Local Host', 'VG Lumiere', 'User-Defined'], on_current_index_changed='server_choice_pick')
+        self.server_shutdown = ui.create_push_button(name='server_shutdown', text='Shutdown', on_clicked='server_shutdown_push')
         self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
-                                      self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), spacing=12)
+                                      self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), self.server_shutdown, spacing=12)
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")

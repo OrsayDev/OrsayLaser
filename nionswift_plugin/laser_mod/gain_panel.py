@@ -154,8 +154,9 @@ class gainhandler:
         self.current_acquition = None
 
     def init_handler(self):
-        self.event_loop.create_task(self.do_enable(False, ['server_ping_push', 'host_value', 'port_value',
-                                                           'init_pb', 'server_label', 'server_value', 'server_choice']))  # not working as something is calling this guy
+        self.event_loop.create_task(self.do_enable(True, ['']))
+        self.event_loop.create_task(self.do_enable(False, ['init_pb', 'server_ping_push', 'host_value', 'port_value',
+                                                           'server_label', 'server_value', 'server_choice']))  # not working as something is calling this guy
         self.normalize_check_box.checked = False  # in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
@@ -168,20 +169,18 @@ class gainhandler:
     def server_shut(self):
         self.init_pb.enabled = True
         self.server_value.text = 'OFF'
-        self.host_value.enabled = True
-        self.port_value.enabled = True
         self.init_handler() #this puts the GUI in the same position as the beginning
 
     def init_push(self, widget):
         ok = self.instrument.init()
         if ok:
-            self.server_value.text = 'ON'
             self.init_pb.enabled = False
+            self.server_value.text = 'ON'
             self.event_loop.create_task(
                 self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                   'process_eegs_pb',
                                   'process_power_pb', 'fit_pb',
-                                  'cancel_pb', 'host_value', 'port_value']))  # not working as something is
+                                  'cancel_pb']))  # not working as something is
         # calling this guy
             self.actions_list = [self.plot_power_wav, self.align_zlp_max, self.align_zlp_fit, self.smooth_zlp,
                              self.process_eegs_pb,
@@ -273,7 +272,7 @@ class gainhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb", 'host_value', 'port_value', 'server_choice']))
+        self.event_loop.create_task(self.do_enable(False, ["init_pb", "abt_pb"]))
 
     def prepare_widget_disable(self, value):
         self.event_loop.create_task(self.do_enable(False, ["init_pb"]))
@@ -284,7 +283,8 @@ class gainhandler:
             self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
                                   'process_eegs_pb',
                                   'process_power_pb', 'fit_pb',
-                                  'cancel_pb']))
+                                  'cancel_pb'
+                                  ]))
 
     def show_dye(self, widget):
 

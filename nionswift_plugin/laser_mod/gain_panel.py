@@ -146,6 +146,7 @@ class gainhandler:
 
         self.wav_di = None
         self.pow_di = None
+        self.pow02_di = None
         self.ser_di = None
         self.ps_di = None
         self.cam_di = None
@@ -311,9 +312,14 @@ class gainhandler:
             self.document_controller.document_model.append_data_item(di_597.data_item)
 
     def show_det(self, xdatas, mode, nacq, npic, show):
-        while self.document_controller.document_model.get_data_item_by_title(
-                'Laser Wavelength ' + str(nacq)) is not None:
-            nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
+
+        for data_items in self.document_controller.document_model._DocumentModel__data_items:
+            if data_items.title == 'Laser Wavelength ' + str(nacq):
+                nacq += 1
+
+        #while self.document_controller.document_model.get_data_item_by_title(
+        #        'Laser Wavelength ' + str(nacq)) is not None:
+        #    nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
 
         for i, xdata in enumerate(xdatas):
             data_item = DataItem.DataItem()
@@ -345,13 +351,17 @@ class gainhandler:
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
             if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
 
-            while self.document_controller.document_model.get_data_item_by_title(
-                    'Laser Wavelength ' + str(nacq)) is not None:
-                nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
+            for data_items in self.document_controller.document_model._DocumentModel__data_items:
+                if data_items.title == 'Laser Wavelength ' + str(nacq):
+                    nacq += 1
+
+            #while self.document_controller.document_model.get_data_item_by_title(
+            #        'Laser Wavelength ' + str(nacq)) is not None:
+            #    nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
 
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
-            if trans: self.pow02_di = DataItemLaserCreation("Power 02" + str(nacq), self.pow02_array, "POW")
+            self.pow02_di = DataItemLaserCreation("Power 02" + str(nacq), self.pow02_array, "POW")
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
@@ -379,11 +389,12 @@ class gainhandler:
 
         if not self.__adjusted and camera_data:
 
-            self.cam_pixels = camera_data.data.shape[1]
-            cam_calibration = camera_data.get_dimensional_calibration(1)
+            print(camera_data.get_dimensional_calibration)
+            self.cam_pixels = camera_data.data.shape[0]
+            cam_calibration = camera_data.get_dimensional_calibration(0)
 
-            if camera_data.data.shape[1] != self.cam_array.shape[1]:
-                self.cam_array = numpy.zeros((self.pts * self.avg, camera_data.data.shape[1]))
+            if camera_data.data.shape[0] != self.cam_array.shape[0]:
+                self.cam_array = numpy.zeros((self.pts * self.avg, camera_data.data.shape[0]))
                 logging.info('***ACQUISITION***: Corrected #PIXELS.')
             try:
                 self.cam_di.set_cam_di_calibration(cam_calibration)

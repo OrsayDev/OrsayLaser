@@ -12,8 +12,9 @@ def SENDMYMESSAGEFUNC(sendmessagefunc):
 
 class TLPowerMeter:
 
-    def __init__(self, sendmessage):
+    def __init__(self, sendmessage, which):
         self.sendmessage=sendmessage
+        self.id = which
         self.wl = 580.
 
 

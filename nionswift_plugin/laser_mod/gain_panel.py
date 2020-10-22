@@ -217,7 +217,7 @@ class gainhandler:
 
     #Transmission Tab
     def acq_trans_push(self, widget):
-        pass
+        self.instrument.acq_trans()
 
     def acq_pr_push(self, widget):
         self.instrument.acq_pr()
@@ -1255,7 +1255,9 @@ class gainView:
         #self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
         self.pm2_label = ui.create_label(text='Power 02 (uW): ')
         self.power02_value_label = ui.create_label(text="@binding(instrument.power02_f)")
-        self.pm_row=ui.create_row(self.pm1_label, self.power_value_label, self.pm2_label, self.power02_value_label, ui.create_stretch(), spacing=12)
+        self.pm1_factor_label = ui.create_label(text='[R]/T Factor for PM1: ')
+        self.pm1_factor_value = ui.create_line_edit(name='pm1_factor_value', text='@binding(instrument.rt_f)')
+        self.pm_row=ui.create_row(self.pm1_label, self.power_value_label, self.pm2_label, self.power02_value_label, self.pm1_factor_label, self.pm1_factor_value, ui.create_stretch(), spacing=12)
 
         self.trans_label = ui.create_label(text='Transmission: ')
         self.trans_value = ui.create_label(text='@binding(instrument.power_transmission_f)')

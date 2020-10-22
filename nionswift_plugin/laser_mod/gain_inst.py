@@ -245,6 +245,7 @@ class gainDevice(Observable.Observable):
         self.__tpts = int(self.__avg * self.__pts)
         self.__power = 0.
         self.__power02 = 0.
+        self.__rt = 10.
         self.__power_transmission = 0.
         self.__power_ref = 0.
         self.__diode = 0.10
@@ -405,17 +406,18 @@ class gainDevice(Observable.Observable):
         time.sleep(frame_time * 1.2)  # 20% more of the time for a single frame
         self.det_acq.fire(det_di, mode, index, npic, show)
 
-    def acq(self):
-        # check if laser server is alive
-        if self.__laser.server_ping():
-            self.__thread = threading.Thread(target=self.acqThread)
-            self.__thread.start()
-
     def abt(self):
         logging.info('***LASER***: Abort scanning. Going back to origin.')
         self.__abort_force = True
         self.__laser.abort_control()  # abort laser thread as well.
         self.run_status_f = False  # force free GUI
+
+    def acq_trans(self):
+        self.__acq_number += 1
+        # check if laser server is alive
+        if self.__laser.server_ping():
+            self.__thread = threading.Thread(target=self.acq_transThread)
+            self.__thread.start()
 
     def acq_pr(self):
         self.__acq_number += 1
@@ -423,6 +425,21 @@ class gainDevice(Observable.Observable):
         if self.__laser.server_ping():
             self.__thread = threading.Thread(target=self.acq_prThread)
             self.__thread.start()
+
+    def acq(self):
+        # check if laser server is alive
+        if self.__laser.server_ping():
+            self.__thread = threading.Thread(target=self.acqThread)
+            self.__thread.start()
+
+    #This is for transmission measurements with the laser. Scan wavelength and get power in both powermeters
+    def acq_transThread(self):
+        self.run_status_f = self.sht_f = True
+        self.__abort_force = False
+        i = 0  # e-point counter
+        i_max = self.__pts
+        j = 0  # each frame inside an specific e-point
+        j_max = self.__avg  # dont put directly self.__avg because it will keep refreshing UI
 
     def acq_prThread(self):
         self.run_status_f = self.__power_ramp = self.sht_f = True
@@ -701,6 +718,18 @@ class gainDevice(Observable.Observable):
         else:
             self.__power02 = self.__pwmeter02.pw_read()
         return format(self.__power02, '.3f')
+
+    @property
+    def rt_f(self): #this func is the R/T factor for the first powermeter. This will normalize power correctly
+        return format(self.__rt, '.1f')
+
+    @rt_f.setter
+    def rt_f(self, value):
+        try:
+            self.__rt = float(value)
+        except:
+            self.__rt = 100.
+            logging.info('***POWERMETER***: [R]/T factor must be a float. If R/T is 10/90, put 10. Now using 100')
 
     @property
     def power_transmission_f(self):

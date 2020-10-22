@@ -448,7 +448,7 @@ class gainDevice(Observable.Observable):
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
             self.__acq_number += 1
-            self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
+            self.call_data.fire(self.__acq_number, self.pts_f + 0, self.avg_f, self.__start_wav, self.__finish_wav,
                                 self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, trans=1)
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
@@ -480,11 +480,6 @@ class gainDevice(Observable.Observable):
 
         self.sht_f = False
         logging.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
-        while j < j_max and not self.__abort_force:
-            last_cam_acq = self.__camera.grab_next_to_finish()[0]
-            self.combo_data_f = True
-            self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
-            j += 1
 
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.

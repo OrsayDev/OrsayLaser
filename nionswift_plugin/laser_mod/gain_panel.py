@@ -449,17 +449,17 @@ class gainhandler:
             pass
         if self.__current_DI:
             temp_acq = int(self.file_name_value.text[-2:])  # Works from 0-99.
-            self.file_UUID_value.text = self.__current_DI.uuid
-            self.file_dim_value.text = self.__current_DI.data.ndim
+            self.file_UUID_value.text = str(self.__current_DI.uuid)
+            self.file_dim_value.text = str(self.__current_DI.data.ndim)
             self.file_x_disp_value.text = str(self.__current_DI.dimensional_calibrations[1].scale) + ' ' + \
                                           self.__current_DI.dimensional_calibrations[1].units
             self.zlp_value.text = ''
             self.energy_window_value.text = ''
 
             try:
-                self.file_type_value.text = self.__current_DI.description['which']
-                self.pts_detected_value.text = self.__current_DI.description['pts']
-                self.avg_detected_value.text = self.__current_DI.description['averages']
+                self.file_type_value.text = str(self.__current_DI.description['which'])
+                self.pts_detected_value.text = str(self.__current_DI.description['pts'])
+                self.avg_detected_value.text = str(self.__current_DI.description['averages'])
                 self.start_detected_value.text = format(self.__current_DI.description['start_wav'], '.3f')
                 self.final_detected_value.text = format(self.__current_DI.description['final_wav'], '.3f')
                 self.step_detected_value.text = format(self.__current_DI.description['step_wav'], '.3f')

@@ -465,6 +465,7 @@ class gainDevice(Observable.Observable):
 
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
+                time.sleep(0.1)
                 self.combo_data_f = True  # check laser now. True simply blocks GUI
                 self.append_data.fire(self.combo_data_f, i, j, False)
                 j += 1
@@ -477,10 +478,7 @@ class gainDevice(Observable.Observable):
                 logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
-
         self.sht_f = False
-        logging.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
-
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
         if self.__ctrl_type == 1: self.servo_f = self.__servo_pos_initial  # Even if this is not controlled it doesnt

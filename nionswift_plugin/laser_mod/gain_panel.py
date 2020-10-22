@@ -988,28 +988,28 @@ class gainView:
                                       self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), self.server_shutdown, spacing=12)
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
-        self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line")
+        self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line", width=100)
         self.pts_label = ui.create_label(text='E-points: ')
         self.pts_value_label = ui.create_label(text="@binding(instrument.pts_f)")
         self.ui_view1 = ui.create_row(self.start_label, self.start_line, ui.create_stretch(), self.pts_label,
                                       self.pts_value_label, spacing=12)
 
         self.finish_label = ui.create_label(text='Finish Wavelength (nm): ')
-        self.finish_line = ui.create_line_edit(text="@binding(instrument.finish_wav_f)", name="finish_line")
+        self.finish_line = ui.create_line_edit(text="@binding(instrument.finish_wav_f)", name="finish_line", width=100)
         self.tpts_label = ui.create_label(text='Total points: ')
         self.tpts_value_label = ui.create_label(text='@binding(instrument.tpts_f)')
         self.ui_view2 = ui.create_row(self.finish_label, self.finish_line, ui.create_stretch(), self.tpts_label,
                                       self.tpts_value_label, spacing=12)
 
         self.step_label = ui.create_label(text='Step Wavelength (nm): ')
-        self.step_line = ui.create_line_edit(text="@binding(instrument.step_wav_f)", name="step_line")
+        self.step_line = ui.create_line_edit(text="@binding(instrument.step_wav_f)", name="step_line", width=100)
         self.current_label = ui.create_label(text='Current Wavelength (nm): ')
         self.current_value_label = ui.create_label(text='@binding(instrument.cur_wav_f)')
         self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(), self.current_label,
                                       self.current_value_label, spacing=12)
 
         self.avg_label = ui.create_label(text='Averages: ')
-        self.avg_line = ui.create_line_edit(text="@binding(instrument.avg_f)", name="avg_line")
+        self.avg_line = ui.create_line_edit(text="@binding(instrument.avg_f)", name="avg_line", width=100)
         self.running_label = ui.create_label(text='Is running? ')
         self.running_value_label = ui.create_label(text='@binding(instrument.run_status_f)')
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label,
@@ -1028,15 +1028,24 @@ class gainView:
         self.power_lock_label = ui.create_label(text='Control Power (uW): ')
         self.power_lock_value = ui.create_label(text='@binding(instrument.locked_power_f)')
         self.power_row01 = ui.create_row(self.power_lock_label, self.power_lock_value, ui.create_stretch())
+        self.pm2_label = ui.create_label(text='Power 02 (uW): ')
+        self.power02_value_label = ui.create_label(text="@binding(instrument.power02_f)")
+        self.pm1_factor_label = ui.create_label(text='[R]/T Factor for PM1: ')
+        self.pm1_factor_value = ui.create_line_edit(name='pm1_factor_value', text='@binding(instrument.rt_f)', width=100)
+        self.power_row02 = ui.create_row(self.pm2_label, self.power02_value_label, ui.create_stretch(),
+                                         self.pm1_factor_label, self.pm1_factor_value)
+        self.trans_label = ui.create_label(text='Transmission: ')
+        self.trans_value = ui.create_label(text='@binding(instrument.power_transmission_f)')
+        self.power_row03 = ui.create_row(self.trans_label, self.trans_value, ui.create_stretch(), spacing=12)
         self.power_avg_label = ui.create_label(text='Number of Averages: ')
-        self.power_avg_value = ui.create_line_edit(name='power_avg_value', text='@binding(instrument.powermeter_avg_f)')
+        self.power_avg_value = ui.create_line_edit(name='power_avg_value', text='@binding(instrument.powermeter_avg_f)', width=100)
         self.power_reset_button = ui.create_push_button(text='Hard Reset', name='power_reset_button',
                                                         on_clicked='pw_hard_reset')
-        self.power_row02 = ui.create_row(self.power_avg_label, self.power_avg_value, ui.create_stretch(),
+        self.power_row04 = ui.create_row(self.power_avg_label, self.power_avg_value, ui.create_stretch(),
                                          self.power_reset_button)
 
         self.powermeter_group = ui.create_group(title='ThorLabs PowerMeter', content=ui.create_column(
-            self.power_row00, self.power_row01, self.power_row02)
+            self.power_row00, self.power_row01, self.power_row02, self.power_row03, self.power_row04)
                                                 )
 
         self.diode_label = ui.create_label(text='Diodes: ')
@@ -1070,7 +1079,7 @@ class gainView:
         self.diode_cur_slider = ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=0,
                                                  maximum=int(MAX_CURRENT * 100))
         self.text_label = ui.create_label(text='       ||       ')
-        self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_edit_f)', name='cur_line')
+        self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_edit_f)', name='cur_line', width=100)
         self.less_pb = ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)
         self.more_pb = ui.create_push_button(text=">>", name="more_pb", on_clicked="more_push", width=25)
         self.ui_view10 = ui.create_row(self.diode_cur_label, self.diode_cur_slider, self.text_label,
@@ -1100,7 +1109,7 @@ class gainView:
                                        self.servo_wobbler_cb, spacing=12)
 
         self.servo_step_label = ui.create_label(text='Servo Step (°): ')
-        self.servo_step_value = ui.create_line_edit(name='servo_step_value', text='@binding(instrument.servo_step_f)')
+        self.servo_step_value = ui.create_line_edit(name='servo_step_value', text='@binding(instrument.servo_step_f)', width=100)
         self.servo_p_points_label = ui.create_label(text='P-Points: ')
         self.servo_p_points_value = ui.create_label(text='@binding(instrument.servo_pts_f)')
         self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, self.servo_p_points_label,
@@ -1118,17 +1127,17 @@ class gainView:
 
         # Fast Blanker
         self.delay_label = ui.create_label(text='Delay (ns): ')
-        self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)')
+        self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)', width=100)
         self.delay_slider = ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)',
                                              minimum=1740, maximum=1850)
         self.delay_row = ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider,
                                        ui.create_stretch())
 
         self.width_label = ui.create_label(text='Width (ns): ')
-        self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)')
+        self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)', width=100)
         self.frequency_label = ui.create_label(text='Frequency (Hz): ')
         self.frequency_value = ui.create_line_edit(name='frequency_value',
-                                                   text='@binding(instrument.laser_frequency_f)')
+                                                   text='@binding(instrument.laser_frequency_f)', width=100)
         self.width_row = ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
                                        self.frequency_label, self.frequency_value, ui.create_stretch())
 
@@ -1152,17 +1161,19 @@ class gainView:
         self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
         self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push", width=150)
         self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push", width=150)
+
         self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, ui.create_stretch(), spacing=12)
 
         self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=150)
+        self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=150)
         self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox',
                                                           checked='@binding(instrument.per_pic_f)',
                                                           on_check_state_changed='change_periodic_pic',
                                                           text='Periodic DET?')
         self.periodic_pics_label = ui.create_label(text='How many (per acq.): ')
         self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value',
-                                                       text='@binding(instrument.many_per_pic_f)')
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.periodic_pics_checkbox, self.periodic_pics_label,
+                                                       text='@binding(instrument.many_per_pic_f)', width=100)
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.acq_trans_pb, self.periodic_pics_checkbox, self.periodic_pics_label,
                                            self.periodic_pics_value, ui.create_stretch(), spacing=12)
 
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(
@@ -1180,7 +1191,7 @@ class gainView:
         self.pb_row = ui.create_row(self.grab_pb, self.plot_power_wav, ui.create_stretch())
 
         self.file_name_label = ui.create_label(text='Title:', name='file_name_label')
-        self.file_name_value = ui.create_line_edit(name='file_name_value')
+        self.file_name_value = ui.create_line_edit(name='file_name_value', width=150)
         self.file_type_label = ui.create_label(text='Type: ', name='file_type_label')
         self.file_type_value = ui.create_label(text='type?', name='file_type_value')
         self.file_name_row = ui.create_row(self.file_name_label, self.file_name_value, ui.create_stretch(),
@@ -1243,11 +1254,11 @@ class gainView:
                                      ui.create_stretch(), spacing=12)
 
         self.savgol_window_label = ui.create_label(text='Smoothing Window: ', name='savgol_window_label')
-        self.savgol_window_value = ui.create_line_edit(name='savgol_window_value')
+        self.savgol_window_value = ui.create_line_edit(name='savgol_window_value', width=100)
         self.savgol_poly_order_label = ui.create_label(text='Poly Order: ', name='savgol_poly_order_label')
-        self.savgol_poly_order_value = ui.create_line_edit(name='savgol_poly_order_value')
+        self.savgol_poly_order_value = ui.create_line_edit(name='savgol_poly_order_value', width=100)
         self.savgol_oversample_label = ui.create_label(text='Oversampling: ', name='savgol_oversample_label')
-        self.savgol_oversample_value = ui.create_line_edit(name='savgol_oversample_value')
+        self.savgol_oversample_value = ui.create_line_edit(name='savgol_oversample_value', width=100)
         self.savgol_row = ui.create_row(self.savgol_window_label, self.savgol_window_value,
                                         self.savgol_poly_order_label, self.savgol_poly_order_value,
                                         self.savgol_oversample_label, self.savgol_oversample_value, ui.create_stretch())
@@ -1262,7 +1273,7 @@ class gainView:
         self.process_power_pb = ui.create_push_button(text='Process Power Scan', on_clicked='process_data',
                                                       name='process_power_pb')
         self.many_replicas_label = ui.create_label(text='# Orders?: ')
-        self.many_replicas = ui.create_line_edit(name='many_replicas')
+        self.many_replicas = ui.create_line_edit(name='many_replicas', width=100)
         self.pb_process_row = ui.create_row(self.process_eegs_pb, self.process_power_pb, self.normalize_check_box,
                                             self.many_replicas_label, self.many_replicas,
                                             spacing=3)
@@ -1270,7 +1281,7 @@ class gainView:
         self.fit_pb = ui.create_push_button(text='Fit', on_clicked='fit_or_cancel', name='fit_pb')
         self.cancel_pb = ui.create_push_button(text='Cancel', on_clicked='fit_or_cancel', name='cancel_pb')
         self.tolerance_energy = ui.create_label(text='Tolerance in Energy: ')
-        self.tolerance_energy_value = ui.create_line_edit(name='tolerance_energy_value')
+        self.tolerance_energy_value = ui.create_line_edit(name='tolerance_energy_value', width=100)
         self.fit_row = ui.create_row(self.fit_pb, self.cancel_pb, self.tolerance_energy, self.tolerance_energy_value,
                                      ui.create_stretch(), spacing=12)
 
@@ -1282,38 +1293,10 @@ class gainView:
         self.ana_tab = ui.create_tab(label='Analysis', content=ui.create_column(
             self.pick_group, self.actions_group, ui.create_stretch())
                                      )
-
         ## END ANALYSYS TAB
 
-         ## BEGIN TRANSMISSION TAB
-
-        self.pm1_label = ui.create_label(text='Power 01 (uW): ')
-        #self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
-        self.pm2_label = ui.create_label(text='Power 02 (uW): ')
-        self.power02_value_label = ui.create_label(text="@binding(instrument.power02_f)")
-        self.pm1_factor_label = ui.create_label(text='[R]/T Factor for PM1: ')
-        self.pm1_factor_value = ui.create_line_edit(name='pm1_factor_value', text='@binding(instrument.rt_f)')
-        self.pm_row=ui.create_row(self.pm1_label, self.power_value_label, self.pm2_label, self.power02_value_label, self.pm1_factor_label, self.pm1_factor_value, ui.create_stretch(), spacing=12)
-
-        self.trans_label = ui.create_label(text='Transmission: ')
-        self.trans_value = ui.create_label(text='@binding(instrument.power_transmission_f)')
-        self.trans_row = ui.create_row(self.trans_label, self.trans_value, ui.create_stretch(), spacing=12)
-
-        #self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
-        self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=150)
-        self.abt_trans_pb = ui.create_push_button(text="Abort Transmission", name="abt_trans_pb", on_clicked="abt_trans_push", width=150)
-        self.buttons_trans_row = ui.create_row(self.upt_pb, self.acq_trans_pb, self.abt_trans_pb, ui.create_stretch(), spacing=12)
-
-        self.trans_tab = ui.create_tab(label='Transmission', content=ui.create_column(
-            self.pm_row, self.trans_row, self.buttons_trans_row, ui.create_stretch())
-                                       )
-
-        ## END TRANSMISSION TAB
-
-        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab, self.trans_tab)
-
+        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab)
         self.ui_view = ui.create_column(self.tabs)
-
 
 def create_spectro_panel(document_controller, panel_id, properties):
     instrument = properties["instrument"]

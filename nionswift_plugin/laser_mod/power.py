@@ -46,7 +46,8 @@ class TLPowerMeter:
 
     def pw_read(self):
         try:
-            return (float(self.tl.query('READ?'))*1e6)
+            a = self.tl.query('READ?')
+            return (float(a)*1e6)
         except:
             print(self.tl.query('*IDN?'))
             self.sendmessage(22)

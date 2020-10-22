@@ -452,7 +452,7 @@ class gainDevice(Observable.Observable):
                                 self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, trans=1)
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            self.__controlRout.pw_control_thread_on() #this is mandatory as it measures power
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1) #this is mandatory as it measures power
         else:
             logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
@@ -465,7 +465,7 @@ class gainDevice(Observable.Observable):
 
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
-                time.sleep(self.__powermeter_avg*0.03*1.2) #each measurement takes 0.03
+                time.sleep(self.__powermeter_avg*0.003*1.1) #each measurement takes 0.03
                 self.combo_data_f = True  # check laser now. True simply blocks GUI
                 self.append_data.fire(self.combo_data_f, i, j, False)
                 j += 1
@@ -506,7 +506,7 @@ class gainDevice(Observable.Observable):
         self.call_data.fire(self.__acq_number, i_max + 1, j_max, self.__start_wav, self.__start_wav, 0.0, 1,
                             self.__delay, self.__width, self.__diode)
         self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
-        self.__controlRout.pw_control_thread_on()
+        self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1)
         i = 0
         j = 0
         while i < i_max and not self.__abort_force:
@@ -553,7 +553,7 @@ class gainDevice(Observable.Observable):
             pics_array = pics_array[1:]  # exclude zero
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            self.__controlRout.pw_control_thread_on() #this is mandatory as it measures power
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1) #this is mandatory as it measures power
         else:
             logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")

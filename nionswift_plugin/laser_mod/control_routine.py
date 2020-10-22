@@ -25,10 +25,10 @@ class controlRoutine:
         self.sendmessage=sendmessage
 
 
-    def pw_control_thread(self, arg):
+    def pw_control_thread(self, interval):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
-            time.sleep(0.1)
+            time.sleep(interval)
             self.sendmessage(101)
 
     def pw_control_thread_check(self):
@@ -37,8 +37,8 @@ class controlRoutine:
         except:
             return False
 
-    def pw_control_thread_on(self):
-        self.control_thread=threading.Thread(target=self.pw_control_thread, args=("task",))
+    def pw_control_thread_on(self, interval):
+        self.control_thread=threading.Thread(target=self.pw_control_thread, args=(interval,))
         self.control_thread.do_run=True
         self.control_thread.start()
 

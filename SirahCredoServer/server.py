@@ -45,10 +45,14 @@ class ServerSirahCredoLaser:
                     try:
                         data = clientsocket.recv(512)
                     except:
+                        if self.__sirah.ser:
+                            self.__sirah.ser.close()
                         print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
                         break
 
                     if not data:
+                        if self.__sirah.ser:
+                            self.__sirah.ser.close()
                         print('***SERVER***: No data received. Hanging for new connection...')
                         break
 

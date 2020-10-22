@@ -287,7 +287,7 @@ class gainhandler:
         self.event_loop.create_task(self.do_enable(False, ["init_pb", 'host_value', 'port_value', 'abt_pb']))
 
     def prepare_widget_disable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ["init_pb", 'host_value', 'port_value']))
+        self.event_loop.create_task(self.do_enable(False, ["init_pb", 'host_value', 'port_value', 'abt_pb']))
 
     def prepare_free_widget_enable(self,
                                    value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?

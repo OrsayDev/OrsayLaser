@@ -465,7 +465,7 @@ class gainDevice(Observable.Observable):
 
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
-                time.sleep(0.25)
+                time.sleep(self.__powermeter_avg*0.03*1.2) #each measurement takes 0.03
                 self.combo_data_f = True  # check laser now. True simply blocks GUI
                 self.append_data.fire(self.combo_data_f, i, j, False)
                 j += 1
@@ -491,7 +491,7 @@ class gainDevice(Observable.Observable):
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
                 self.__laser.set_scan_thread_release()
         self.run_status_f = False  # acquisition is over
-        self.start_wav_f = self.__start_wav
+        #self.start_wav_f = self.__start_wav
         self.end_data.fire()
 
 
@@ -603,7 +603,7 @@ class gainDevice(Observable.Observable):
                 self.__laser.set_scan_thread_release()
         self.run_status_f = False  # acquisition is over
         self.grab_det("end", self.__acq_number, 0, True)
-        self.start_wav_f = self.__start_wav
+        #self.start_wav_f = self.__start_wav
         self.end_data.fire()
 
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control

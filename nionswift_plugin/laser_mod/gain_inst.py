@@ -465,7 +465,6 @@ class gainDevice(Observable.Observable):
 
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
-                last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
                 self.combo_data_f = True  # check laser now. True simply blocks GUI
                 self.append_data.fire(self.combo_data_f, i, j, False)
                 j += 1

@@ -367,7 +367,7 @@ class gainhandler:
 
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
-            self.pow02_di = DataItemLaserCreation("Power 02" + str(nacq), self.pow02_array, "POW")
+            self.pow02_di = DataItemLaserCreation("Power 02 " + str(nacq), self.pow02_array, "POW")
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
@@ -437,8 +437,12 @@ class gainhandler:
 
     def grab_data_item(self, widget):
         try:
-            self.__current_DI = self.document_controller.document_model.get_data_item_by_title(
-                self.file_name_value.text)
+            #self.__current_DI = self.document_controller.document_model.get_data_item_by_title(
+            #    self.file_name_value.text)
+
+            for data_items in self.document_controller.document_model._DocumentModel__data_items:
+                if data_items.title == self.file_name_value.text:
+                    self.__current_DI = data_items
             for pbs in self.actions_list:
                 pbs.enabled = False
         except:
@@ -468,11 +472,17 @@ class gainhandler:
                 self.step_detected_value.text = 'Unknown'
 
             if "Gain" in self.file_name_value.text:
-                self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title(
-                    "Power " + str(temp_acq))
+                for data_items in self.document_controller.document_model._DocumentModel__data_items:
+                    if data_items.title == "Power " + str(temp_acq):
+                        self.__current_DI = data_items
+                    elif data_items.title == 'Laser Wavelength " + str(temp_acq)':
+                        self.__current_DI_WAV = data_items
+
+                #self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title(
+                #    "Power " + str(temp_acq))
                 self.power_file_detected_value.text = bool(self.__current_DI_POW)
-                self.__current_DI_WAV = self.document_controller.document_model.get_data_item_by_title(
-                    "Laser Wavelength " + str(temp_acq))
+                #self.__current_DI_WAV = self.document_controller.document_model.get_data_item_by_title(
+                #    "Laser Wavelength " + str(temp_acq))
                 self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
                 if self.__current_DI_POW and self.__current_DI_WAV:
                     self.align_zlp_max.enabled = self.plot_power_wav.enabled = True

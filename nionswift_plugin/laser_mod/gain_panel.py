@@ -270,6 +270,12 @@ class gainhandler:
         self.periodic_pics_value.enabled = (check_state == 'checked')
         self.periodic_pics_label.enabled = (check_state == 'checked')
 
+    async def data_item_show(self, DI):
+        self.document_controller.document_model.append_data_item(DI)
+
+    async def data_item_exit_live(self, DI):
+        DI._exit_live_state()
+
     async def do_enable(self, enabled=True, not_affected_widget_name_list=None):
         for var in self.__dict__:
             if var not in not_affected_widget_name_list:
@@ -309,7 +315,7 @@ class gainhandler:
                                            None, None,
                                            None, is_live=False)
 
-            self.document_controller.document_model.append_data_item(di_597.data_item)
+            self.event_loop.create_task(self.data_item_show(di_597.data_item))
 
     def show_det(self, xdatas, mode, nacq, npic, show):
 
@@ -332,7 +338,7 @@ class gainhandler:
             if mode == 'middle': data_item.define_property("title",
                                                            mode + str(npic) + '_det' + str(i) + ' ' + str(nacq - 1))
 
-            if show: self.document_controller.document_model.append_data_item(data_item)
+            if show: self.event_loop.create_task(self.data_item_show(data_item))
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
         if self.current_acquition != nacq:
@@ -365,17 +371,17 @@ class gainhandler:
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
-            self.document_controller.document_model.append_data_item(self.wav_di.data_item)
-            self.document_controller.document_model.append_data_item(self.pow_di.data_item)
-            if self.ctrl == 2: self.document_controller.document_model.append_data_item(self.ps_di.data_item)
-            if self.ctrl == 1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
-            if trans: self.document_controller.document_model.append_data_item(self.pow02_di.data_item)
+            self.event_loop.create_task(self.data_item_show(self.wav_di.data_item))
+            self.event_loop.create_task(self.data_item_show(self.pow_di.data_item))
+            if self.ctrl == 2: self.event_loop.create_task(self.data_item_show(self.ps_di.data_item))
+            if self.ctrl == 1: self.event_loop.create_task(self.data_item_show(self.ser_di.data_item))
+            if trans: self.event_loop.create_task(self.data_item_show(self.pow02_di.data_item))
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
             self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
                                                 avg, step, delay, width, diode_cur, ctrl)
-            if not trans: self.document_controller.document_model.append_data_item(self.cam_di.data_item)
+            if not trans: self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
     def append_data(self, value, index1, index2, camera_data):
         try:
@@ -389,7 +395,6 @@ class gainhandler:
 
         if not self.__adjusted and camera_data:
 
-            print(camera_data.get_dimensional_calibration)
             self.cam_pixels = camera_data.data.shape[0]
             cam_calibration = camera_data.get_dimensional_calibration(0)
 
@@ -420,12 +425,12 @@ class gainhandler:
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data(self):
-        if self.wav_di: self.wav_di.data_item._exit_live_state()
-        if self.pow_di: self.pow_di.data_item._exit_live_state()
-        if self.pow02_di: self.pow02_di.data_item._exit_live_state()
-        if self.ser_di: self.ser_di.data_item._exit_live_state()
-        if self.ps_di: self.ps_di.data_item._exit_live_state()
-        if self.cam_di: self.cam_di.data_item._exit_live_state()
+        if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))
+        if self.pow_di: self.event_loop.create_task(self.data_item_exit_live(self.pow_di.data_item))
+        if self.pow02_di: self.event_loop.create_task(self.data_item_exit_live(self.pow02_di.data_item))
+        if self.ser_di: self.event_loop.create_task(self.data_item_exit_live(self.ser_di.data_item))
+        if self.ps_di: self.event_loop.create_task(self.data_item_exit_live(self.ps_di.data_item))
+        if self.cam_di: self.event_loop.create_task(self.data_item_exit_live(self.cam_di.data_item))
 
     def stop_function(self, wiget):
         self.instrument.Laser_stop_all()
@@ -496,7 +501,7 @@ class gainhandler:
                                           temp_dict['control'], is_live=False)
 
         self.plot_power_wav.enabled = False
-        self.document_controller.document_model.append_data_item(power_avg.data_item)
+        self.event_loop.create_task(self.data_item_show(power_avg.data_item))
         logging.info('***ACQUISITION***: Average Power Data Item Created.')
 
     def align_zlp(self, widget):
@@ -574,8 +579,7 @@ class gainhandler:
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = False
             logging.info('***ACQUISITION***: Data Item created.')
 
-        if self.display_check_box.checked: self.document_controller.document_model.append_data_item(
-            self.aligned_cam_di.data_item)
+        if self.display_check_box.checked: self.event_loop.create_task(self.data_item_show(self.aligned_cam_di.data_item))
 
     def smooth_data(self, widget):
         temp_data = self.aligned_cam_di.data_item.data
@@ -634,8 +638,7 @@ class gainhandler:
             self.smooth_zlp.enabled = False
             logging.info('***ACQUISITION***: Smooth Successful. Data Item created.')
 
-        if self.display_smooth_check_box.checked: self.document_controller.document_model.append_data_item(
-            self.smooth_di.data_item)
+        if self.display_smooth_check_box.checked: self.event_loop.create_task(self.data_item_show(self.smooth_di.data_item))
 
     def process_data(self, widget):
 
@@ -736,9 +739,9 @@ class gainhandler:
                                                               temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                               temp_dict['control'], is_live=False)
 
-                self.document_controller.document_model.append_data_item(self.gain_di.data_item)
-                self.document_controller.document_model.append_data_item(self.loss_di.data_item)
-                if not k: self.document_controller.document_model.append_data_item(self.zlp_di.data_item)
+                self.event_loop.create_task(self.data_item_show(self.gain_di.data_item))
+                self.event_loop.create_task(self.data_item_show(self.loss_di.data_item))
+                if not k: self.event_loop.create_task(self.data_item_show(self.zlp_di.data_item))
             logging.info('***ACQUISITION***: sEEGS/sEELS Done.')
 
         if widget == self.process_power_pb:
@@ -754,7 +757,7 @@ class gainhandler:
                                                         temp_dict['control'], is_live=False,
                                                         power_min=power_array_itp.min(), power_inc=power_inc)
 
-                    self.document_controller.document_model.append_data_item(self.zlp_di.data_item)
+                    self.event_loop.create_task(self.data_item_show(self.zlp_di.data_item))
 
                 power_array_itp, gain_array_itp, power_inc = self.data_proc.as_power_func(gain_array[k], self.rpa_avg)
                 self.gain_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_gain_title_name, gain_array_itp,
@@ -765,7 +768,7 @@ class gainhandler:
                                                      temp_dict['control'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
 
-                self.document_controller.document_model.append_data_item(self.gain_di.data_item)
+                self.event_loop.create_task(self.data_item_show(self.gain_di.data_item))
 
                 power_array_itp, loss_array_itp, power_inc = self.data_proc.as_power_func(loss_array[k], self.rpa_avg)
                 self.loss_di = DataItemLaserCreation('Power_' + str(k + 1) + '_' + temp_loss_title_name, loss_array_itp,
@@ -775,7 +778,7 @@ class gainhandler:
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
                                                      temp_dict['control'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
-                self.document_controller.document_model.append_data_item(self.loss_di.data_item)
+                self.event_loop.create_task(self.data_item_show(self.loss_di.data_item))
 
                 logging.info('***ACQUISTION***: Power Scan Done.')
 
@@ -839,7 +842,7 @@ class gainhandler:
                                                 eels_dispersion=eels_dispersion, hor_pixels=data_size,
                                                 oversample=oversample)
 
-            self.document_controller.document_model.append_data_item(self.fit_di.data_item)
+            self.event_loop.create_task(self.data_item_show(self.fit_di.data_item))
 
             if self.fit_pb.text == 'Fit Laser Scan':
 
@@ -932,11 +935,11 @@ class gainhandler:
                                                      temp_dict['control'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
 
-            self.document_controller.document_model.append_data_item(self.int_di.data_item)
-            if a1_array.any(): self.document_controller.document_model.append_data_item(self.int1_di.data_item)
-            if a2_array.any(): self.document_controller.document_model.append_data_item(self.int2_di.data_item)
-            if a3_array.any(): self.document_controller.document_model.append_data_item(self.int3_di.data_item)
-            if a4_array.any(): self.document_controller.document_model.append_data_item(self.int4_di.data_item)
+            self.event_loop.create_task(self.data_item_show(self.int_di.data_item))
+            if a1_array.any(): self.event_loop.create_task(self.data_item_show(self.int1_di.data_item))
+            if a2_array.any(): self.event_loop.create_task(self.data_item_show(self.int2_di.data_item))
+            if a3_array.any(): self.event_loop.create_task(self.data_item_show(self.int3_di.data_item))
+            if a4_array.any(): self.event_loop.create_task(self.data_item_show(self.int4_di.data_item))
 
             logging.info('***ACQUISITION***: Fit Done.')
 

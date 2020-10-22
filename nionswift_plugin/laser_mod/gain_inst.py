@@ -253,7 +253,7 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
         self.__servo_pts = 0
         self.__servo_wobbler = False
-        self.__ctrl_type = 1
+        self.__ctrl_type = 0
         self.__delay = 1810 * 1e-9
         self.__width = 50 * 1e-9
         self.__fb_status = False
@@ -354,11 +354,12 @@ class gainDevice(Observable.Observable):
                     # Handling the beginning. I have put it here instead of simply returning True and
                     # self.__OrsayScanInstrument and self.__camera because these properties affect GUI. I would like
                     # to release GUI only in complete True case
-                    self.sht_f = False
-                    self.fast_blanker_status_f = False
+                    self.servo_f = 180 #maximum transmission
+                    self.sht_f = False #shutter off
+                    self.fast_blanker_status_f = False #fast blanker OFF
                     self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
-                    self.__status = False
-                    self.property_changed_event.fire("cur_wav_f")
+                    self.__status = False #nothing is running
+                    self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
                     return True
                 else:
                     return False
@@ -412,7 +413,7 @@ class gainDevice(Observable.Observable):
         self.det_acq.fire(det_di, mode, index, npic, show)
 
     def abt(self):
-        logging.info('***LASER***: Abort scanning. Going back to origin.')
+        logging.info('***LASER***: Abort Measurement.')
         self.__abort_force = True
         self.__laser.abort_control()  # abort laser thread as well.
         self.run_status_f = False  # force free GUI

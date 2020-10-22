@@ -2,6 +2,7 @@ import pyvisa
 import time
 import os
 import json
+import threading
 
 abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
 with open(abs_path) as savfile:
@@ -24,9 +25,11 @@ class TLPowerMeter:
         self.pwthread = None
         self.rm = pyvisa.ResourceManager()
         self.id = which
+        self.lock = threading.Lock()
+
         try:
             self.tl = self.rm.open_resource(which)
-            self.tl.timeout=50
+            self.tl.timeout=200
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
             self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
@@ -37,21 +40,23 @@ class TLPowerMeter:
     
     def pw_set_wl(self, cur_WL):
         string='SENS:CORR:WAV '+str(cur_WL)
-        try:
-            self.tl.write(string)
-        except:
-            print(self.tl.query('*IDN?'))
-            self.sendmessage(21)
+        with self.lock:
+            try:
+                self.tl.write(string)
+            except:
+                print(self.tl.query('*IDN?'))
+                self.sendmessage(21)
 
 
     def pw_read(self):
-        try:
-            a = self.tl.query('READ?')
-            return (float(a)*1e6)
-        except:
-            print(self.tl.query('*IDN?'))
-            self.sendmessage(22)
-            return (float(self.tl.query('FETCH?'))*1e6)
+        with self.lock:
+            try:
+                a = self.tl.query('READ?')
+                return (float(a)*1e6)
+            except:
+                print(self.tl.query('*IDN?'))
+                self.sendmessage(22)
+                return (float(self.tl.query('FETCH?'))*1e6)
 
     def pw_reset(self):
         try:

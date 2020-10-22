@@ -465,7 +465,7 @@ class gainDevice(Observable.Observable):
 
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
-                time.sleep(0.1)
+                time.sleep(0.25)
                 self.combo_data_f = True  # check laser now. True simply blocks GUI
                 self.append_data.fire(self.combo_data_f, i, j, False)
                 j += 1
@@ -643,6 +643,7 @@ class gainDevice(Observable.Observable):
             if message == 101:
                 self.property_changed_event.fire("power_f")
                 self.property_changed_event.fire("power02_f") #measure both powers
+                self.property_changed_event.fire("power_transmission_f")
                 if self.__ctrl_type == 1 and not self.__power_ramp:
                     self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180

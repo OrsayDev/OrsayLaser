@@ -341,10 +341,6 @@ class gainDevice(Observable.Observable):
             # self.__OrsayScanInstrument) are identical
 
         else:
-            # Obviously turn off blanker at beginning. Not sure if i have eels before clicking init. Check this!!
-            self.sht_f = False
-            self.fast_blanker_status_f = False
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
@@ -352,11 +348,20 @@ class gainDevice(Observable.Observable):
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__laser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
             if self.__laser.server_ping():
-                logging.info('***SERVER***: Connection with server successful.')
                 # Ask where is Laser
-                self.__status = False
-                self.property_changed_event.fire("cur_wav_f")
-                return bool(True and self.__OrsayScanInstrument and self.__camera)
+                logging.info('***SERVER***: Connection with server successful.')
+                if bool(True and self.__OrsayScanInstrument and self.__camera):
+                    # Handling the beginning. I have put it here instead of simply returning True and
+                    # self.__OrsayScanInstrument and self.__camera because these properties affect GUI. I would like
+                    # to release GUI only in complete True case
+                    self.sht_f = False
+                    self.fast_blanker_status_f = False
+                    self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
+                    self.__status = False
+                    self.property_changed_event.fire("cur_wav_f")
+                    return True
+                else:
+                    return False
             else:
                 logging.info(
                     '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')

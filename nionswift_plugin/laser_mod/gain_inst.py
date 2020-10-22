@@ -439,12 +439,75 @@ class gainDevice(Observable.Observable):
 
     #This is for transmission measurements with the laser. Scan wavelength and get power in both powermeters
     def acq_transThread(self):
-        self.run_status_f = self.sht_f = True
+        self.run_status_f = True
         self.__abort_force = False
+        self.__servo_pos_initial = self.__servo_pos
+
+        # Laser thread begins
+        if (self.__laser.set_scan_thread_check() and abs(
+                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
+
+            self.__acq_number += 1
+            self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
+                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
+            self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
+            pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
+            pics_array = pics_array[1:]  # exclude zero
+            self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+            self.sht_f = True
+            if self.__ctrl_type: self.__controlRout.pw_control_thread_on()
+        else:
+            logging.info(
+                "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
+            self.__abort_force = True
+
         i = 0  # e-point counter
         i_max = self.__pts
         j = 0  # each frame inside an specific e-point
         j_max = self.__avg  # dont put directly self.__avg because it will keep refreshing UI
+
+        while i < i_max and not self.__abort_force:  # i means our laser WL's
+            while j < j_max and not self.__abort_force:  # j is our averages
+                last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
+                self.combo_data_f = True  # check laser now
+                self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+                j += 1
+            j = 0
+            if i in pics_array and self.__per_pic:
+                self.grab_det("middle", self.__acq_number, i, True)
+            i += 1
+            if (
+                    self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):
+                # check if laser changes have finished and thread step is over
+                self.__laser.set_scan_thread_release()  # if yes, you can advance
+                logging.info("***ACQUISITION***: Moving to next wavelength...")
+            else:
+                self.abt()  # execute our abort routine (laser and acq thread)
+
+        self.sht_f = False
+        logging.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
+        while j < j_max and not self.__abort_force:
+            last_cam_acq = self.__camera.grab_next_to_finish()[0]
+            self.combo_data_f = True
+            self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+            j += 1
+
+        if self.__controlRout.pw_control_thread_check():
+            self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
+        if self.__ctrl_type == 1: self.servo_f = self.__servo_pos_initial  # Even if this is not controlled it doesnt
+        # matter
+        if self.__ctrl_type == 2: pass  # here you can put the initial current of the power supply. Not implemented yet
+        self.combo_data_f = True  # if its controlled then you update servo or power supply right
+        while (
+                not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
+            # looped here indefinitely than fuck the hardware
+            if self.__laser.set_scan_thread_locked():  # releasing everything if locked
+                self.__laser.set_scan_thread_release()
+        self.run_status_f = False  # acquisition is over
+        self.grab_det("end", self.__acq_number, 0, True)
+        self.start_wav_f = self.__start_wav
+        self.end_data.fire()
+
 
     def acq_prThread(self):
         self.run_status_f = self.__power_ramp = self.sht_f = True
@@ -504,7 +567,7 @@ class gainDevice(Observable.Observable):
             pics_array = pics_array[1:]  # exclude zero
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            self.__controlRout.pw_control_thread_on()
+            if self.__ctrl_type: self.__controlRout.pw_control_thread_on()
         else:
             logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")

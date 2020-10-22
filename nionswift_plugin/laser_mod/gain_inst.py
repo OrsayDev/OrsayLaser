@@ -449,13 +449,10 @@ class gainDevice(Observable.Observable):
 
             self.__acq_number += 1
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
-                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
-            self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
-            pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
-            pics_array = pics_array[1:]  # exclude zero
+                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, trans=1)
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            if self.__ctrl_type: self.__controlRout.pw_control_thread_on()
+            self.__controlRout.pw_control_thread_on() #this is mandatory as it measures power
         else:
             logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
@@ -469,12 +466,10 @@ class gainDevice(Observable.Observable):
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
                 last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
-                self.combo_data_f = True  # check laser now
-                self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+                self.combo_data_f = True  # check laser now. True simply blocks GUI
+                self.append_data.fire(self.combo_data_f, i, j, False)
                 j += 1
             j = 0
-            if i in pics_array and self.__per_pic:
-                self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (
                     self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):
@@ -504,7 +499,6 @@ class gainDevice(Observable.Observable):
             if self.__laser.set_scan_thread_locked():  # releasing everything if locked
                 self.__laser.set_scan_thread_release()
         self.run_status_f = False  # acquisition is over
-        self.grab_det("end", self.__acq_number, 0, True)
         self.start_wav_f = self.__start_wav
         self.end_data.fire()
 
@@ -567,7 +561,7 @@ class gainDevice(Observable.Observable):
             pics_array = pics_array[1:]  # exclude zero
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            if self.__ctrl_type: self.__controlRout.pw_control_thread_on()
+            self.__controlRout.pw_control_thread_on() #this is mandatory as it measures power
         else:
             logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
@@ -656,6 +650,7 @@ class gainDevice(Observable.Observable):
                 logging.info('***SERVO***: Angle smaller than 0. Holding on 0.')
             if message == 101:
                 self.property_changed_event.fire("power_f")
+                self.property_changed_event.fire("power02_f") #measure both powers
                 if self.__ctrl_type == 1 and not self.__power_ramp:
                     self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180
@@ -1033,11 +1028,11 @@ class gainDevice(Observable.Observable):
     @property
     def combo_data_f(self):
         if self.__ctrl_type == 1 or self.__power_ramp:
-            return [self.__cur_wav, self.__power, self.__servo_pos]
+            return [self.__cur_wav, self.__power, self.__servo_pos, self.__power02]
         if self.__ctrl_type == 2:
-            return [self.__cur_wav, self.__power, self.__diode]
+            return [self.__cur_wav, self.__power, self.__diode, self.__power02]
         else:
-            return [self.__cur_wav, self.__power]
+            return [self.__cur_wav, self.__power, self.__power02]
 
     @combo_data_f.setter
     def combo_data_f(self, value):

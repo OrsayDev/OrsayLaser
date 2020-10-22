@@ -328,7 +328,7 @@ class gainhandler:
 
             if show: self.document_controller.document_model.append_data_item(data_item)
 
-    def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur):
+    def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
         if self.current_acquition != nacq:
             self.__adjusted = False
             self.current_acquition = nacq
@@ -341,6 +341,7 @@ class gainhandler:
             self.cam_pixels = 1600
             self.wav_array = numpy.zeros(pts * avg)
             self.pow_array = numpy.zeros(pts * avg)
+            self.pow02_array = numpy.zeros(pts * avg)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
             if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
 
@@ -350,6 +351,7 @@ class gainhandler:
 
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
+            if trans: self.pow02_di = DataItemLaserCreation("Power 02" + str(nacq), self.pow02_array, "POW")
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
@@ -357,22 +359,25 @@ class gainhandler:
             self.document_controller.document_model.append_data_item(self.pow_di.data_item)
             if self.ctrl == 2: self.document_controller.document_model.append_data_item(self.ps_di.data_item)
             if self.ctrl == 1: self.document_controller.document_model.append_data_item(self.ser_di.data_item)
+            if trans: self.document_controller.document_model.append_data_item(self.pow02_di.data_item)
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
             self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
                                                 avg, step, delay, width, diode_cur, ctrl)
-            self.document_controller.document_model.append_data_item(self.cam_di.data_item)
+            if not trans: self.document_controller.document_model.append_data_item(self.cam_di.data_item)
 
     def append_data(self, value, index1, index2, camera_data):
         try:
-            cur_wav, power, control = value
+            cur_wav, power, control, power02 = value
         except:
-            cur_wav, power = value
+            cur_wav, power, power02 = value
 
         self.wav_array[index2 + index1 * self.avg] = cur_wav
         self.pow_array[index2 + index1 * self.avg] = power
-        if not self.__adjusted:
+        self.pow02_array[index2 + index1 * self.avg] = power02
+
+        if not self.__adjusted and camera_data:
 
             self.cam_pixels = camera_data.data.shape[1]
             cam_calibration = camera_data.get_dimensional_calibration(1)
@@ -389,22 +394,24 @@ class gainhandler:
 
             self.__adjusted = True
 
-        cam_hor = numpy.sum(camera_data.data, axis=0)
-
-        self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
+        if camera_data: #if it is false, as in transmission, do nothing
+            cam_hor = numpy.sum(camera_data.data, axis=0)
+            self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
 
         if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
         if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
 
         self.wav_di.update_data_only(self.wav_array)
         self.pow_di.update_data_only(self.pow_array)
-        self.cam_di.update_data_only(self.cam_array)
+        self.pow02_di.update_data_only(self.pow02_array)
+        if camera_data: self.cam_di.update_data_only(self.cam_array)
         if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data(self):
         if self.wav_di: self.wav_di.data_item._exit_live_state()
         if self.pow_di: self.pow_di.data_item._exit_live_state()
+        if self.pow02_di: self.pow02_di.data_item._exit_live_state()
         if self.ser_di: self.ser_di.data_item._exit_live_state()
         if self.ps_di: self.ps_di.data_item._exit_live_state()
         if self.cam_di: self.cam_di.data_item._exit_live_state()

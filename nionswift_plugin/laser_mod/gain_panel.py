@@ -59,6 +59,11 @@ class DataItemLaserCreation():
             self.calibration.units = '°'
         if which == 'PS':
             self.calibration.units = 'A'
+        if which == 'transmission_as_wav':
+            self.calibration.units = 'T'
+            self.dimensional_calibrations[0].units = 'nm'
+            self.dimensional_calibrations[0].offset = start
+            self.dimensional_calibrations[0].scale = step
         if which == 'power_as_wav':
             self.calibration.units = 'μW'
             self.dimensional_calibrations[0].units = 'nm'
@@ -354,6 +359,7 @@ class gainhandler:
             self.wav_array = numpy.zeros(pts * avg)
             self.pow_array = numpy.zeros(pts * avg)
             self.pow02_array = numpy.zeros(pts * avg)
+            self.trans_array = numpy.zeros(pts)
             if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
             if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
 
@@ -368,6 +374,7 @@ class gainhandler:
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
             self.pow02_di = DataItemLaserCreation("Power 02 " + str(nacq), self.pow02_array, "POW")
+            self.trans_di = DataItemLaserCreation("Transmission " + str(nacq), self.trans_array, "transmission_as_wav")
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
@@ -376,6 +383,7 @@ class gainhandler:
             if self.ctrl == 2: self.event_loop.create_task(self.data_item_show(self.ps_di.data_item))
             if self.ctrl == 1: self.event_loop.create_task(self.data_item_show(self.ser_di.data_item))
             if trans: self.event_loop.create_task(self.data_item_show(self.pow02_di.data_item))
+            if trans: self.event_loop.create_task(self.data_item_show(self.trans_di.data_item))
 
             # CAMERA CALL
             self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
@@ -392,6 +400,7 @@ class gainhandler:
         self.wav_array[index2 + index1 * self.avg] = cur_wav
         self.pow_array[index2 + index1 * self.avg] = power
         self.pow02_array[index2 + index1 * self.avg] = power02
+        self.trans_array[index1] += (power02 / (self.instrument.rt_f * power) ) / self.avg
 
         if not self.__adjusted and camera_data:
 
@@ -420,6 +429,7 @@ class gainhandler:
         self.wav_di.update_data_only(self.wav_array)
         self.pow_di.update_data_only(self.pow_array)
         self.pow02_di.update_data_only(self.pow02_array)
+        self.trans_di.update_data_only(self.trans_array)
         if camera_data: self.cam_di.update_data_only(self.cam_array)
         if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
@@ -428,6 +438,7 @@ class gainhandler:
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))
         if self.pow_di: self.event_loop.create_task(self.data_item_exit_live(self.pow_di.data_item))
         if self.pow02_di: self.event_loop.create_task(self.data_item_exit_live(self.pow02_di.data_item))
+        if self.trans_di: self.event_loop.create_task(self.data_item_exit_live(self.trans_di.data_item))
         if self.ser_di: self.event_loop.create_task(self.data_item_exit_live(self.ser_di.data_item))
         if self.ps_di: self.event_loop.create_task(self.data_item_exit_live(self.ps_di.data_item))
         if self.cam_di: self.event_loop.create_task(self.data_item_exit_live(self.cam_di.data_item))

@@ -354,11 +354,11 @@ class gainDevice(Observable.Observable):
                     # Handling the beginning. I have put it here instead of simply returning True and
                     # self.__OrsayScanInstrument and self.__camera because these properties affect GUI. I would like
                     # to release GUI only in complete True case
-                    self.servo_f = 180 #maximum transmission
                     self.sht_f = False #shutter off
                     self.fast_blanker_status_f = False #fast blanker OFF
                     self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
-                    self.__status = False #nothing is running
+                    self.run_status_f = False
+                    self.servo_f = 180 #maximum transmission
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
                     return True
                 else:
@@ -778,7 +778,7 @@ class gainDevice(Observable.Observable):
 
     @property
     def rt_f(self): #this func is the R/T factor for the first powermeter. This will normalize power correctly
-        return format(self.__rt, '.1f')
+        return self.__rt
 
     @rt_f.setter
     def rt_f(self, value):
@@ -791,7 +791,7 @@ class gainDevice(Observable.Observable):
     @property
     def power_transmission_f(self):
         self.__power_transmission = self.__power02 / self.__power
-        return format(self.__power_transmission, '.3f')
+        return format(self.__power_transmission, '.5f')
 
 
     @property

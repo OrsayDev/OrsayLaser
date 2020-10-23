@@ -33,9 +33,9 @@ else:
     from . import power as power
 
 if DEBUG_ps:
-    from . import power_supply_vi as ps
+    pass
 else:
-    from . import power_supply as ps
+    from SirahCredoServer import power_supply as ps, power_supply_vi as ps
 
 if DEBUG_servo:
     from . import servo_vi as servo
@@ -226,8 +226,7 @@ class LaserServerHandler():
             msg = msg + my_message.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
-            if data.decode() != 'None':
-                logging.info('***SERVER***: Bad communication. Error 01.')
+            return data
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -239,7 +238,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logging.info('***SERVER***: Bad communication. Error 02.')
+                logging.info('***SERVER***: Bad communication. Error 12.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -314,8 +313,8 @@ class gainDevice(Observable.Observable):
         self.__power02_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
 
-        self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
+        #self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        #self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
 
         self.__servo_sendmessage = servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__servo = servo.servoMotor(self.__servo_sendmessage)
@@ -851,8 +850,8 @@ class gainDevice(Observable.Observable):
         self.__diode = value / 100
         cvalue = format(float(self.__diode), '.2f')  # how to format and send to my hardware
         if self.__diode < MAX_CURRENT:
-            self.__ps.comm('C1:' + str(cvalue) + '\n')
-            self.__ps.comm('C2:' + str(cvalue) + '\n')
+            self.__laser.comm('C1:' + str(cvalue) + '\n')
+            self.__laser.comm('C2:' + str(cvalue) + '\n')
         else:
             logging.info('***LASER PS***: Attempt to put a current outside allowed range. Check global_settings.')
 
@@ -883,44 +882,62 @@ class gainDevice(Observable.Observable):
 
     @property
     def cur_d1_f(self):
-        return self.__ps.query('?C1\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?C1\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @property
     def cur_d2_f(self):
-        return self.__ps.query('?C2\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?C2\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @property
     def t_d1_f(self):
-        return self.__ps.query('?T1\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?T1\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @property
     def t_d2_f(self):
-        return self.__ps.query('?T2\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?T2\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @property
     def sht_f(self):
-        return self.__ps.query('?SHT\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?SHT\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @sht_f.setter
     def sht_f(self, value: bool):
         if value:
-            self.__ps.comm('SHT:1\n')
+            self.__laser.comm('SHT:1\n')
         else:
-            self.__ps.comm('SHT:0\n')
+            self.__laser.comm('SHT:0\n')
 
         self.property_changed_event.fire('sht_f')
         if not self.__status: self.free_event.fire('all')
 
     @property
     def d_f(self):
-        return self.__ps.query('?D\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?D\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @d_f.setter
     def d_f(self, value: bool):
         if value:
-            self.__ps.comm('D:1\n')
+            self.__laser.comm('D:1\n')
         else:
-            self.__ps.comm('D:0\n')
+            self.__laser.comm('D:0\n')
 
         self.property_changed_event.fire('d_f')  # kill GUI and updates fast OFF response
         threading.Timer(3, self.property_changed_event.fire, args=('d_f',)).start()  # update in case of slow response
@@ -928,14 +945,17 @@ class gainDevice(Observable.Observable):
 
     @property
     def q_f(self):
-        return self.__ps.query('?G\n').decode('UTF-8').replace('\n', '')
+        try:
+            return self.__laser.query('?G\n').decode('UTF-8').replace('\n', '')
+        except:
+            return 'None'
 
     @q_f.setter
     def q_f(self, value: bool):
         if value:
-            self.__ps.comm('G:1\n')
+            self.__laser.comm('G:1\n')
         else:
-            self.__ps.comm('G:0\n')
+            self.__laser.comm('G:0\n')
         self.property_changed_event.fire('q_f')
         self.free_event.fire("all")
 

@@ -4,6 +4,8 @@ import json
 import PySimpleGUI as sg
 import laser_vi
 import laser
+import power_supply_vi
+import power_supply
 
 __author__ = "Yves Auad"
 
@@ -21,9 +23,11 @@ class ServerSirahCredoLaser:
         print("***SERVER***: Initializing SirahCredoServer...")
         if SERVER_HOST == '127.0.0.1':
             self.__sirah = laser_vi.SirahCredoLaser()
+            self.__ps = power_supply_vi.SpectraPhysics()
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         elif SERVER_HOST == '129.175.82.159':
             self.__sirah = laser.SirahCredoLaser()
+            self.__ps = power_supply.SpectraPhysics()
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -32,7 +36,10 @@ class ServerSirahCredoLaser:
 
         if not self.__sirah.sucessfull:
             self.s.close()  # quits the server is not successful
-            print('***SERVER***: Server not successfully created. Leaving...')
+            print('***SERVER***: Server not successfully created because of Sirah. Leaving...')
+        if not self.__ps.sucessfull:
+            self.s.close()  # quits the server is not successful
+            print('***SERVER***: Server not successfully created because of PS. Leaving...')
 
     def main_loop(self):
         self.s.listen(0)
@@ -116,6 +123,22 @@ class ServerSirahCredoLaser:
                             pts = int(data[52:60])  # 8 bytes
                             self.__sirah.set_scan(cur, step, pts)
                             return_data = 'None'.encode()
+
+                    ## Power Supply Functions
+                    elif b"query" in data:
+                        if data[5:8] == bytes(3):
+                            my_msg = data[8:]
+                            print(my_msg)
+                            return_data = self.__ps.query(my_msg.decode())
+                            print(return_data)
+
+                    elif b"comm" in data:
+                        if data[4:7] == bytes(3):
+                            my_msg = data[7:]
+                            self.__ps.comm(my_msg.decode())
+                            return_data = 'None'.encode()
+
+                    ## End Power Supply Functions
 
                     else:
                         print(f'***SERVER***: Data {data} received unknown origin.')

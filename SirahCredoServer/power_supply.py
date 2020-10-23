@@ -8,15 +8,9 @@ __author__ = "Yves Auad"
 def _isPython3():
     return sys.version_info[0] >= 3
 
-
-def SENDMYMESSAGEFUNC(sendmessagefunc):
-    return sendmessagefunc
-
-
 class SpectraPhysics:
 
-    def __init__(self, sendmessage):
-        self.sendmessage = sendmessage
+    def __init__(self):
         self.pow = 20.
         self.control_thread = None
         self.ser = serial.Serial()
@@ -31,8 +25,9 @@ class SpectraPhysics:
             if not self.ser.is_open:
                 self.ser.open()
                 time.sleep(0.5)
+                self.sucessfull = True
         except:
-            self.sendmessage(61)
+            self.sucessfull = False
 
         self.ser.write('D:0\n'.encode())
         self.ser.readline()
@@ -57,7 +52,6 @@ class SpectraPhysics:
             self.ser.write(mes.encode())
             return self.ser.readline()
         except:
-            self.sendmessage(62)
             self.ser.close()
             time.sleep(0.05)
             self.ser.open()
@@ -71,7 +65,6 @@ class SpectraPhysics:
             self.ser.readline()  # clean buffer
             return None
         except:
-            self.sendmessage(63)
             self.ser.write(mes.encode())
             self.ser.readline()  # clean buffer
             return None

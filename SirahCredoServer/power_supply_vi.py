@@ -1,11 +1,5 @@
-import serial
 import sys
-import logging
-import time
-import threading
 import numpy
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
 
 __author__ = "Yves Auad"
 
@@ -13,21 +7,19 @@ __author__ = "Yves Auad"
 def _isPython3():
     return sys.version_info[0] >= 3
 
-
-def SENDMYMESSAGEFUNC(sendmessagefunc):
-    return sendmessagefunc
-
-
 class SpectraPhysics:
 
-    def __init__(self, sendmessage):
-        self.sendmessage = sendmessage
+    def __init__(self):
         self.control_thread = None
         self.cur1 = b'1\n'
         self.cur2 = b'1\n'
         self.shutter = b'CLOSED\n'
         self.diode = b'OFF\n'
         self.q = b'OFF\n'
+        self.t1 = b'26.00\n'
+        self.t2 = b'34.00\n'
+
+        self.sucessfull = True
 
     def query(self, mes):
         if mes == '?C1\n':
@@ -36,6 +28,14 @@ class SpectraPhysics:
             return val
         if mes == '?C2\n':
             val = format(float(self.cur2.decode('UTF-8').replace('\n', '')) + 0.01 * numpy.random.randn(1)[0], '.2f')
+            val = (str(val) + '\n').encode()
+            return val
+        if mes == '?T1\n':
+            val = format(float(self.t1.decode('UTF-8').replace('\n', '')) + 0.01 * numpy.random.randn(1)[0], '.2f')
+            val = (str(val) + '\n').encode()
+            return val
+        if mes == '?T2\n':
+            val = format(float(self.t2.decode('UTF-8').replace('\n', '')) + 0.01 * numpy.random.randn(1)[0], '.2f')
             val = (str(val) + '\n').encode()
             return val
         if mes == '?SHT\n':
@@ -66,27 +66,3 @@ class SpectraPhysics:
             self.q = b'ON\n'
         return None
 
-    '''def pw_control_receive(self, cur):
-        self.pow=round(cur/100., 2) #remember we need to divide by 100
-
-    def pw_control_thread(self, arg):
-        self.control_thread=threading.currentThread()
-        while getattr(self.control_thread, "do_run", True):
-            self.comm('C1:'+str(self.pow)+'\n')
-            self.comm('C2:'+str(self.pow)+'\n')
-            time.sleep(0.1)
-            self.sendmessage(79)
-
-    def pw_control_thread_check(self):
-        try:
-            return getattr(self.control_thread, "do_run")
-        except:
-            return False
-
-    def pw_control_thread_on(self):
-        self.control_thread=threading.Thread(target=self.pw_control_thread, args=("task",))
-        self.control_thread.do_run=True
-        self.control_thread.start()
-
-    def pw_control_thread_off(self):
-        self.control_thread.do_run=False'''

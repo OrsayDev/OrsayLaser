@@ -76,6 +76,10 @@ class LaserServerHandler():
     def shutdown(self):
         self.s.close()
 
+    def connection_error_handler(self):
+        #server shutdown will be handled in the message below
+        self.callback(666)
+
     def set_hardware_wl(self, wl):
         try:
             header = b'set_hardware_wl'
@@ -213,9 +217,33 @@ class LaserServerHandler():
             self.connection_error_handler()
             self.connection_error_handler()
 
-    def connection_error_handler(self):
-        #server shutdown will be handled in the message below
-        self.callback(666)
+    ## POWER SUPPLY RELATED FUNCTIONS ##
+
+    def query(self, my_message):
+        try:
+            header = b'query'
+            msg = header + bytes(3) #power supply sends 00-00-00
+            msg = msg + my_message.encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 01.')
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def comm(self, my_message):
+        try:
+            header = b'comm'
+            msg = header + bytes(3) #power supply sends 00-00-00
+            msg = msg + my_message.encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 02.')
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    ## POWER SUPPLY RELATED FUNCTIONS ##
 
 
 class gainDevice(Observable.Observable):

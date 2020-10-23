@@ -374,7 +374,8 @@ class gainhandler:
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
             self.pow02_di = DataItemLaserCreation("Power 02 " + str(nacq), self.pow02_array, "POW")
-            self.trans_di = DataItemLaserCreation("Transmission " + str(nacq), self.trans_array, "transmission_as_wav")
+            self.trans_di = DataItemLaserCreation("Transmission " + str(nacq), self.trans_array, "transmission_as_wav",
+                                                  start, end, pts, avg, delay, width, diode_cur, ctrl)
             if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 

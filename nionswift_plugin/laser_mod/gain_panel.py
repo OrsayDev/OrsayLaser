@@ -1097,9 +1097,16 @@ class gainView:
                                        self.diode_cur_line, ui.create_spacing(12), self.less_pb, ui.create_spacing(5),
                                        self.more_pb, ui.create_stretch())
 
+        self.diode1_temp_label = ui.create_label(text='T1 (°C): ')
+        self.diode1_temp_value = ui.create_label(text='@binding(instrument.t_d1_f)')
+        self.diode2_temp_label = ui.create_label(text='T2 (°C): ')
+        self.diode2_temp_value = ui.create_label(text='@binding(instrument.t_d2_f)')
+        self.ui_view11 = ui.create_row(self.diode1_temp_label, self.diode1_temp_value, self.diode2_temp_label,
+                                       self.diode2_temp_value, ui.create_stretch(), spacing=12)
+
         self.ps_group = ui.create_group(title='Laser PS', content=ui.create_column(
             self.ui_view8,
-            self.ui_view9, self.ui_view10)
+            self.ui_view9, self.ui_view10, self.ui_view11)
                                         )
         # Servo Motor
 

@@ -360,6 +360,17 @@ class gainDevice(Observable.Observable):
                     self.run_status_f = False
                     self.servo_f = 180 #maximum transmission
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
+
+                    ##POWER SUPPLY CHECK###
+                    self.property_changed_event.fire('q_f')
+                    self.property_changed_event.fire('d_f')
+                    self.property_changed_event.fire('cur_d1_f')
+                    self.property_changed_event.fire('cur_d2_f')
+                    self.property_changed_event.fire('sht_f')
+                    self.property_changed_event.fire("cur_d_f")
+                    self.property_changed_event.fire("cur_d_edit_f")
+                    self.property_changed_event.fire('t_d1_f')
+                    self.property_changed_event.fire('t_d2_f')
                     return True
                 else:
                     return False
@@ -396,6 +407,10 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("power_f")
         self.property_changed_event.fire("power02_f")
         self.property_changed_event.fire("power_transmission_f")
+        self.property_changed_event.fire('t_d1_f')
+        self.property_changed_event.fire('t_d2_f')
+        self.property_changed_event.fire('cur_d1_f')
+        self.property_changed_event.fire('cur_d2_f')
         if not self.__status:
             self.free_event.fire("all")
 
@@ -845,6 +860,14 @@ class gainDevice(Observable.Observable):
     @property
     def cur_d2_f(self):
         return self.__ps.query('?C2\n').decode('UTF-8').replace('\n', '')
+
+    @property
+    def t_d1_f(self):
+        return self.__ps.query('?T1\n').decode('UTF-8').replace('\n', '')
+
+    @property
+    def t_d2_f(self):
+        return self.__ps.query('?T2\n').decode('UTF-8').replace('\n', '')
 
     @property
     def sht_f(self):

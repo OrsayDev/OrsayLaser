@@ -12,7 +12,7 @@
     "AVG": 30
   },
   "SERVO": {
-    "DEBUG": 0
+    "DEBUG": 1
   },
   "SOCKET_CLIENT": {
     "HOST": "127.0.0.1",

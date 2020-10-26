@@ -4,13 +4,6 @@ import os
 import json
 import threading
 
-abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
-with open(abs_path) as savfile:
-    settings = json.load(savfile)
-
-AVG = settings["PW"]["AVG"]
-
-
 __author__ = "Yves Auad"
 
 class TLPowerMeter:
@@ -26,7 +19,7 @@ class TLPowerMeter:
             self.tl.timeout=200
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
-            self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
+            self.tl.write('SENS:AVERAGE:COUNT '+str(30))
         except:
             print(self.tl.query('*IDN?'))
 

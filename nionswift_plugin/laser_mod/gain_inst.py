@@ -424,13 +424,15 @@ class gainDevice(Observable.Observable):
             if self.__laser.server_ping():
                 # Ask where is Laser
                 logging.info('***SERVER***: Connection with server successful.')
-                if bool(True and self.__OrsayScanInstrument and self.__camera):
+                #if self.__OrsayScanInstrument and self.__camera:
+                if self.__camera:
                     # Handling the beginning. I have put it here instead of simply returning True and
                     # self.__OrsayScanInstrument and self.__camera because these properties affect GUI. I would like
                     # to release GUI only in complete True case
-                    self.sht_f = False #shutter off
-                    self.fast_blanker_status_f = False #fast blanker OFF
-                    self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
+                    if hasattr(self.__OrsayScanInstrument.scan_device, 'orsayscan'):
+                        self.fast_blanker_status_f = False #fast blanker OFF
+                        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
+                    self.sht_f = False  # shutter off
                     self.run_status_f = False
                     self.servo_f = 180 #maximum transmission
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
@@ -467,8 +469,8 @@ class gainDevice(Observable.Observable):
         self.free_event.fire("all")
 
     def hard_reset(self):
-        self.__laser.pw_reset(0)
-        self.__laser.pw_reset(1)
+        self.__laser.pw_reset('0')
+        self.__laser.pw_reset('1')
         #self.__pwmeter.pw_reset()
         #self.__pwmeter02.pw_reset()
 
@@ -835,8 +837,8 @@ class gainDevice(Observable.Observable):
             return 'None'
         else:
             self.__cur_wav = self.__laser.get_hardware_wl()[0]
-            self.__laser.pw_set_wl(self.__cur_wav, 0)
-            self.__laser.pw_set_wl(self.__cur_wav, 1)
+            self.__laser.pw_set_wl(self.__cur_wav, '0')
+            self.__laser.pw_set_wl(self.__cur_wav, '1')
             #self.__pwmeter.pw_set_wl(self.__cur_wav)
             #self.__pwmeter02.pw_set_wl(self.__cur_wav)
             return format(self.__cur_wav, '.4f')
@@ -853,27 +855,33 @@ class gainDevice(Observable.Observable):
 
     @property
     def power_f(self):
-        if DEBUG_pw:
-            self.__power = (self.__laser.pw_read(0) + (self.__diode) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read(0)
+        try:
+            if DEBUG_pw:
+                self.__power = (self.__laser.pw_read('0') + (self.__diode) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read('0')
             #self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (
             #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
-        else:
-            self.__power = self.__laser.pw_read(0)
-            #self.__power = self.__pwmeter.pw_read()
-        return format(self.__power, '.3f')
+            else:
+                self.__power = self.__laser.pw_read('0')
+                #self.__power = self.__pwmeter.pw_read()
+            return format(self.__power, '.3f')
+        except:
+            return 'None'
 
     @property
     def power02_f(self):
-        if DEBUG_pw:
-            self.__power02 = (self.__laser.pw_read(1) + (self.__diode/2.) ** 2) * (
-                    self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read(1)
+        try:
+            if DEBUG_pw:
+                self.__power02 = (self.__laser.pw_read('1') + (self.__diode/2.) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read('1')
             #self.__power02 = (self.__pwmeter02.pw_read() + (self.__diode/2.) ** 2) * (
             #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter02.pw_read()
-        else:
-            self.__power02 = self.__laser.pw_read(1)
-            #self.__power02 = self.__pwmeter02.pw_read()
-        return format(self.__power02, '.3f')
+            else:
+                self.__power02 = self.__laser.pw_read('1')
+                #self.__power02 = self.__pwmeter02.pw_read()
+            return format(self.__power02, '.3f')
+        except:
+            return 'None'
 
     @property
     def rt_f(self): #this func is the R/T factor for the first powermeter. This will normalize power correctly
@@ -889,8 +897,11 @@ class gainDevice(Observable.Observable):
 
     @property
     def power_transmission_f(self):
-        self.__power_transmission = self.__power02 / self.__power
-        return format(self.__power_transmission, '.5f')
+        try:
+            self.__power_transmission = self.__power02 / self.__power
+            return format(self.__power_transmission, '.5f')
+        except:
+            'None'
 
 
     @property
@@ -1171,8 +1182,8 @@ class gainDevice(Observable.Observable):
     def powermeter_avg_f(self, value):
         try:
             self.__powermeter_avg = int(value)
-            self.__laser.pw_set_avg(self.__powermeter_avg, 0)
-            self.__laser.pw_set_avg(self.__powermeter_avg, 1)
+            self.__laser.pw_set_avg(self.__powermeter_avg, '0')
+            self.__laser.pw_set_avg(self.__powermeter_avg, '1')
             #self.__pwmeter.pw_set_avg(self.__powermeter_avg)
             #self.__pwmeter02.pw_set_avg(self.__powermeter_avg)
         except:

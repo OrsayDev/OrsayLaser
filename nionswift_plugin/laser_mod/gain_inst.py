@@ -246,7 +246,7 @@ class LaserServerHandler():
 
     ## POWER METER RELATED FUNCTIONS ##
 
-    def pw_set_wl(self, my_message, which):
+    def pw_set_wl(self, wl, which):
         try:
             header = b'pw_set_wl'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
@@ -258,22 +258,20 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
-    def pw_read(self, my_message, which):
+    def pw_read(self, which):
         try:
             header = b'pw_read'+which.encode()
             msg = header + bytes(5) #power meter sends 00-00-00-00-00
-            msg = msg + my_message.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             return data
         except ConnectionResetError:
             self.connection_error_handler()
 
-    def pw_reset(self, my_message, which):
+    def pw_reset(self, which):
         try:
             header = b'pw_reset'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
-            msg = msg + my_message.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -281,11 +279,11 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
-    def pw_set_avg(self, my_message, which):
+    def pw_set_avg(self, avg, which):
         try:
             header = b'pw_set_avg'+which.encode()
             msg = header + bytes(3) #power supply sends 00-00-00-00-00
-            msg = msg + my_message.encode()
+            msg = msg + avg.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -356,11 +354,11 @@ class gainDevice(Observable.Observable):
 
         self.__laser = None
 
-        self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR')
+        #self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        #self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR')
 
-        self.__power02_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
+        #self.__power02_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        #self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
 
         #self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         #self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
@@ -469,8 +467,10 @@ class gainDevice(Observable.Observable):
         self.free_event.fire("all")
 
     def hard_reset(self):
-        self.__pwmeter.pw_reset()
-        self.__pwmeter02.pw_reset()
+        self.__laser.pw_reset(0)
+        self.__laser.pw_reset(1)
+        #self.__pwmeter.pw_reset()
+        #self.__pwmeter02.pw_reset()
 
     def diode(self, val):
         self.d_f = val
@@ -835,8 +835,10 @@ class gainDevice(Observable.Observable):
             return 'None'
         else:
             self.__cur_wav = self.__laser.get_hardware_wl()[0]
-            self.__pwmeter.pw_set_wl(self.__cur_wav)
-            self.__pwmeter02.pw_set_wl(self.__cur_wav)
+            self.__laser.pw_set_wl(self.__cur_wav, 0)
+            self.__laser.pw_set_wl(self.__cur_wav, 1)
+            #self.__pwmeter.pw_set_wl(self.__cur_wav)
+            #self.__pwmeter02.pw_set_wl(self.__cur_wav)
             return format(self.__cur_wav, '.4f')
 
     @property
@@ -852,19 +854,25 @@ class gainDevice(Observable.Observable):
     @property
     def power_f(self):
         if DEBUG_pw:
-            self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (
-                    self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
+            self.__power = (self.__laser.pw_read(0) + (self.__diode) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read(0)
+            #self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (
+            #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
         else:
-            self.__power = self.__pwmeter.pw_read()
+            self.__power = self.__laser.pw_read(0)
+            #self.__power = self.__pwmeter.pw_read()
         return format(self.__power, '.3f')
 
     @property
     def power02_f(self):
         if DEBUG_pw:
-            self.__power02 = (self.__pwmeter02.pw_read() + (self.__diode/2.) ** 2) * (
-                    self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter02.pw_read()
+            self.__power02 = (self.__laser.pw_read(1) + (self.__diode/2.) ** 2) * (
+                    self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read(1)
+            #self.__power02 = (self.__pwmeter02.pw_read() + (self.__diode/2.) ** 2) * (
+            #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter02.pw_read()
         else:
-            self.__power02 = self.__pwmeter02.pw_read()
+            self.__power02 = self.__laser.pw_read(1)
+            #self.__power02 = self.__pwmeter02.pw_read()
         return format(self.__power02, '.3f')
 
     @property
@@ -1163,8 +1171,10 @@ class gainDevice(Observable.Observable):
     def powermeter_avg_f(self, value):
         try:
             self.__powermeter_avg = int(value)
-            self.__pwmeter.pw_set_avg(self.__powermeter_avg)
-            self.__pwmeter02.pw_set_avg(self.__powermeter_avg)
+            self.__laser.pw_set_avg(self.__powermeter_avg, 0)
+            self.__laser.pw_set_avg(self.__powermeter_avg, 1)
+            #self.__pwmeter.pw_set_avg(self.__powermeter_avg)
+            #self.__pwmeter02.pw_set_avg(self.__powermeter_avg)
         except:
             logging.info("***POWERMETER***: Please enter an integer.")
 

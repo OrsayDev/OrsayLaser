@@ -7,13 +7,9 @@ __author__ = "Yves Auad"
 def _isPython3():
     return sys.version_info[0] >= 3
 
-def SENDMYMESSAGEFUNC(sendmessagefunc):
-    return sendmessagefunc
-
 class TLPowerMeter:
 
-    def __init__(self, sendmessage, which):
-        self.sendmessage=sendmessage
+    def __init__(self, which):
         self.id = which
         self.wl = 580.
 
@@ -29,4 +25,3 @@ class TLPowerMeter:
 
     def pw_reset(self):
         time.sleep(0.01)
-        self.sendmessage(25)

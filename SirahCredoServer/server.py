@@ -6,6 +6,8 @@ import laser_vi
 import laser
 import power_supply_vi
 import power_supply
+import power
+import power_vi
 
 __author__ = "Yves Auad"
 
@@ -24,6 +26,8 @@ class ServerSirahCredoLaser:
         if SERVER_HOST == '127.0.0.1':
             self.__sirah = laser_vi.SirahCredoLaser()
             self.__ps = power_supply_vi.SpectraPhysics()
+            self.__pwmeter = power_vi.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR')
+            self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         elif SERVER_HOST == '129.175.82.159':
             self.__sirah = laser.SirahCredoLaser()

@@ -80,6 +80,8 @@ class LaserServerHandler():
         #server shutdown will be handled in the message below
         self.callback(666)
 
+    ## Sirah Credo Laser Function
+
     def set_hardware_wl(self, wl):
         try:
             header = b'set_hardware_wl'
@@ -242,7 +244,54 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
-    ## POWER SUPPLY RELATED FUNCTIONS ##
+    ## POWER METER RELATED FUNCTIONS ##
+
+    def pw_set_wl(self, my_message):
+        try:
+            header = b'pw_set_wl'
+            msg = header + bytes(5) #power supply sends 00-00-00-00-00
+            msg = msg + my_message.encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 13.') #must return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def pw_read(self, my_message):
+        try:
+            header = b'pw_read'
+            msg = header + bytes(5) #power meter sends 00-00-00-00-00
+            msg = msg + my_message.encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            return data
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def pw_reset(self, my_message):
+        try:
+            header = b'pw_reset'
+            msg = header + bytes(5) #power supply sends 00-00-00-00-00
+            msg = msg + my_message.encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 14.') #must return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def pw_set_avg(self, my_message):
+        try:
+            header = b'pw_set_avg'
+            msg = header + bytes(3) #power supply sends 00-00-00-00-00
+            msg = msg + my_message.encode()
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 15.') #must return None
+        except ConnectionResetError:
+            self.connection_error_handler()
 
 
 class gainDevice(Observable.Observable):

@@ -26,12 +26,14 @@ class ServerSirahCredoLaser:
         if SERVER_HOST == '127.0.0.1':
             self.__sirah = laser_vi.SirahCredoLaser()
             self.__ps = power_supply_vi.SpectraPhysics()
-            self.__pwmeter = power_vi.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR')
-            self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
+            self.__pwmeter = [power_vi.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR'),
+                              power_vi.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')]
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         elif SERVER_HOST == '129.175.82.159':
             self.__sirah = laser.SirahCredoLaser()
             self.__ps = power_supply.SpectraPhysics()
+            self.__pwmeter = [power.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR'),
+                              power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')]
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -142,7 +144,32 @@ class ServerSirahCredoLaser:
                             self.__ps.comm(my_msg.decode())
                             return_data = 'None'.encode()
 
-                    ## End Power Supply Functions
+                    ## Power Meter Functions
+
+                    elif b"pw_set_wl" in data:
+                        which=int(data[9])
+                        if data[10:15] == bytes(5):
+                            wl = float(data[15: 31].decode())
+                            self.__pwmeter[which].pw_set_wl(wl)
+                            return_data = 'None'.encode()
+
+                    elif b"pw_read" in data:
+                        which=int(data[7])
+                        if data[8:13] == bytes(5):
+                            return_data = format(self.__pwmeter[which].pw_read(), '.8f').rjust(16, '0').encode()
+
+                    elif b"pw_reset" in data:
+                        which=int(data[8])
+                        if data[9:14] == bytes(5):
+                            self.__pwmeter[which].pw_reset()
+                            return_data = 'None'.encode()
+
+                    elif b"pw_set_avg" in data:
+                        which=int(data[10])
+                        if data[11:16] == bytes(5):
+                            avg = int(data[16:24])
+                            self.__pwmeter[which].pw_set_avg(avg)
+                            return_data = 'None'.encode()
 
                     else:
                         print(f'***SERVER***: Data {data} received unknown origin.')

@@ -250,7 +250,7 @@ class LaserServerHandler():
         try:
             header = b'pw_set_wl'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
-            msg = msg + my_message.encode()
+            msg = msg + format(wl, '.8f').rjust(16, '0').encode() #16 bytes for float
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -264,7 +264,7 @@ class LaserServerHandler():
             msg = header + bytes(5) #power meter sends 00-00-00-00-00
             self.s.sendall(msg)
             data = self.s.recv(512)
-            return data
+            return float(data.decode())
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -283,7 +283,7 @@ class LaserServerHandler():
         try:
             header = b'pw_set_avg'+which.encode()
             msg = header + bytes(3) #power supply sends 00-00-00-00-00
-            msg = msg + avg.encode()
+            msg = msg + format(avg, '.0f').rjust(8, '0').encode() # 8 bytes for int
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':

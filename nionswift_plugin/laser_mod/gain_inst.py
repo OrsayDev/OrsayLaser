@@ -28,14 +28,14 @@ CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 DEBUG = DEBUG_pw and DEBUG_ps and DEBUG_servo
 
 if DEBUG_pw:
-    from . import power_vi as power
+    pass
 else:
-    from . import power as power
+    pass
 
 if DEBUG_ps:
     pass
 else:
-    from SirahCredoServer import power_supply as ps, power_supply_vi as ps
+    from SirahCredoServer import power as power, power_vi as power
 
 if DEBUG_servo:
     from . import servo_vi as servo
@@ -246,9 +246,9 @@ class LaserServerHandler():
 
     ## POWER METER RELATED FUNCTIONS ##
 
-    def pw_set_wl(self, my_message):
+    def pw_set_wl(self, my_message, which):
         try:
-            header = b'pw_set_wl'
+            header = b'pw_set_wl'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
             msg = msg + my_message.encode()
             self.s.sendall(msg)
@@ -258,9 +258,9 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
-    def pw_read(self, my_message):
+    def pw_read(self, my_message, which):
         try:
-            header = b'pw_read'
+            header = b'pw_read'+which.encode()
             msg = header + bytes(5) #power meter sends 00-00-00-00-00
             msg = msg + my_message.encode()
             self.s.sendall(msg)
@@ -269,9 +269,9 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
-    def pw_reset(self, my_message):
+    def pw_reset(self, my_message, which):
         try:
-            header = b'pw_reset'
+            header = b'pw_reset'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
             msg = msg + my_message.encode()
             self.s.sendall(msg)
@@ -281,9 +281,9 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
-    def pw_set_avg(self, my_message):
+    def pw_set_avg(self, my_message, which):
         try:
-            header = b'pw_set_avg'
+            header = b'pw_set_avg'+which.encode()
             msg = header + bytes(3) #power supply sends 00-00-00-00-00
             msg = msg + my_message.encode()
             self.s.sendall(msg)

@@ -9,6 +9,8 @@ import power_supply
 import power
 import power_vi
 import time
+import select
+import queue
 
 __author__ = "Yves Auad"
 
@@ -23,6 +25,7 @@ SERVER_PORT = settings["SOCKET_SERVER"]["PORT"]
 class ServerSirahCredoLaser:
 
     def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT, TIMEOUT=10.0):
+        self.__running = True
         print("***SERVER***: Initializing SirahCredoServer...")
         if SERVER_HOST == '127.0.0.1':
             self.__sirah = laser_vi.SirahCredoLaser()
@@ -41,6 +44,10 @@ class ServerSirahCredoLaser:
         self.s.settimeout(TIMEOUT)
         self.s.bind((SERVER_HOST, SERVER_PORT))
 
+        self.inputs = [self.s]
+        self.outputs = []
+        self.message_queues = {}
+
         if not self.__sirah.sucessfull:
             self.s.close()  # quits the server is not successful
             print('***SERVER***: Server not successfully created because of Sirah. Leaving...')
@@ -52,134 +59,150 @@ class ServerSirahCredoLaser:
         self.s.listen(5)
         if 1:
             clientsocket, address = self.s.accept()
+            clientsocket.setblocking(False)
+            self.inputs.append(clientsocket)
+            self.message_queues[clientsocket] = queue.Queue()
             print(f"***SERVER***: Connection from {address} has been established.")
             with clientsocket:
                 clientsocket02, address02 = self.s.accept()
+                clientsocket02.setblocking(False)
+                self.inputs.append(clientsocket02)
+                self.message_queues[clientsocket] = queue.Queue()
                 print(f"***SERVER***: Connection from {address02} has been established.")
-                while True:
-                    try:
-                        data = clientsocket.recv(512)
-                    except:
-                        if hasattr(self.__sirah, 'ser'):
-                            self.__sirah.ser.close()
-                        print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
-                        break
+                while self.__running:
+                    readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
+                    for s in readable:
+                        if s in self.inputs:
+                            if s==clientsocket:
+                                print('clietsocket')
+                            if s==clientsocket02:
+                                print('clientsocket02')
+                            try:
+                                data = s.recv(512) #s can be clientsocket or clientsocket02
+                                #self.message_queues[s].put(data)
+                            except:
+                                self.inputs.remove(s)
+                                if hasattr(self.__sirah, 'ser'):
+                                    self.__sirah.ser.close()
+                                print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
+                                self.__running = False
 
-                    if not data:
-                        if hasattr(self.__sirah, 'ser'):
-                            self.__sirah.ser.close()
-                        print('***SERVER***: No data received. Hanging for new connection...')
-                        break
+                            if not data:
+                                self.inputs.remove(s)
+                                if hasattr(self.__sirah, 'ser'):
+                                    self.__sirah.ser.close()
+                                print('***SERVER***: No data received. Hanging for new connection...')
+                                self.__running = False
 
-                    start_time = time.time()
-                    if b"server_ping" in data:
-                        return_data = 'Server Alive'.encode()
+                            start_time = time.time()
+                            if b"server_ping" in data:
+                                return_data = 'Server Alive'.encode()
 
-                    elif b"set_hardware_wl" in data:  # set_hardware_wl(self, wl). no return
-                        if data[15:19] == bytes(4):
-                            wl = float(data[19: 35].decode())  # 16 bytes
-                            self.__sirah.set_hardware_wl(wl)
-                            return_data = 'None'.encode()
+                            elif b"set_hardware_wl" in data:  # set_hardware_wl(self, wl). no return
+                                if data[15:19] == bytes(4):
+                                    wl = float(data[19: 35].decode())  # 16 bytes
+                                    self.__sirah.set_hardware_wl(wl)
+                                    return_data = 'None'.encode()
 
-                    elif b"get_hardware_wl" in data:  # get_hardware_wl(self). return
-                        if data[15:19] == bytes(4):
-                            return_data = format(self.__sirah.get_hardware_wl()[0], '.8f').rjust(16, '0').encode()
+                            elif b"get_hardware_wl" in data:  # get_hardware_wl(self). return
+                                if data[15:19] == bytes(4):
+                                    return_data = format(self.__sirah.get_hardware_wl()[0], '.8f').rjust(16, '0').encode()
 
-                    elif b"setWL" in data:  # setWL(self, wavelength: float, current_wavelength: float). no return
-                        if data[5:9] == bytes(4) and data[25:29] == bytes(4):
-                            wl = float(data[9:25].decode())  # 16 bytes
-                            cur_wl = float(data[29:45].decode())  # 16 bytes
-                            return_data = self.__sirah.setWL(wl, cur_wl)
+                            elif b"setWL" in data:  # setWL(self, wavelength: float, current_wavelength: float). no return
+                                if data[5:9] == bytes(4) and data[25:29] == bytes(4):
+                                    wl = float(data[9:25].decode())  # 16 bytes
+                                    cur_wl = float(data[29:45].decode())  # 16 bytes
+                                    return_data = self.__sirah.setWL(wl, cur_wl)
 
-                    elif b"abort_control" in data:  # abort_control(self). No return
-                        if data[13:17] == bytes(4):
-                            self.__sirah.abort_control()
-                            return_data = 'None'.encode()
+                            elif b"abort_control" in data:  # abort_control(self). No return
+                                if data[13:17] == bytes(4):
+                                    self.__sirah.abort_control()
+                                    return_data = 'None'.encode()
 
-                    elif b"set_scan_thread_locked" in data:  # set_scan_thread_locked(self). return
-                        if data[22:26] == bytes(4):
-                            return_data = self.__sirah.set_scan_thread_locked()
-                            if return_data:
-                                return_data = b'1'
+                            elif b"set_scan_thread_locked" in data:  # set_scan_thread_locked(self). return
+                                if data[22:26] == bytes(4):
+                                    return_data = self.__sirah.set_scan_thread_locked()
+                                    if return_data:
+                                        return_data = b'1'
+                                    else:
+                                        return_data = b'0'
+
+                            elif b"set_scan_thread_release" in data:  # set_scan_thread_release(self). no return
+                                if data[23:27] == bytes(4):
+                                    self.__sirah.set_scan_thread_release()
+                                    return_data = 'None'.encode()
+
+                            elif b"set_scan_thread_check" in data:  # set_scan_thread_check(self). return
+                                if data[21:25] == bytes(4):
+                                    return_data = self.__sirah.set_scan_thread_check()
+                                    if return_data:
+                                        return_data = b'1'
+                                    else:
+                                        return_data = b'0'
+
+                            elif b"set_scan_thread_hardware_status" in data:  # set_scan_thread_hardware_status(self). return
+                                if data[31:35] == bytes(4):
+                                    return_data = self.__sirah.set_scan_thread_hardware_status()
+                                    if return_data == 2:
+                                        return_data = b'2'
+                                    else:
+                                        return_data = b'3'
+
+                            elif b"set_scan" in data:  # set_scan(self, cur, step, pts). no return
+                                if data[8:12] == bytes(4) and data[28:32] == bytes(4) and data[48:52] == bytes(4):
+                                    cur = float(data[12:28].decode())  # 16 bytes
+                                    step = float(data[32:48])  # 16 bytes
+                                    pts = int(data[52:60])  # 8 bytes
+                                    self.__sirah.set_scan(cur, step, pts)
+                                    return_data = 'None'.encode()
+
+                            ## Power Supply Functions
+                            elif b"query" in data:
+                                if data[5:8] == bytes(3):
+                                    my_msg = data[8:]
+                                    return_data = self.__ps.query(my_msg.decode())
+
+                            elif b"comm" in data:
+                                if data[4:7] == bytes(3):
+                                    my_msg = data[7:]
+                                    self.__ps.comm(my_msg.decode())
+                                    return_data = 'None'.encode()
+
+                            ## Power Meter Functions
+
+                            elif b"pw_set_wl" in data:
+                                which=int(data[9:10])
+                                if data[10:15] == bytes(5):
+                                    wl = float(data[15: 31].decode())
+                                    self.__pwmeter[which].pw_set_wl(wl)
+                                    return_data = 'None'.encode()
+
+                            elif b"pw_read" in data:
+                                which=int(data[7:8])
+                                if data[8:13] == bytes(5):
+                                    return_data = format(self.__pwmeter[which].pw_read(), '.8f').rjust(16, '0').encode()
+
+                            elif b"pw_reset" in data:
+                                which=int(data[8:9])
+                                if data[9:14] == bytes(5):
+                                    self.__pwmeter[which].pw_reset()
+                                    return_data = 'None'.encode()
+
+                            elif b"pw_set_avg" in data:
+                                which=int(data[10:11])
+                                if data[11:16] == bytes(5):
+                                    avg = int(data[16:24])
+                                    self.__pwmeter[which].pw_set_avg(avg)
+                                    return_data = 'None'.encode()
+
                             else:
-                                return_data = b'0'
+                                print(f'***SERVER***: Data {data} received unknown origin.')
 
-                    elif b"set_scan_thread_release" in data:  # set_scan_thread_release(self). no return
-                        if data[23:27] == bytes(4):
-                            self.__sirah.set_scan_thread_release()
-                            return_data = 'None'.encode()
-
-                    elif b"set_scan_thread_check" in data:  # set_scan_thread_check(self). return
-                        if data[21:25] == bytes(4):
-                            return_data = self.__sirah.set_scan_thread_check()
-                            if return_data:
-                                return_data = b'1'
-                            else:
-                                return_data = b'0'
-
-                    elif b"set_scan_thread_hardware_status" in data:  # set_scan_thread_hardware_status(self). return
-                        if data[31:35] == bytes(4):
-                            return_data = self.__sirah.set_scan_thread_hardware_status()
-                            if return_data == 2:
-                                return_data = b'2'
-                            else:
-                                return_data = b'3'
-
-                    elif b"set_scan" in data:  # set_scan(self, cur, step, pts). no return
-                        if data[8:12] == bytes(4) and data[28:32] == bytes(4) and data[48:52] == bytes(4):
-                            cur = float(data[12:28].decode())  # 16 bytes
-                            step = float(data[32:48])  # 16 bytes
-                            pts = int(data[52:60])  # 8 bytes
-                            self.__sirah.set_scan(cur, step, pts)
-                            return_data = 'None'.encode()
-
-                    ## Power Supply Functions
-                    elif b"query" in data:
-                        if data[5:8] == bytes(3):
-                            my_msg = data[8:]
-                            return_data = self.__ps.query(my_msg.decode())
-
-                    elif b"comm" in data:
-                        if data[4:7] == bytes(3):
-                            my_msg = data[7:]
-                            self.__ps.comm(my_msg.decode())
-                            return_data = 'None'.encode()
-
-                    ## Power Meter Functions
-
-                    elif b"pw_set_wl" in data:
-                        which=int(data[9:10])
-                        if data[10:15] == bytes(5):
-                            wl = float(data[15: 31].decode())
-                            self.__pwmeter[which].pw_set_wl(wl)
-                            return_data = 'None'.encode()
-
-                    elif b"pw_read" in data:
-                        which=int(data[7:8])
-                        if data[8:13] == bytes(5):
-                            return_data = format(self.__pwmeter[which].pw_read(), '.8f').rjust(16, '0').encode()
-
-                    elif b"pw_reset" in data:
-                        which=int(data[8:9])
-                        if data[9:14] == bytes(5):
-                            self.__pwmeter[which].pw_reset()
-                            return_data = 'None'.encode()
-
-                    elif b"pw_set_avg" in data:
-                        which=int(data[10:11])
-                        if data[11:16] == bytes(5):
-                            avg = int(data[16:24])
-                            self.__pwmeter[which].pw_set_avg(avg)
-                            return_data = 'None'.encode()
-
-                    else:
-                        print(f'***SERVER***: Data {data} received unknown origin.')
-
-                    end = time.time()
-                    clientsocket.sendall(return_data)
-                    if (end-start_time > 0.025):
-                        print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
-                        print(f'Sent data was {data}')
+                            end = time.time()
+                            s.sendall(return_data)
+                            if (end-start_time > 0.1):
+                                print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
+                                print(f'Sent data was {data}')
 
 
 layout = [

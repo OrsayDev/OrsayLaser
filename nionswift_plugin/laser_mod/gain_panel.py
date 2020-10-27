@@ -154,6 +154,7 @@ class gainhandler:
         self.pow02_di = None
         self.ser_di = None
         self.ps_di = None
+        self.trans_di = None
         self.cam_di = None
         self.aligned_cam_di = None
 

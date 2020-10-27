@@ -334,7 +334,7 @@ class gainDevice(Observable.Observable):
         self.__frequency = 10000
         self.__acq_number = 0  # this is a strange variable. This measures how many gain acquire you did in order to
         # create new displays every new acquisition
-        self.__powermeter_avg = 30
+        self.__powermeter_avg = 10
         self.__servo_step = 2
         self.__nper_pic = 2
         self.__dye = 0
@@ -471,8 +471,8 @@ class gainDevice(Observable.Observable):
         self.free_event.fire("all")
 
     def hard_reset(self):
-        self.__laser.pw_reset('0')
-        self.__laser.pw_reset('1')
+        self.__laser02.pw_reset('0')
+        self.__laser02.pw_reset('1')
         #self.__pwmeter.pw_reset()
         #self.__pwmeter02.pw_reset()
 
@@ -548,7 +548,7 @@ class gainDevice(Observable.Observable):
                                 self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, trans=1)
             self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1) #this is mandatory as it measures power
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003) #this is mandatory as it measures power
         else:
             logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
@@ -738,8 +738,8 @@ class gainDevice(Observable.Observable):
                 logging.info('***SERVO***: Angle smaller than 0. Holding on 0.')
             if message == 101:
                 self.property_changed_event.fire("power_f")
-                self.property_changed_event.fire("power02_f") #measure both powers
-                self.property_changed_event.fire("power_transmission_f")
+                #self.property_changed_event.fire("power02_f") #measure both powers
+                #self.property_changed_event.fire("power_transmission_f")
                 if self.__ctrl_type == 1 and not self.__power_ramp:
                     self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180
@@ -839,10 +839,8 @@ class gainDevice(Observable.Observable):
             return 'None'
         else:
             self.__cur_wav = self.__laser.get_hardware_wl()[0]
-            self.__laser.pw_set_wl(self.__cur_wav, '0')
-            self.__laser.pw_set_wl(self.__cur_wav, '1')
-            #self.__pwmeter.pw_set_wl(self.__cur_wav)
-            #self.__pwmeter02.pw_set_wl(self.__cur_wav)
+            #self.__laser02.pw_set_wl(self.__cur_wav, '0')
+            #self.__laser02.pw_set_wl(self.__cur_wav, '1')
             return format(self.__cur_wav, '.4f')
 
     @property
@@ -859,27 +857,24 @@ class gainDevice(Observable.Observable):
     def power_f(self):
         try:
             if DEBUG_pw:
-                self.__power = (self.__laser.pw_read('0') + (self.__diode) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read('0')
-            #self.__power = (self.__pwmeter.pw_read() + (self.__diode) ** 2) * (
-            #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter.pw_read()
+                self.__power = (self.__laser02.pw_read('0') + (self.__diode) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser02.pw_read('0')
             else:
-                self.__power = self.__laser.pw_read('0')
-                #self.__power = self.__pwmeter.pw_read()
+                self.__power = self.__laser02.pw_read('0')
             return format(self.__power, '.3f')
-        except:
+        except AttributeError:
             return 'None'
 
     @property
     def power02_f(self):
         try:
             if DEBUG_pw:
-                self.__power02 = (self.__laser.pw_read('1') + (self.__diode/2.) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser.pw_read('1')
+                self.__power02 = (self.__laser02.pw_read('1') + (self.__diode/2.) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser02.pw_read('1')
             #self.__power02 = (self.__pwmeter02.pw_read() + (self.__diode/2.) ** 2) * (
             #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter02.pw_read()
             else:
-                self.__power02 = self.__laser.pw_read('1')
+                self.__power02 = self.__laser02.pw_read('1')
                 #self.__power02 = self.__pwmeter02.pw_read()
             return format(self.__power02, '.3f')
         except:
@@ -1184,8 +1179,8 @@ class gainDevice(Observable.Observable):
     def powermeter_avg_f(self, value):
         try:
             self.__powermeter_avg = int(value)
-            self.__laser.pw_set_avg(self.__powermeter_avg, '0')
-            self.__laser.pw_set_avg(self.__powermeter_avg, '1')
+            self.__laser02.pw_set_avg(self.__powermeter_avg, '0')
+            self.__laser02.pw_set_avg(self.__powermeter_avg, '1')
             #self.__pwmeter.pw_set_avg(self.__powermeter_avg)
             #self.__pwmeter02.pw_set_avg(self.__powermeter_avg)
         except:

@@ -8,6 +8,8 @@ import power_supply_vi
 import power_supply
 import power
 import power_vi
+import ard
+import ard_vi
 import time
 import select
 import queue
@@ -32,12 +34,14 @@ class ServerSirahCredoLaser:
             self.__ps = power_supply_vi.SpectraPhysics()
             self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
                               power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__ard = ard_vi.Arduino()
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         elif SERVER_HOST == '129.175.82.159':
             self.__sirah = laser.SirahCredoLaser()
             self.__ps = power_supply.SpectraPhysics()
             self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
                               power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__ard = ard.Arduino()
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setblocking(False)
@@ -178,6 +182,30 @@ class ServerSirahCredoLaser:
                                     avg = int(data[16:24])
                                     self.__pwmeter[which].pw_set_avg(avg)
                                     return_data = 'None'.encode()
+
+                            # Arduino Function
+                            elif b"get_pos" in data:
+                                if data[7:13] == bytes(6):
+                                    return_data = format(self.__ard.get_pos(), '.0f').rjust(8, '0').encode()
+
+                            elif b"set_pos" in data:
+                                if data[7:13] == bytes(6):
+                                    pos = int(data[13:21])
+                                    self.__ard.set_pos(pos)
+                                    return_data = 'None'.encode()
+
+                            elif b"wobbler_on" in data:
+                                if data[10:16] == bytes(6):
+                                    pos = int(data[16:24])
+                                    step = int(data[30:38])
+                                    self.__ard.wobbler_on(pos, step)
+                                    return_data = 'None'.encode()
+
+                            elif b"wobbler_off" in data:
+                                if data[11:17] == bytes(6):
+                                    self.__ard.wobbler_off()
+                                    return_data = 'None'.encode()
+
 
                             else:
                                 print(f'***SERVER***: Data {data} received unknown origin.')

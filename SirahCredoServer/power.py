@@ -56,8 +56,6 @@ class TLPowerMeter:
     def pw_set_avg(self, value):
         try:
             self.tl.write('SENS:AVERAGE:COUNT '+str(value))
-            print(self.tl.query("SENS:AVERAGE:COUNT?"))
-            print(self.tl.query('*IDN?'))
         except:
             print(self.tl.query('*IDN?'))
 

@@ -34,12 +34,8 @@ else:
 if DEBUG_ps:
     pass
 else:
-    from SirahCredoServer import power as power, power_vi as power
+    from SirahCredoServer import power as power, power_vi as power, ard as ard, ard_vi as ard
 
-if DEBUG_servo:
-    from . import servo_vi as servo
-else:
-    from . import servo as servo
 
 from . import control_routine as ctrlRout
 
@@ -290,6 +286,56 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
+    def get_pos(self):
+        try:
+            header = b'get_pos'
+            msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode():
+                return int(data.decode())
+            else:
+                return 0
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def set_pos(self, pos):
+        try:
+            header = b'set_pos'
+            msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
+            msg = msg + format(pos, '.0f').rjust(8, '0').encode() # 8 bytes for int
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 16.') #must return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def wobbler_on(self, pos, step):
+        try:
+            header = b'wobbler_on'
+            msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
+            msg = msg + format(pos, '.0f').rjust(8, '0').encode() # 8 bytes for int
+            msg = msg + bytes(6)
+            msg = msg + format(step, '.0f').rjust(8, '0').encode() # 8 bytes for int
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 17.') #must return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+
+    def wobbler_off(self):
+        try:
+            header = b'wobbler_off'
+            msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
+            self.s.sendall(msg)
+            data = self.s.recv(512)
+            if data.decode() != 'None':
+                logging.info('***SERVER***: Bad communication. Error 18.') #must return None
+        except ConnectionResetError:
+            self.connection_error_handler()
+
 
 class gainDevice(Observable.Observable):
 
@@ -354,9 +400,10 @@ class gainDevice(Observable.Observable):
         self.__serverLaser = None
         self.__serverPM = [None, None]
         self.__serverPS = None
+        self.__serverArd = None
 
-        self.__servo_sendmessage = servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__servo = servo.servoMotor(self.__servo_sendmessage)
+        #self.__servo_sendmessage = servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        #self.__servo = servo.servoMotor(self.__servo_sendmessage)
 
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
@@ -417,6 +464,7 @@ class gainDevice(Observable.Observable):
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port),
                                LaserServerHandler(self.__laser_message, self.__host, self.__port)]
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port)
+            self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port)
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser
@@ -1027,9 +1075,9 @@ class gainDevice(Observable.Observable):
     def servo_wobbler_f(self, value):
         self.__servo_wobbler = value
         if value:
-            self.__servo.wobbler_on(self.__servo_pos, self.__servo_step)
+            self.__serverArd.wobbler_on(self.__servo_pos, self.__servo_step)
         else:
-            self.__servo.wobbler_off()
+            self.__serverArd.wobbler_off()
             time.sleep(1.1 / 2.)
             self.servo_f = self.__servo_pos
         self.property_changed_event.fire('servo_wobbler_f')
@@ -1038,7 +1086,8 @@ class gainDevice(Observable.Observable):
     @property
     def servo_f(self):
         if not self.__status:
-            return int(self.__servo.get_pos().decode('UTF-8'))
+            return self.__serverArd.get_pos()
+            #return int(self.__serverArd.get_pos())
         else:
             return self.__servo_pos
 
@@ -1046,7 +1095,7 @@ class gainDevice(Observable.Observable):
     def servo_f(self, value: int):
         if self.servo_wobbler_f: self.servo_wobbler_f = False
         self.__servo_pos = value
-        self.__servo.set_pos(self.__servo_pos)
+        self.__serverArd.set_pos(self.__servo_pos)
         if not self.__status:
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")

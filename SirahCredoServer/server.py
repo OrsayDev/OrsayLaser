@@ -8,7 +8,7 @@ import power_supply_vi
 import power_supply
 import power
 import power_vi
-import threading
+import time
 
 __author__ = "Yves Auad"
 
@@ -52,10 +52,10 @@ class ServerSirahCredoLaser:
         self.s.listen(5)
         if 1:
             clientsocket, address = self.s.accept()
-            print(f"***SERVER***: {clientsocket} Connection from {address} has been established.")
+            print(f"***SERVER***: Connection from {address} has been established.")
             with clientsocket:
                 clientsocket02, address02 = self.s.accept()
-                print(f"***SERVER***: {clientsocket02} Connection from {address02} has been established.")
+                print(f"***SERVER***: Connection from {address02} has been established.")
                 while True:
                     try:
                         data = clientsocket.recv(512)
@@ -71,6 +71,7 @@ class ServerSirahCredoLaser:
                         print('***SERVER***: No data received. Hanging for new connection...')
                         break
 
+                    start_time = time.time()
                     if b"server_ping" in data:
                         return_data = 'Server Alive'.encode()
 
@@ -174,7 +175,12 @@ class ServerSirahCredoLaser:
                     else:
                         print(f'***SERVER***: Data {data} received unknown origin.')
 
+                    end = time.time()
                     clientsocket.sendall(return_data)
+                    if (end-start_time > 0.01):
+                        print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
+                        print(f'Sent data was {data}')
+
 
 layout = [
     [sg.Text('Hanging Timeout (s): '), sg.In('10.00', size=(25, 1), enable_events=True, key='TIMEOUT')],

@@ -21,6 +21,7 @@ class TLPowerMeter:
     def pw_read(self):
         a=-1.0
         val = a*self.wl**2-2*a*585*self.wl+585**2*a+100
+        time.sleep(0.1)
         return abs(val + numpy.random.randn(1)[0])
 
     def pw_reset(self):

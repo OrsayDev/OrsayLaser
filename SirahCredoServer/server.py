@@ -40,6 +40,7 @@ class ServerSirahCredoLaser:
                               power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.setblocking(False)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.settimeout(TIMEOUT)
         self.s.bind((SERVER_HOST, SERVER_PORT))
@@ -57,43 +58,26 @@ class ServerSirahCredoLaser:
 
     def main_loop(self):
         self.s.listen(5)
-        if 1:
-            clientsocket, address = self.s.accept()
-            clientsocket.setblocking(False)
-            self.inputs.append(clientsocket)
-            self.message_queues[clientsocket] = queue.Queue()
-            print(f"***SERVER***: Connection from {address} has been established.")
-            with clientsocket:
-                clientsocket02, address02 = self.s.accept()
-                clientsocket02.setblocking(False)
-                self.inputs.append(clientsocket02)
-                self.message_queues[clientsocket] = queue.Queue()
-                print(f"***SERVER***: Connection from {address02} has been established.")
-                while self.__running:
-                    readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
-                    for s in readable:
-                        if s in self.inputs:
-                            if s==clientsocket:
-                                print('clietsocket')
-                            if s==clientsocket02:
-                                print('clientsocket02')
-                            try:
-                                data = s.recv(512) #s can be clientsocket or clientsocket02
-                                #self.message_queues[s].put(data)
-                            except:
-                                self.inputs.remove(s)
-                                if hasattr(self.__sirah, 'ser'):
-                                    self.__sirah.ser.close()
-                                print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
-                                self.__running = False
-
-                            if not data:
-                                self.inputs.remove(s)
-                                if hasattr(self.__sirah, 'ser'):
-                                    self.__sirah.ser.close()
-                                print('***SERVER***: No data received. Hanging for new connection...')
-                                self.__running = False
-
+        while self.__running:
+            readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
+            for s in readable:
+                if s is self.s:
+                    clientsocket, address = self.s.accept()
+                    clientsocket.setblocking(False)
+                    self.inputs.append(clientsocket)
+                    self.message_queues[clientsocket] = queue.Queue()
+                    print(f"***SERVER***: Connection from {address} has been established.")
+                else:
+                    try:
+                        data = s.recv(512) #s can be clientsocket or clientsocket02
+                        #self.message_queues[s].put(data)
+                        if not data:
+                            self.inputs.remove(s)
+                            if hasattr(self.__sirah, 'ser'):
+                                self.__sirah.ser.close()
+                            print('***SERVER***: No data received. Hanging for new connection...')
+                            self.__running = False
+                        else:
                             start_time = time.time()
                             if b"server_ping" in data:
                                 return_data = 'Server Alive'.encode()
@@ -203,6 +187,14 @@ class ServerSirahCredoLaser:
                             if (end-start_time > 0.1):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')
+                    except:
+                        self.inputs.remove(s)
+                        if hasattr(self.__sirah, 'ser'):
+                            self.__sirah.ser.close()
+                        print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
+                        self.__running = False
+
+
 
 
 layout = [

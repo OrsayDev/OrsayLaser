@@ -351,16 +351,9 @@ class gainDevice(Observable.Observable):
         self.__per_pic = True
         self.__per_pic = True
 
-        self.__laser = None
-
-        #self.__power_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        #self.__pwmeter = power.TLPowerMeter(self.__power_sendmessage, 'USB0::4883::32882::1907040::0::INSTR')
-
-        #self.__power02_sendmessage = power.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        #self.__pwmeter02 = power.TLPowerMeter(self.__power_sendmessage, 'USB0::0x1313::0x8072::1908893::INSTR')
-
-        #self.__ps_sendmessage = ps.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        #self.__ps = ps.SpectraPhysics(self.__ps_sendmessage)
+        self.__serverLaser = None
+        self.__serverPM = [None, None]
+        self.__serverPS = None
 
         self.__servo_sendmessage = servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__servo = servo.servoMotor(self.__servo_sendmessage)
@@ -372,11 +365,11 @@ class gainDevice(Observable.Observable):
         self.__camera = None
 
     def server_instrument_ping(self):
-        self.__laser.server_ping()
+        self.__serverLaser.server_ping()
 
     def server_instrument_shutdown(self):
-        if self.__laser:
-            self.__laser.shutdown()
+        if self.__serverLaser:
+            self.__serverLaser.shutdown()
 
     def init(self):
 
@@ -417,12 +410,15 @@ class gainDevice(Observable.Observable):
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        self.__laser_message02 = SENDMYMESSAGEFUNC(self.sendMessageFactory())
+
         try:
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
-            self.__laser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
-            self.__laser02 = LaserServerHandler(self.__laser_message, self.__host, self.__port)
-            if self.__laser.server_ping():
+            self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
+            self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port),
+                               LaserServerHandler(self.__laser_message, self.__host, self.__port)]
+            self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port)
+
+            if self.__serverLaser.server_ping():
                 # Ask where is Laser
                 logging.info('***SERVER***: Connection with server successful.')
                 #if self.__OrsayScanInstrument and self.__camera:
@@ -471,10 +467,8 @@ class gainDevice(Observable.Observable):
         self.free_event.fire("all")
 
     def hard_reset(self):
-        self.__laser02.pw_reset('0')
-        self.__laser02.pw_reset('1')
-        #self.__pwmeter.pw_reset()
-        #self.__pwmeter02.pw_reset()
+        self.__serverPM[0].pw_reset('0')
+        self.__serverPM[1].pw_reset('1')
 
     def diode(self, val):
         self.d_f = val
@@ -510,26 +504,26 @@ class gainDevice(Observable.Observable):
     def abt(self):
         logging.info('***LASER***: Abort Measurement.')
         self.__abort_force = True
-        self.__laser.abort_control()  # abort laser thread as well.
+        self.__serverLaser.abort_control()  # abort laser thread as well.
         self.run_status_f = False  # force free GUI
 
     def acq_trans(self):
         self.__acq_number += 1
         # check if laser server is alive
-        if self.__laser.server_ping():
+        if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acq_transThread)
             self.__thread.start()
 
     def acq_pr(self):
         self.__acq_number += 1
         #check if laser server is alive
-        if self.__laser.server_ping():
+        if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acq_prThread)
             self.__thread.start()
 
     def acq(self):
         # check if laser server is alive
-        if self.__laser.server_ping():
+        if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acqThread)
             self.__thread.start()
 
@@ -540,13 +534,13 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
-        if (self.__laser.set_scan_thread_check() and abs(
+        if (self.__serverLaser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
             self.__acq_number += 1
             self.call_data.fire(self.__acq_number, self.pts_f + 0, self.avg_f, self.__start_wav, self.__finish_wav,
                                 self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, trans=1)
-            self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+            self.__serverLaser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003) #this is mandatory as it measures power
         else:
@@ -568,9 +562,9 @@ class gainDevice(Observable.Observable):
             j = 0
             i += 1
             if (
-                    self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):
+                    self.__serverLaser.set_scan_thread_hardware_status() == 2 and self.__serverLaser.set_scan_thread_locked()):
                 # check if laser changes have finished and thread step is over
-                self.__laser.set_scan_thread_release()  # if yes, you can advance
+                self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
                 logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
@@ -582,10 +576,10 @@ class gainDevice(Observable.Observable):
         if self.__ctrl_type == 2: pass  # here you can put the initial current of the power supply. Not implemented yet
         self.combo_data_f = True  # if its controlled then you update servo or power supply right
         while (
-                not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
+                not self.__serverLaser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
             # looped here indefinitely than fuck the hardware
-            if self.__laser.set_scan_thread_locked():  # releasing everything if locked
-                self.__laser.set_scan_thread_release()
+            if self.__serverLaser.set_scan_thread_locked():  # releasing everything if locked
+                self.__serverLaser.set_scan_thread_release()
         self.run_status_f = False  # acquisition is over
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
@@ -638,7 +632,7 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
-        if (self.__laser.set_scan_thread_check() and abs(
+        if (self.__serverLaser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
 
             self.__acq_number += 1
@@ -647,7 +641,7 @@ class gainDevice(Observable.Observable):
             self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
             pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero
-            self.__laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+            self.__serverLaser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1) #this is mandatory as it measures power
         else:
@@ -671,9 +665,9 @@ class gainDevice(Observable.Observable):
                 self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (
-                    self.__laser.set_scan_thread_hardware_status() == 2 and self.__laser.set_scan_thread_locked()):
+                    self.__serverLaser.set_scan_thread_hardware_status() == 2 and self.__serverLaser.set_scan_thread_locked()):
                 # check if laser changes have finished and thread step is over
-                self.__laser.set_scan_thread_release()  # if yes, you can advance
+                self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
                 logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
@@ -693,10 +687,10 @@ class gainDevice(Observable.Observable):
         if self.__ctrl_type == 2: pass  # here you can put the initial current of the power supply. Not implemented yet
         self.combo_data_f = True  # if its controlled then you update servo or power supply right
         while (
-                not self.__laser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
+                not self.__serverLaser.set_scan_thread_check()):  # thread MUST END for the sake of security. Better to be
             # looped here indefinitely than fuck the hardware
-            if self.__laser.set_scan_thread_locked():  # releasing everything if locked
-                self.__laser.set_scan_thread_release()
+            if self.__serverLaser.set_scan_thread_locked():  # releasing everything if locked
+                self.__serverLaser.set_scan_thread_release()
         self.run_status_f = False  # acquisition is over
         self.grab_det("end", self.__acq_number, 0, True)
         #self.start_wav_f = self.__start_wav
@@ -780,7 +774,7 @@ class gainDevice(Observable.Observable):
             self.property_changed_event.fire("pts_f")
             self.property_changed_event.fire("tpts_f")
             self.run_status_f = True
-            response = self.__laser.setWL(self.__start_wav, self.__cur_wav)
+            response = self.__serverLaser.setWL(self.__start_wav, self.__cur_wav)
             if response == 1:
                 logging.info("***LASER***: start WL is current WL")
                 self.run_status_f = False
@@ -835,12 +829,12 @@ class gainDevice(Observable.Observable):
 
     @property  # we dont set cur_wav but rather start wav.
     def cur_wav_f(self) -> str:
-        if not self.__laser:
+        if not self.__serverLaser:
             return 'None'
         else:
-            self.__cur_wav = self.__laser.get_hardware_wl()[0]
-            #self.__laser02.pw_set_wl(self.__cur_wav, '0')
-            #self.__laser02.pw_set_wl(self.__cur_wav, '1')
+            self.__cur_wav = self.__serverLaser.get_hardware_wl()[0]
+            self.__serverPM[0].pw_set_wl(self.__cur_wav, '0')
+            self.__serverPM[1].pw_set_wl(self.__cur_wav, '1')
             return format(self.__cur_wav, '.4f')
 
     @property
@@ -857,10 +851,10 @@ class gainDevice(Observable.Observable):
     def power_f(self):
         try:
             if DEBUG_pw:
-                self.__power = (self.__laser02.pw_read('0') + (self.__diode) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser02.pw_read('0')
+                self.__power = (self.__serverPM[0].pw_read('0') + (self.__diode) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[0].pw_read('0')
             else:
-                self.__power = self.__laser02.pw_read('0')
+                self.__power = self.__serverPM[0].pw_read('0')
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'
@@ -869,13 +863,10 @@ class gainDevice(Observable.Observable):
     def power02_f(self):
         try:
             if DEBUG_pw:
-                self.__power02 = (self.__laser02.pw_read('1') + (self.__diode/2.) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__laser02.pw_read('1')
-            #self.__power02 = (self.__pwmeter02.pw_read() + (self.__diode/2.) ** 2) * (
-            #        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__pwmeter02.pw_read()
+                self.__power02 = (self.__serverPM[1].pw_read('1') + (self.__diode/2.) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[1].pw_read('1')
             else:
-                self.__power02 = self.__laser02.pw_read('1')
-                #self.__power02 = self.__pwmeter02.pw_read()
+                self.__power02 = self.__serverPM[1].pw_read('1')
             return format(self.__power02, '.3f')
         except:
             return 'None'
@@ -915,8 +906,8 @@ class gainDevice(Observable.Observable):
         self.__diode = value / 100
         cvalue = format(float(self.__diode), '.2f')  # how to format and send to my hardware
         if self.__diode < MAX_CURRENT:
-            self.__laser.comm('C1:' + str(cvalue) + '\n')
-            self.__laser.comm('C2:' + str(cvalue) + '\n')
+            self.__serverPS.comm('C1:' + str(cvalue) + '\n')
+            self.__serverPS.comm('C2:' + str(cvalue) + '\n')
         else:
             logging.info('***LASER PS***: Attempt to put a current outside allowed range. Check global_settings.')
 
@@ -948,44 +939,44 @@ class gainDevice(Observable.Observable):
     @property
     def cur_d1_f(self):
         try:
-            return self.__laser.query('?C1\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @property
     def cur_d2_f(self):
         try:
-            return self.__laser.query('?C2\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?C2\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @property
     def t_d1_f(self):
         try:
-            return self.__laser.query('?T1\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?T1\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @property
     def t_d2_f(self):
         try:
-            return self.__laser.query('?T2\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?T2\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @property
     def sht_f(self):
         try:
-            return self.__laser.query('?SHT\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?SHT\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @sht_f.setter
     def sht_f(self, value: bool):
         if value:
-            self.__laser.comm('SHT:1\n')
+            self.__serverPS.comm('SHT:1\n')
         else:
-            self.__laser.comm('SHT:0\n')
+            self.__serverPS.comm('SHT:0\n')
 
         self.property_changed_event.fire('sht_f')
         if not self.__status: self.free_event.fire('all')
@@ -993,16 +984,16 @@ class gainDevice(Observable.Observable):
     @property
     def d_f(self):
         try:
-            return self.__laser.query('?D\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?D\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @d_f.setter
     def d_f(self, value: bool):
         if value:
-            self.__laser.comm('D:1\n')
+            self.__serverPS.comm('D:1\n')
         else:
-            self.__laser.comm('D:0\n')
+            self.__serverPS.comm('D:0\n')
 
         self.property_changed_event.fire('d_f')  # kill GUI and updates fast OFF response
         threading.Timer(3, self.property_changed_event.fire, args=('d_f',)).start()  # update in case of slow response
@@ -1011,16 +1002,16 @@ class gainDevice(Observable.Observable):
     @property
     def q_f(self):
         try:
-            return self.__laser.query('?G\n').decode('UTF-8').replace('\n', '')
+            return self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
 
     @q_f.setter
     def q_f(self, value: bool):
         if value:
-            self.__laser.comm('G:1\n')
+            self.__serverPS.comm('G:1\n')
         else:
-            self.__laser.comm('G:0\n')
+            self.__serverPS.comm('G:0\n')
         self.property_changed_event.fire('q_f')
         self.free_event.fire("all")
 
@@ -1179,10 +1170,8 @@ class gainDevice(Observable.Observable):
     def powermeter_avg_f(self, value):
         try:
             self.__powermeter_avg = int(value)
-            self.__laser02.pw_set_avg(self.__powermeter_avg, '0')
-            self.__laser02.pw_set_avg(self.__powermeter_avg, '1')
-            #self.__pwmeter.pw_set_avg(self.__powermeter_avg)
-            #self.__pwmeter02.pw_set_avg(self.__powermeter_avg)
+            self.__serverPM[0].pw_set_avg(self.__powermeter_avg, '0')
+            self.__serverPM[1].pw_set_avg(self.__powermeter_avg, '1')
         except:
             logging.info("***POWERMETER***: Please enter an integer.")
 

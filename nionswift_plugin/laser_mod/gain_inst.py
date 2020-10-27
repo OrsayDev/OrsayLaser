@@ -418,9 +418,11 @@ class gainDevice(Observable.Observable):
             logging.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
 
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
+        self.__laser_message02 = SENDMYMESSAGEFUNC(self.sendMessageFactory())
         try:
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__laser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
+            self.__laser02 = LaserServerHandler(self.__laser_message, self.__host, self.__port)
             if self.__laser.server_ping():
                 # Ask where is Laser
                 logging.info('***SERVER***: Connection with server successful.')

@@ -8,6 +8,7 @@ import power_supply_vi
 import power_supply
 import power
 import power_vi
+import threading
 
 __author__ = "Yves Auad"
 
@@ -48,12 +49,13 @@ class ServerSirahCredoLaser:
             print('***SERVER***: Server not successfully created because of PS. Leaving...')
 
     def main_loop(self):
-        self.s.listen(0)
-        #while True:
+        self.s.listen(5)
         if 1:
             clientsocket, address = self.s.accept()
-            print(f"***SERVER***: Connection from {address} has been established.")
+            print(f"***SERVER***: {clientsocket} Connection from {address} has been established.")
             with clientsocket:
+                clientsocket02, address02 = self.s.accept()
+                print(f"***SERVER***: {clientsocket02} Connection from {address02} has been established.")
                 while True:
                     try:
                         data = clientsocket.recv(512)

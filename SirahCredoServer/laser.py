@@ -80,12 +80,10 @@ class SirahCredoLaser:
         bs = bytearray(mes)
         try:
             self.ser.write(bs)
-            self.ser.read(1)
-            error = self.ser.read(1)
-            self.ser.read(1)
-            status = self.ser.read(1)
-            abs1 = self.ser.read(4)
-            self.ser.read(6)  # clear buffer
+            data = self.ser.read(14)
+            error = data[1:2]
+            status=data[3:4]
+            abs1 = data[4:8]
             pos = self.bytes_to_pos(abs1)
             cur_wl = self.pos_to_wl(pos)
             if (status[0] == 2 or status[0] == 3):

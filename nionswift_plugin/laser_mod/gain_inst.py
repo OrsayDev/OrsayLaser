@@ -21,7 +21,6 @@ DEBUG_servo = settings["SERVO"]["DEBUG"]
 CAMERA = settings["CAMERA"]["WHICH"]
 SCAN = settings["SCAN"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
-PW_AVG = settings["PW"]["AVG"]
 CLIENT_HOST = settings["SOCKET_CLIENT"]["HOST"]
 CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 
@@ -282,7 +281,7 @@ class LaserServerHandler():
     def pw_set_avg(self, avg, which):
         try:
             header = b'pw_set_avg'+which.encode()
-            msg = header + bytes(3) #power supply sends 00-00-00-00-00
+            msg = header + bytes(5) #power supply sends 00-00-00-00-00
             msg = msg + format(avg, '.0f').rjust(8, '0').encode() # 8 bytes for int
             self.s.sendall(msg)
             data = self.s.recv(512)
@@ -335,7 +334,7 @@ class gainDevice(Observable.Observable):
         self.__frequency = 10000
         self.__acq_number = 0  # this is a strange variable. This measures how many gain acquire you did in order to
         # create new displays every new acquisition
-        self.__powermeter_avg = PW_AVG
+        self.__powermeter_avg = 30
         self.__servo_step = 2
         self.__nper_pic = 2
         self.__dye = 0
@@ -437,6 +436,7 @@ class gainDevice(Observable.Observable):
                     self.sht_f = False  # shutter off
                     self.run_status_f = False
                     self.servo_f = 180 #maximum transmission
+                    self.powermeter_avg_f = self.__powermeter_avg
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
 
                     ##POWER SUPPLY CHECK###

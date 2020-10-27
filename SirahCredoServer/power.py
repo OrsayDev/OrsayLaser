@@ -19,7 +19,6 @@ class TLPowerMeter:
             self.tl.timeout=200
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
-            self.tl.write('SENS:AVERAGE:COUNT '+str(30))
         except:
             print(self.tl.query('*IDN?'))
 

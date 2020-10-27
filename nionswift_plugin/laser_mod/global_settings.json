@@ -8,11 +8,10 @@
     "MAX_CURRENT": 30
   },
   "PW": {
-    "DEBUG": 1,
-    "AVG": 30
+    "DEBUG": 0
   },
   "SERVO": {
-    "DEBUG": 1
+    "DEBUG": 0
   },
   "SOCKET_CLIENT": {
     "HOST": "127.0.0.1",

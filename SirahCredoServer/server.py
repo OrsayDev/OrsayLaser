@@ -177,7 +177,7 @@ class ServerSirahCredoLaser:
 
                     end = time.time()
                     clientsocket.sendall(return_data)
-                    if (end-start_time > 0.01):
+                    if (end-start_time > 0.025):
                         print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                         print(f'Sent data was {data}')
 

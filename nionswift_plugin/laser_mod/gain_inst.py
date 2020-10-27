@@ -16,29 +16,15 @@ with open(abs_path) as savfile:
     settings = json.load(savfile)
 
 DEBUG_pw = settings["PW"]["DEBUG"]
-DEBUG_ps = settings["PS"]["DEBUG"]
-DEBUG_servo = settings["SERVO"]["DEBUG"]
 CAMERA = settings["CAMERA"]["WHICH"]
 SCAN = settings["SCAN"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 CLIENT_HOST = settings["SOCKET_CLIENT"]["HOST"]
 CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 
-DEBUG = DEBUG_pw and DEBUG_ps and DEBUG_servo
-
-if DEBUG_pw:
-    pass
-else:
-    pass
-
-if DEBUG_ps:
-    pass
-else:
-    from SirahCredoServer import power as power, power_vi as power, ard as ard, ard_vi as ard
-
+DEBUG = DEBUG_pw
 
 from . import control_routine as ctrlRout
-
 
 def SENDMYMESSAGEFUNC(sendmessagefunc):
     return sendmessagefunc
@@ -362,6 +348,7 @@ class gainDevice(Observable.Observable):
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
         self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
+        self.__power_wav = self.__start_wav
         self.__power = 0.
         self.__power02 = 0.
         self.__rt = 10.
@@ -401,9 +388,6 @@ class gainDevice(Observable.Observable):
         self.__serverPM = [None, None]
         self.__serverPS = None
         self.__serverArd = None
-
-        #self.__servo_sendmessage = servo.SENDMYMESSAGEFUNC(self.sendMessageFactory())
-        #self.__servo = servo.servoMotor(self.__servo_sendmessage)
 
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
@@ -748,36 +732,6 @@ class gainDevice(Observable.Observable):
 
     def sendMessageFactory(self):
         def sendMessage(message):
-            if message == 21:
-                logging.info('***Power Meter***: Cant write')
-            if message == 22:
-                logging.info('***Power Meter***: Cant READ a new measurement. Fetching last one instead.')
-            if message == 24:
-                logging.info('***Power Meter***: Power Meter not ID; Please check hardware.')
-            if message == 25:
-                logging.info('***Power Meter***: Hardware reset successful.')
-            if message == 26:
-                logging.info('***Power Meter***: Hardware reset failed.')
-            if message == 27:
-                logging.info('***Power Meter***: New averaging OK.')
-            if message == 28:
-                logging.info('***Power Meter***: Could not set new averaging.')
-            if message == 61:
-                logging.info('***LASER PS***: Could not open serial port. Check if connected and port')
-            if message == 62:
-                logging.info('***LASER PS***: Could not query properly')
-            if message == 63:
-                logging.info('***LASER PS***: Could not send command properly')
-            if message == 81:
-                logging.info('***SERVO***: Could not open serial port. Check if connected')
-            if message == 82:
-                logging.info('***SERVO***: Could not properly get_pos. Retrying after a flush..')
-            if message == 83:
-                logging.info('***SERVO***: Could not properly set_pos. Retrying after a flush..')
-            if message == 84:
-                logging.info('***SERVO***: Angle higher than 180. Holding on 180.')
-            if message == 85:
-                logging.info('***SERVO***: Angle smaller than 0. Holding on 0.')
             if message == 101:
                 self.property_changed_event.fire("power_f")
                 #self.property_changed_event.fire("power02_f") #measure both powers
@@ -789,12 +743,14 @@ class gainDevice(Observable.Observable):
                 if self.__ctrl_type == 2:
                     self.__diode = self.__diode + 0.02 if self.__power < self.__power_ref else self.__diode - 0.02
                     self.cur_d_f = self.__diode
-            if message == 102:
+            elif message == 102:
                 logging.info('***CONTROL***: Control OFF but it was never on.')
-            if message == 666:
+            elif message == 666:
                 self.__abort_force = True
                 logging.info('***SERVER***: Lost connection with server. Please check if server is active.')
                 self.server_shutdown.fire()
+            else:
+                logging.info(f'***WARNING***: Message {message} is not recognizable')
         return sendMessage
 
     def Laser_stop_all(self):
@@ -808,6 +764,7 @@ class gainDevice(Observable.Observable):
             time.sleep(0.05)
             self.wavelength_ready()
         else:
+            self.power_wav_f = self.__cur_wav
             self.run_status_f = False  # this already frees GUI
 
     @property
@@ -881,8 +838,6 @@ class gainDevice(Observable.Observable):
             return 'None'
         else:
             self.__cur_wav = self.__serverLaser.get_hardware_wl()[0]
-            self.__serverPM[0].pw_set_wl(self.__cur_wav, '0')
-            self.__serverPM[1].pw_set_wl(self.__cur_wav, '1')
             return format(self.__cur_wav, '.4f')
 
     @property
@@ -902,6 +857,8 @@ class gainDevice(Observable.Observable):
                 self.__power = (self.__serverPM[0].pw_read('0') + (self.__diode) ** 2) * (
                         self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[0].pw_read('0')
             else:
+                if abs(self.power_wav_f - self.__cur_wav)>0.1:
+                    self.power_wav_f = self.__cur_wav
                 self.__power = self.__serverPM[0].pw_read('0')
             return format(self.__power, '.3f')
         except AttributeError:
@@ -918,6 +875,16 @@ class gainDevice(Observable.Observable):
             return format(self.__power02, '.3f')
         except:
             return 'None'
+
+    @property
+    def power_wav_f(self):
+        return self.__power_wav
+
+    @power_wav_f.setter
+    def power_wav_f(self, value):
+        self.__power_wav = value
+        self.__serverPM[0].pw_set_wl(self.__power_wav, '0')
+        self.__serverPM[1].pw_set_wl(self.__power_wav, '1')
 
     @property
     def rt_f(self): #this func is the R/T factor for the first powermeter. This will normalize power correctly

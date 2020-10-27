@@ -4,14 +4,12 @@
     "MIN_WAV": 532
   },
   "PS": {
-    "DEBUG": 0,
     "MAX_CURRENT": 30
   },
   "PW": {
     "DEBUG": 0
   },
   "SERVO": {
-    "DEBUG": 0
   },
   "SOCKET_CLIENT": {
     "HOST": "127.0.0.1",

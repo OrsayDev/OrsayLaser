@@ -73,8 +73,8 @@ class ServerSirahCredoLaser:
                     print(f"***SERVER***: Connection from {address} has been established.")
                 else:
                     try:
-                        data = s.recv(512) #s can be clientsocket or clientsocket02
-                        #self.message_queues[s].put(data)
+                        data = s.recv(512)
+                        self.message_queues[s].put(data)
                         if not data:
                             self.inputs.remove(s)
                             if hasattr(self.__sirah, 'ser'):
@@ -212,10 +212,10 @@ class ServerSirahCredoLaser:
 
                             end = time.time()
                             s.sendall(return_data)
-                            if (end-start_time > 0.1):
+                            if (end-start_time > 0.025):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')
-                    except:
+                    except ConnectionResetError:
                         self.inputs.remove(s)
                         if hasattr(self.__sirah, 'ser'):
                             self.__sirah.ser.close()

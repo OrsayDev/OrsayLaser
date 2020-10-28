@@ -16,7 +16,8 @@ class Arduino:
         self.control_thread = None
 
     def get_pos(self):
-        return self.pos.decode()
+        a = int(self.pos.decode())
+        return a
 
     def set_pos(self, position):
         if position > 180:

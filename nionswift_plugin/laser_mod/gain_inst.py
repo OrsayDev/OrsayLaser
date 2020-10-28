@@ -1054,7 +1054,6 @@ class gainDevice(Observable.Observable):
     def servo_f(self):
         if not self.__status:
             return self.__serverArd.get_pos()
-            #return int(self.__serverArd.get_pos())
         else:
             return self.__servo_pos
 

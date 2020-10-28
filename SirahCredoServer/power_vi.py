@@ -13,7 +13,6 @@ class TLPowerMeter:
         self.id = which
         self.wl = 580.
 
-
     def pw_set_wl(self, cur_wl):
         self.wl=cur_wl
         return None
@@ -21,8 +20,11 @@ class TLPowerMeter:
     def pw_read(self):
         a=-1.0
         val = a*self.wl**2-2*a*585*self.wl+585**2*a+100
-        time.sleep(0.1)
+        time.sleep(0.003)
         return abs(val + numpy.random.randn(1)[0])
 
     def pw_reset(self):
         time.sleep(0.01)
+
+    def pw_set_avg(self, value):
+        pass

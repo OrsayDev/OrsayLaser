@@ -27,7 +27,7 @@ class Arduino:
                 self.ser.open()
                 self.ser.readline()
         except:
-            pass
+            print('ok')
 
 
     def get_pos(self):

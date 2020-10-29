@@ -158,17 +158,27 @@ class ServerSirahCredoLaser:
 
                             ## Power Meter Functions
 
-                            elif b"pw_set_wl" in data:
-                                which=int(data[9:10])
-                                if data[10:15] == bytes(5):
-                                    wl = float(data[15: 31].decode())
-                                    self.__pwmeter[which].pw_set_wl(wl)
-                                    return_data = 'None'.encode()
+
+                            #elif b"pw_set_wl" in data:
+                            #    which=int(data[9:10])
+                            #    if data[10:15] == bytes(5):
+                            #        wl = float(data[15: 31].decode())
+                            #        try:
+                            #            self.__pwmeter[which].pw_set_wl(wl)
+                            #        except:
+                            #            print(f'***WARNING***: Power Meter {which} is disconnected.')
+                            #        return_data = 'None'.encode()
+
 
                             elif b"pw_read" in data:
                                 which=int(data[7:8])
                                 if data[8:13] == bytes(5):
-                                    return_data = format(self.__pwmeter[which].pw_read(), '.8f').rjust(16, '0').encode()
+                                    try:
+                                        wl = float(data[13: 29])
+                                        return_data = format(self.__pwmeter[which].pw_read(wl), '.8f').rjust(16, '0').encode()
+                                    except:
+                                        print(f'***WARNING***: Power Meter {which} is disconnected.')
+                                        return_data = format(9e5, '.8f').rjust(16, '0').encode()
 
                             elif b"pw_reset" in data:
                                 which=int(data[8:9])
@@ -180,7 +190,10 @@ class ServerSirahCredoLaser:
                                 which=int(data[10:11])
                                 if data[11:16] == bytes(5):
                                     avg = int(data[16:24])
-                                    self.__pwmeter[which].pw_set_avg(avg)
+                                    try:
+                                        self.__pwmeter[which].pw_set_avg(avg)
+                                    except:
+                                        print(f'***WARNING***: Power Meter {which} is disconnected.')
                                     return_data = 'None'.encode()
 
                             # Arduino Function
@@ -212,7 +225,7 @@ class ServerSirahCredoLaser:
 
                             end = time.time()
                             s.sendall(return_data)
-                            if (end-start_time > 0.025):
+                            if (end-start_time > 0.02):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')
                     except ConnectionResetError:

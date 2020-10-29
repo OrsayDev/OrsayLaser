@@ -12,6 +12,8 @@ class TLPowerMeter:
         self.pwthread = None
         self.rm = pyvisa.ResourceManager()
         self.id = which
+        self.last = None
+        self.wl = 585.
         self.lock = threading.Lock()
 
         try:
@@ -20,25 +22,32 @@ class TLPowerMeter:
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
         except:
-            print(self.tl.query('*IDN?'))
+            sensor = self.tl.query('*IDN?')
+            print(f'Problem 01 in {sensor}')
 
     
     def pw_set_wl(self, cur_WL):
         string='SENS:CORR:WAV '+str(cur_WL)
-        with self.lock:
-            try:
-                self.tl.write(string)
-            except:
-                print(self.tl.query('*IDN?'))
+        try:
+            self.tl.write(string)
+        except:
+            sensor = self.tl.query('*IDN?')
+            print(f'Problem 02 in {sensor}')
 
 
-    def pw_read(self):
+    def pw_read(self, wl):
         with self.lock:
             try:
-                a = self.tl.query('READ?')
-                return (float(a)*1e6)
+                #Put good WL
+                if abs(wl - self.wl) > 0.1:
+                    self.wl = wl
+                    self.pw_set_wl(wl)
+                #Do power measurement
+                self.last = float(self.tl.query('READ?'))*1e6
+                return self.last
             except:
-                print(self.tl.query('*IDN?'))
+                sensor = self.tl.query('*IDN?')
+                print(f'Problem 03 in {sensor}')
                 return (float(self.tl.query('FETCH?'))*1e6)
 
     def pw_reset(self):
@@ -51,11 +60,13 @@ class TLPowerMeter:
             self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
             print(self.tl.query('*IDN?'))
         except:
-            print(self.tl.query('*IDN?'))
+            sensor = self.tl.query('*IDN?')
+            print(f'Problem 04 in {sensor}')
 
     def pw_set_avg(self, value):
         try:
             self.tl.write('SENS:AVERAGE:COUNT '+str(value))
         except:
-            print(self.tl.query('*IDN?'))
+            sensor = self.tl.query('*IDN?')
+            print(f'Problem 05 in {sensor}')
 

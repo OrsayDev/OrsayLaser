@@ -31,7 +31,6 @@ class SirahCredoLaser:
         try:
             if not self.ser.is_open:
                 self.ser.open()
-                time.sleep(0.1)
                 self.sucessfull = True
         except:
             print("***LASER***: Could not open serial port. Check if connected and port.")

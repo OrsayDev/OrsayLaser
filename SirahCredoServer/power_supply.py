@@ -24,7 +24,6 @@ class SpectraPhysics:
         try:
             if not self.ser.is_open:
                 self.ser.open()
-                time.sleep(0.5)
                 self.sucessfull = True
         except:
             self.sucessfull = False

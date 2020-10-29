@@ -227,7 +227,7 @@ class LaserServerHandler():
 
     ## POWER METER RELATED FUNCTIONS ##
 
-    def pw_set_wl(self, wl, which):
+    '''def pw_set_wl(self, wl, which):
         try:
             header = b'pw_set_wl'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
@@ -237,12 +237,13 @@ class LaserServerHandler():
             if data.decode() != 'None':
                 logging.info('***SERVER***: Bad communication. Error 13.') #must return None
         except ConnectionResetError:
-            self.connection_error_handler()
+            self.connection_error_handler()'''
 
-    def pw_read(self, which):
+    def pw_read(self, which, wl):
         try:
             header = b'pw_read'+which.encode()
             msg = header + bytes(5) #power meter sends 00-00-00-00-00
+            msg = msg + format(wl, '.8f').rjust(16, '0').encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             return float(data.decode())
@@ -348,7 +349,6 @@ class gainDevice(Observable.Observable):
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
         self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
-        self.__power_wav = self.__start_wav
         self.__power = 0.
         self.__power02 = 0.
         self.__rt = 10.
@@ -761,7 +761,7 @@ class gainDevice(Observable.Observable):
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
             self.property_changed_event.fire("cur_wav_f")  # don't need a thread.
-            time.sleep(0.05)
+            time.sleep(0.05) ##this reading takes 25ms so 50ms is safe.
             self.wavelength_ready()
         else:
             self.power_wav_f = self.__cur_wav
@@ -854,12 +854,10 @@ class gainDevice(Observable.Observable):
     def power_f(self):
         try:
             if DEBUG_pw:
-                self.__power = (self.__serverPM[0].pw_read('0') + (self.__diode) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[0].pw_read('0')
+                self.__power = (self.__serverPM[0].pw_read('0', self.__cur_wav) + (self.__diode) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[0].pw_read('0', self.__cur_wav)
             else:
-                if abs(self.power_wav_f - self.__cur_wav)>0.1:
-                    self.power_wav_f = self.__cur_wav
-                self.__power = self.__serverPM[0].pw_read('0')
+                self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'
@@ -868,23 +866,13 @@ class gainDevice(Observable.Observable):
     def power02_f(self):
         try:
             if DEBUG_pw:
-                self.__power02 = (self.__serverPM[1].pw_read('1') + (self.__diode/2.) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[1].pw_read('1')
+                self.__power02 = (self.__serverPM[1].pw_read('1', self.__cur_wav) + (self.__diode/2.) ** 2) * (
+                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[1].pw_read('1', self.__cur_wav)
             else:
-                self.__power02 = self.__serverPM[1].pw_read('1')
+                self.__power02 = self.__serverPM[1].pw_read('1', self.__cur_wav)
             return format(self.__power02, '.3f')
         except:
             return 'None'
-
-    @property
-    def power_wav_f(self):
-        return self.__power_wav
-
-    @power_wav_f.setter
-    def power_wav_f(self, value):
-        self.__power_wav = value
-        self.__serverPM[0].pw_set_wl(self.__power_wav, '0')
-        self.__serverPM[1].pw_set_wl(self.__power_wav, '1')
 
     @property
     def rt_f(self): #this func is the R/T factor for the first powermeter. This will normalize power correctly

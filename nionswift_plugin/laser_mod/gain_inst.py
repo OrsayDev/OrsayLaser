@@ -410,7 +410,6 @@ class gainDevice(Observable.Observable):
             server.shutdown()
         if self.__serverPS: self.__serverPS.shutdown()
         if self.__serverArd: self.__serverArd.shutdown()
-        if self.__serverBroadCast: self.__serverBroadCast.shutdown()
 
     def init(self):
 
@@ -459,7 +458,6 @@ class gainDevice(Observable.Observable):
                                LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
-            #self.__serverBroadCast = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'bc')
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser

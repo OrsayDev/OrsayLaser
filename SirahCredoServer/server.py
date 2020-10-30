@@ -58,12 +58,15 @@ class ServerSirahCredoLaser:
         if not self.__sirah.sucessfull:
             self.s.close()  # quits the server is not successful
             print('***SERVER***: Server not successfully created because of Sirah. Leaving...')
-        if not self.__ps.sucessfull:
+        elif not self.__ps.sucessfull:
             self.s.close()  # quits the server is not successful
             print('***SERVER***: Server not successfully created because of PS. Leaving...')
+        else:
+            self.s.listen()
+            print('***SERVER***: Server OK')
 
-    def main_loop(self):
-        self.s.listen()
+
+    def main(self):
         while self.__running:
             readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
             #for w in writable:
@@ -247,8 +250,6 @@ class ServerSirahCredoLaser:
                         self.__running = False
 
 
-
-
 layout = [
     [sg.Text('Hanging Timeout (s): '), sg.In('10.00', size=(25, 1), enable_events=True, key='TIMEOUT')],
     [sg.Radio("Local Host", "Radio", size=(10, 1), key='LOCAL_HOST', enable_events=True, default=True),
@@ -286,8 +287,7 @@ while True:
             print('***SERVER***: Could not BIND probably. MUST work on LOCALHOST.')
     if event == "Hang":
             try:
-                ss.main_loop()
-
+                ss.main()
                 try:
                     ss.s.close()
                     ss = None

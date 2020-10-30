@@ -12,16 +12,14 @@ _ = gettext.gettext
 class serverhandler:
 
     def __init__(self, instrument: server_inst.serverDevice, document_controller):
-
         self.event_loop = document_controller.event_loop
         self.document_controller = document_controller
         self.instrument = instrument
         self.enabled = False
-        #self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
+        self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
 
     def init_handler(self):
-        pass
-        #self.event_loop.create_task(self.do_enable(False, ['init_pb']))
+        self.event_loop.create_task(self.do_enable(False, ['init_pb']))
 
     def init(self, widget):
         ok = self.instrument.init()
@@ -41,10 +39,8 @@ class serverhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(True, ['']))
+        self.event_loop.create_task(self.do_enable(True, ['init_pb']))
 
-    def prepare_widget_disable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ['']))
 
 
 class serverView:
@@ -94,6 +90,6 @@ def create_spectro_panel(document_controller, panel_id, properties):
 
 def run(instrument: server_inst.serverDevice) -> None:
     panel_id = "Server Status"  # make sure it is unique, otherwise only one of the panel will be displayed
-    name = _("Server Staus")
+    name = _("Server Status")
     Workspace.WorkspaceManager().register_panel(create_spectro_panel, panel_id, name, ["left", "right"], "left",
                                                 {"instrument": instrument})

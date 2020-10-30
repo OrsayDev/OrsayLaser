@@ -1,25 +1,20 @@
 # standard libraries
 from nion.utils import Event
 from nion.utils import Observable
-from nion.swift.model import HardwareSource
 
-import time
 import threading
-
 import numpy
 import socket
 
-GREEN = (numpy.ones((1, 1), dtype=numpy.uint32))*2500000000
-RED = (numpy.ones((1, 1), dtype=numpy.uint32))*4000000000
+GREEN = (numpy.ones((1, 1), dtype=numpy.uint32)) * 2000000000
+RED = (numpy.ones((1, 1), dtype=numpy.uint32)) * 4000000000
 
 class serverDevice(Observable.Observable):
     def __init__(self):
         self.property_changed_event = Event.Event()
-
         self.__colorLaser = self.__colorPM01 = self.__colorPM02 = self.__colorPS = self.__colorArd = RED
 
     def init(self):
-        self.osc = False
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect(('127.0.0.1', 65432))
         self.s.sendall('bc'.encode())
@@ -33,15 +28,14 @@ class serverDevice(Observable.Observable):
         threading.Thread(target=self.read, args=(),).start()
 
     def read(self):
-        time.sleep(0.02)
-        self.laser_blink=False
         data = self.s.recv(512)
         if b'get_hardware_wl' in data:
-            self.laser_blink=True
+            self.color_laser='green'
         self.loop()
 
     @property
     def color_laser(self):
+        print('oi')
         return self.__colorLaser
 
     @color_laser.setter
@@ -50,6 +44,7 @@ class serverDevice(Observable.Observable):
             self.__colorLaser = RED
         else:
             self.__colorLaser = GREEN
+        self.property_changed_event.fire("color_laser")
 
     @property
     def color_pm01(self):
@@ -61,6 +56,7 @@ class serverDevice(Observable.Observable):
             self.__colorPM01 = RED
         else:
             self.__colorPM01 = GREEN
+        self.property_changed_event.fire('color_pm01')
 
     @property
     def color_pm02(self):
@@ -72,6 +68,7 @@ class serverDevice(Observable.Observable):
             self.__colorPM02 = RED
         else:
             self.__colorPM02 = GREEN
+        self.property_changed_event.fire('color_pm02')
 
     @property
     def color_ps(self):
@@ -83,6 +80,7 @@ class serverDevice(Observable.Observable):
             self.__colorPS = RED
         else:
             Self.__colorPS = GREEN
+        self.property_changed_event.fire('color_ps')
 
     @property
     def color_ard(self):
@@ -94,3 +92,4 @@ class serverDevice(Observable.Observable):
             self.__colorArd = RED
         else:
             self.__colorArd = GREEN
+        self.property_changed_event.fire('color_ard')

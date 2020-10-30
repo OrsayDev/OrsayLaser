@@ -11,9 +11,11 @@ from SirahCredoServer import server_inst
 def run():
 
     simpleInstrument=gain_inst.gainDevice()
-    simpleServer = server_inst.serverDevice()
     HardwareSource.HardwareSourceManager().register_instrument("sgain_controller", simpleInstrument)
     gain_panel.run(simpleInstrument)
+
+    simpleServer = server_inst.serverDevice()
+    HardwareSource.HardwareSourceManager().register_instrument("server_display", simpleServer)
     server_panel.run(simpleServer)
 
 

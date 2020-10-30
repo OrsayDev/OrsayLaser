@@ -6,36 +6,46 @@ import threading
 import numpy
 import socket
 
-GREEN = (numpy.ones((1, 1), dtype=numpy.uint32)) * 2000000000
-RED = (numpy.ones((1, 1), dtype=numpy.uint32)) * 4000000000
+GREEN = (numpy.ones((25, 35), dtype=numpy.uint32)) * 2000000000
+RED = (numpy.ones((25, 35), dtype=numpy.uint32)) * 4000000000
 
 class serverDevice(Observable.Observable):
     def __init__(self):
         self.property_changed_event = Event.Event()
-        self.__colorLaser = self.__colorPM01 = self.__colorPM02 = self.__colorPS = self.__colorArd = RED
+
+        self.__colorLaser = RED
+        self.__colorPM01 = RED
+        self.__colorPM02 = RED
+        self.__colorPS = RED
+        self.__colorArd = RED
 
     def init(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect(('127.0.0.1', 65432))
         self.s.sendall('bc'.encode())
         data = self.s.recv(512)
+
         if data == b'bc':
             return True
         else:
             return False
 
     def loop(self):
-        threading.Thread(target=self.read, args=(),).start()
+        threading.Timer(0.02, self.read, args=(),).start()
 
     def read(self):
+        self.color_laser=self.color_pm01=self.color_pm02=self.color_ps=self.color_ard='red'
         data = self.s.recv(512)
         if b'get_hardware_wl' in data:
             self.color_laser='green'
+        elif b'query' in data:
+            self.color_ps='green'
+        elif b'pw_' in data:
+            self.color_pm01='gren'
         self.loop()
 
     @property
     def color_laser(self):
-        print('oi')
         return self.__colorLaser
 
     @color_laser.setter
@@ -79,7 +89,7 @@ class serverDevice(Observable.Observable):
         if value=='red':
             self.__colorPS = RED
         else:
-            Self.__colorPS = GREEN
+            self.__colorPS = GREEN
         self.property_changed_event.fire('color_ps')
 
     @property

@@ -28,7 +28,7 @@ class serverhandler:
             self.instrument.loop()
 
     def click(self, widget):
-        pass
+        print('clicked')
 
     async def do_enable(self, enabled=True, not_affected_widget_name_list=None):
         for var in self.__dict__:
@@ -50,24 +50,25 @@ class serverView:
         self.init_pb = ui.create_push_button(name='init_pb', on_clicked='init', text='Init')
 
         self.client_laser = ui.create_label(name='client_laser', text='Client Laser: ')
-        self.client_laser_rgb = ui.create_image(image='@binding(instrument.color_laser)', on_clicked='click', width=15)
+        self.client_laser_rgb = ui.create_push_button(icon='@binding(instrument.color_laser)', on_clicked='click', width=25)
         self.laser = ui.create_row(self.client_laser, self.client_laser_rgb)
 
         self.client_pm01 = ui.create_label(name='client_pm01', text='Client Power 01: ')
-        self.client_pm01_rgb = ui.create_image(image='@binding(instrument.color_pm01)', on_clicked='click', width=15)
+        self.client_pm01_rgb = ui.create_push_button(icon='@binding(instrument.color_pm01)', on_clicked='click', width=25)
         self.pm01 = ui.create_row(self.client_pm01, self.client_pm01_rgb)
 
         self.client_pm02 = ui.create_label(name='client_pm02',text='Client Power 02: ')
-        self.client_pm02_rgb = ui.create_image(image='@binding(instrument.color_pm02)', on_clicked='click', width=15)
+        self.client_pm02_rgb = ui.create_push_button(icon='@binding(instrument.color_pm02)', on_clicked='click', width=25)
         self.pm02 = ui.create_row(self.client_pm02, self.client_pm02_rgb)
 
         self.client_ps = ui.create_label(name='client_ps', text='Client Power Supply: ')
-        self.client_ps_rgb = ui.create_image(image='@binding(instrument.color_ps)', on_clicked='click', width=15)
+        self.client_ps_rgb = ui.create_push_button(icon='@binding(instrument.color_ps)', on_clicked='click', width=25)
         self.ps = ui.create_row(self.client_ps, self.client_ps_rgb)
 
         self.client_ard = ui.create_label(name='client_ard',text='Client Arduino: ')
-        self.client_ard_rgb = ui.create_image(image='@binding(instrument.color_ard)', on_clicked='click', width=15)
+        self.client_ard_rgb = ui.create_push_button(icon='@binding(instrument.color_ard)', on_clicked='click', width=25)
         self.ard = ui.create_row(self.client_ard,  self.client_ard_rgb)
+
 
         self.ui_view = ui.create_column(self.init_pb, self.laser, self.pm01, self.pm02, self.ps, self.ard)
 

@@ -66,6 +66,8 @@ class ServerSirahCredoLaser:
         self.s.listen()
         while self.__running:
             readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
+            #for w in writable:
+            #    w.send(b'')
             for s in readable:
                 if s is self.s:
                     clientsocket, address = self.s.accept()
@@ -73,6 +75,7 @@ class ServerSirahCredoLaser:
                     clientsocket.sendall(data)
                     clientsocket.setblocking(False)
                     self.inputs.append(clientsocket)
+                    #if data.decode() == 'bc': self.outputs.append(clientsocket)
                     self.who[data.decode()] = clientsocket
                     self.message_queues[clientsocket] = queue.Queue()
                     print(f"***SERVER***: Connection from {address} has been established.")

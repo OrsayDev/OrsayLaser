@@ -36,6 +36,8 @@ class LaserServerHandler():
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
         self.s.settimeout(0.5)
         self.callback = callback
+        self.name = which.encode()
+        self.on = True
         self.s.sendall(which.encode())
         data = self.s.recv(512)
 
@@ -57,10 +59,12 @@ class LaserServerHandler():
             return False
 
     def shutdown(self):
+        self.on = False
         self.s.close()
 
     def connection_error_handler(self):
         #server shutdown will be handled in the message below
+        self.shutdown()
         self.callback(666)
 
     ## Sirah Credo Laser Function
@@ -401,8 +405,12 @@ class gainDevice(Observable.Observable):
         self.__serverLaser.server_ping()
 
     def server_instrument_shutdown(self):
-        if self.__serverLaser:
-            self.__serverLaser.shutdown()
+        if self.__serverLaser: self.__serverLaser.shutdown()
+        for server in self.__serverPM:
+            server.shutdown()
+        if self.__serverPS: self.__serverPS.shutdown()
+        if self.__serverArd: self.__serverArd.shutdown()
+        if self.__serverBroadCast: self.__serverBroadCast.shutdown()
 
     def init(self):
 
@@ -451,7 +459,7 @@ class gainDevice(Observable.Observable):
                                LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
-            self.__serverBroadCast = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'bc')
+            #self.__serverBroadCast = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'bc')
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser
@@ -861,6 +869,7 @@ class gainDevice(Observable.Observable):
                         self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[0].pw_read('0', self.__cur_wav)
             else:
                 self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
+                self.blink.fire()
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'

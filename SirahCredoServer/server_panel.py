@@ -4,28 +4,30 @@ from nion.swift import Panel
 from nion.swift import Workspace
 from nion.ui import Declarative
 from nion.ui import UserInterface
-from nionswift_plugin.laser_mod import gain_inst
+from . import server_inst
+import socket
 
 _ = gettext.gettext
 
 class serverhandler:
 
-    def __init__(self, instrument: gain_inst.gainDevice, document_controller):
+    def __init__(self, instrument: server_inst.serverDevice, document_controller):
 
         self.event_loop = document_controller.event_loop
         self.document_controller = document_controller
         self.instrument = instrument
         self.enabled = False
-        self.busy_event_listener = self.instrument.busy_event.listen(self.prepare_widget_disable)
-        self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
-        self.free_event_listener = self.instrument.free_event.listen(self.prepare_free_widget_enable)
-
+        #self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
 
     def init_handler(self):
-        self.event_loop.create_task(self.do_enable(True, ['']))
-        self.event_loop.create_task(self.do_enable(False, ['init_pb', 'server_ping_push', 'host_value', 'port_value',
-                                                           'server_value', 'server_choice']))  # not working as something is calling this guy
+        self.event_loop.create_task(self.do_enable(False, ['init_pb']))
 
+    def init(self, widget):
+        ok = self.instrument.init()
+        if ok:
+            self.init_pb.enabled = False
+            self.event_loop.create_task(self.do_enable(True, ['init_pb']))
+            self.instrument.loop()
 
     async def do_enable(self, enabled=True, not_affected_widget_name_list=None):
         for var in self.__dict__:
@@ -35,23 +37,45 @@ class serverhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ['']))
+        self.event_loop.create_task(self.do_enable(True, ['']))
 
     def prepare_widget_disable(self, value):
         self.event_loop.create_task(self.do_enable(False, ['']))
 
-    def prepare_free_widget_enable(self,
-                                   value):  # THAT THE SECOND EVENT NEVER WORKS. WHAT IS THE DIF BETWEEN THE FIRST?
-        self.event_loop.create_task(
-            self.do_enable(True, ['']))
 
 class serverView:
 
-    def __init__(self, instrument: gain_inst.gainDevice):
+    def __init__(self, instrument: server_inst.serverDevice):
         ui = Declarative.DeclarativeUI()
 
-        self.host_label = ui.create_label(text='Host: ')
-        self.ui_view = ui.create_column(self.host_label)
+        self.init_pb = ui.create_push_button(name='init_pb', on_clicked='init', text='Init')
+
+        self.client_laser = ui.create_label(name='client_laser', text='Client Laser: ')
+        self.client_laser_blink = ui.create_label(name='client_laser_blink', text='@binding(instrument.laser_blink)')
+        self.laser = ui.create_row(self.client_laser, ui.create_stretch(),
+                                   self.client_laser_blink, spacing=12)
+
+        self.client_pm01 = ui.create_label(name='client_pm01', text='Client Power 01: ')
+        self.client_pm01_blink = ui.create_label(name='client_pm01_blink', text='o')
+        self.pm01 = ui.create_row(self.client_pm01, ui.create_stretch(),
+                                  self.client_pm01_blink, spacing=12)
+
+        self.client_pm02 = ui.create_label(name='client_pm02',text='Client Power 02: ')
+        self.client_pm02_blink = ui.create_label(name='client_pm02_blink', text='o')
+        self.pm02 = ui.create_row(self.client_pm02, ui.create_stretch(),
+                                  self.client_pm02_blink, spacing=12)
+
+        self.client_ps = ui.create_label(name='client_ps', text='Client Power Supply: ')
+        self.client_ps_blink = ui.create_label(name='client_ps_blink', text='o')
+        self.ps = ui.create_row(self.client_ps, ui.create_stretch(),
+                                self.client_ps_blink, spacing=12)
+
+        self.client_ard = ui.create_label(name='client_ard',text='Client Arduino: ')
+        self.client_ard_blink = ui.create_label(name='client_ard_blink', text='o')
+        self.ard = ui.create_row(self.client_ard, ui.create_stretch(),
+                                 self.client_ard_blink, spacing=12)
+
+        self.ui_view = ui.create_column(self.init_pb, self.laser, self.pm01, self.pm02, self.ps, self.ard)
 
 def create_spectro_panel(document_controller, panel_id, properties):
     instrument = properties["instrument"]
@@ -69,7 +93,7 @@ def create_spectro_panel(document_controller, panel_id, properties):
     return panel
 
 
-def run(instrument: gain_inst.gainDevice) -> None:
+def run(instrument: server_inst.serverDevice) -> None:
     panel_id = "Server Status"  # make sure it is unique, otherwise only one of the panel will be displayed
     name = _("Server Staus")
     Workspace.WorkspaceManager().register_panel(create_spectro_panel, panel_id, name, ["left", "right"], "left",

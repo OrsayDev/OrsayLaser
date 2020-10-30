@@ -31,11 +31,13 @@ def SENDMYMESSAGEFUNC(sendmessagefunc):
 
 class LaserServerHandler():
 
-    def __init__(self, callback, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT):
+    def __init__(self, callback, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT, which = 'None'):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
         self.s.settimeout(0.5)
         self.callback = callback
+        self.s.sendall(which.encode())
+        data = self.s.recv(512)
 
     def server_ping(self):
         try:
@@ -444,11 +446,12 @@ class gainDevice(Observable.Observable):
 
         try:
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
-            self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port)
-            self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port),
-                               LaserServerHandler(self.__laser_message, self.__host, self.__port)]
-            self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port)
-            self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port)
+            self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
+            self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
+                               LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
+            self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
+            self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
+            self.__serverBroadCast = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'bc')
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser

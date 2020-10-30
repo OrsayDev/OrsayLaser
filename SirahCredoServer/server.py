@@ -51,6 +51,8 @@ class ServerSirahCredoLaser:
 
         self.inputs = [self.s]
         self.outputs = []
+        self.who = {}
+        self.who['server'] = self.s
         self.message_queues = {}
 
         if not self.__sirah.sucessfull:
@@ -61,14 +63,17 @@ class ServerSirahCredoLaser:
             print('***SERVER***: Server not successfully created because of PS. Leaving...')
 
     def main_loop(self):
-        self.s.listen(5)
+        self.s.listen()
         while self.__running:
             readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
             for s in readable:
                 if s is self.s:
                     clientsocket, address = self.s.accept()
+                    data = clientsocket.recv(512)
+                    clientsocket.sendall(data)
                     clientsocket.setblocking(False)
                     self.inputs.append(clientsocket)
+                    self.who[data.decode()] = clientsocket
                     self.message_queues[clientsocket] = queue.Queue()
                     print(f"***SERVER***: Connection from {address} has been established.")
                 else:
@@ -225,6 +230,9 @@ class ServerSirahCredoLaser:
 
                             end = time.time()
                             s.sendall(return_data)
+                            if 'bc' in self.who:
+                                self.who['bc'].sendall(data)
+                                print(data)
                             if (end-start_time > 0.02):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')

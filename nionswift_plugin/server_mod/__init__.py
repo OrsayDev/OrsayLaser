@@ -1,7 +1,7 @@
 from nion.swift.model import HardwareSource
 
-from . import server_panel
-from . import server_inst
+from nionswift_plugin.server_mod import server_inst, server_panel
+
 
 def run():
     simpleServer = server_inst.serverDevice()

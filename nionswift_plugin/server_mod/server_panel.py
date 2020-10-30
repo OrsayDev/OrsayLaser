@@ -4,8 +4,7 @@ from nion.swift import Panel
 from nion.swift import Workspace
 from nion.ui import Declarative
 from nion.ui import UserInterface
-from . import server_inst
-import numpy
+from nionswift_plugin.server_mod import server_inst
 
 _ = gettext.gettext
 

@@ -532,6 +532,7 @@ class gainDevice(Observable.Observable):
 
     def lock(self):
         self.property_changed_event.fire("locked_power_f")
+        self.property_changed_event.fire("locked_power02_f")
         self.free_event.fire("all")
 
     def hard_reset(self):
@@ -955,6 +956,7 @@ class gainDevice(Observable.Observable):
 
         if not self.__status:
             self.property_changed_event.fire("power_f")
+            self.property_changed_event.fire("power02_f")
             self.property_changed_event.fire("cur_d1_f")
             self.property_changed_event.fire("cur_d2_f")
             self.property_changed_event.fire("cur_d_f")
@@ -971,6 +973,7 @@ class gainDevice(Observable.Observable):
 
         if not self.__status:
             self.property_changed_event.fire("power_f")
+            self.property_changed_event.fire("power02_f")
             self.property_changed_event.fire("cur_d1_f")
             self.property_changed_event.fire("cur_d2_f")
             self.property_changed_event.fire(
@@ -1093,6 +1096,7 @@ class gainDevice(Observable.Observable):
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
             self.property_changed_event.fire("power_f")
+            self.property_changed_event.fire("power02_f")
             self.property_changed_event.fire("servo_f")  # this updates my label
             self.free_event.fire('all')
 

@@ -106,12 +106,14 @@ class ServerSirahCredoLaser:
                             elif b"get_hardware_wl" in data:  # get_hardware_wl(self). return
                                 if data[15:19] == bytes(4):
                                     return_data = format(self.__sirah.get_hardware_wl()[0], '.8f').rjust(16, '0').encode()
+                                    return_data = return_data + bytes(4) + b'LASER'
 
                             elif b"setWL" in data:  # setWL(self, wavelength: float, current_wavelength: float). no return
                                 if data[5:9] == bytes(4) and data[25:29] == bytes(4):
                                     wl = float(data[9:25].decode())  # 16 bytes
                                     cur_wl = float(data[29:45].decode())  # 16 bytes
                                     return_data = self.__sirah.setWL(wl, cur_wl)
+                                    return_data = return_data + bytes(4) + b'LASER'
 
                             elif b"abort_control" in data:  # abort_control(self). No return
                                 if data[13:17] == bytes(4):
@@ -125,6 +127,7 @@ class ServerSirahCredoLaser:
                                         return_data = b'1'
                                     else:
                                         return_data = b'0'
+                                    return_data = return_data + bytes(4) + b'LASER'
 
                             elif b"set_scan_thread_release" in data:  # set_scan_thread_release(self). no return
                                 if data[23:27] == bytes(4):
@@ -138,6 +141,8 @@ class ServerSirahCredoLaser:
                                         return_data = b'1'
                                     else:
                                         return_data = b'0'
+                                    return_data = return_data + bytes(4) + b'LASER'
+
 
                             elif b"set_scan_thread_hardware_status" in data:  # set_scan_thread_hardware_status(self). return
                                 if data[31:35] == bytes(4):
@@ -146,6 +151,7 @@ class ServerSirahCredoLaser:
                                         return_data = b'2'
                                     else:
                                         return_data = b'3'
+                                    return_data = return_data + bytes(4) + b'LASER'
 
                             elif b"set_scan" in data:  # set_scan(self, cur, step, pts). no return
                                 if data[8:12] == bytes(4) and data[28:32] == bytes(4) and data[48:52] == bytes(4):
@@ -160,6 +166,7 @@ class ServerSirahCredoLaser:
                                 if data[5:8] == bytes(3):
                                     my_msg = data[8:-15]
                                     return_data = self.__ps.query(my_msg.decode())
+                                    return_data = return_data + bytes(3) + b'POWER_SUPPLY'
 
                             elif b"comm" in data:
                                 if data[4:7] == bytes(3):
@@ -190,6 +197,7 @@ class ServerSirahCredoLaser:
                                     except:
                                         print(f'***WARNING***: Power Meter {which} is disconnected.')
                                         return_data = format(9e5, '.8f').rjust(16, '0').encode()
+                                    return_data = return_data + bytes(5) + b'POWERMETER'+data[7:8]
 
                             elif b"pw_reset" in data:
                                 which=int(data[8:9])
@@ -211,6 +219,7 @@ class ServerSirahCredoLaser:
                             elif b"get_pos" in data:
                                 if data[7:13] == bytes(6):
                                     return_data = format(self.__ard.get_pos(), '.0f').rjust(8, '0').encode()
+                                    return_data = return_data + bytes(6) + b'ARDUINO'
 
                             elif b"set_pos" in data:
                                 if data[7:13] == bytes(6):
@@ -230,14 +239,15 @@ class ServerSirahCredoLaser:
                                     self.__ard.wobbler_off()
                                     return_data = 'None'.encode()
 
-
                             else:
                                 print(f'***SERVER***: Data {data} received unknown origin.')
 
                             end = time.time()
                             s.sendall(return_data)
                             if 'bc' in self.who:
-                                self.who['bc'].sendall(data)
+                                self.who['bc'].sendall(data+b'RX')
+                                if return_data is not b'None':
+                                    self.who['bc'].sendall(return_data+b'TX')
                             if (end-start_time > 0.02):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')

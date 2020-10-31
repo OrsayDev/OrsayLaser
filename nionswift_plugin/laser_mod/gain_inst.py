@@ -90,6 +90,7 @@ class LaserServerHandler():
             msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
+            data=data[:-9]
             return (float(data.decode()), 0)
         except ConnectionResetError:
             self.connection_error_handler()
@@ -107,9 +108,9 @@ class LaserServerHandler():
             msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
-            if data == b'message_01':
+            if data[:-9] == b'message_01':
                 return 1
-            elif data == b'message_02':
+            elif data[:-9] == b'message_02':
                 return 2
             else:
                 logging.info('***SERVER***: Bad communication. Error 03.')
@@ -137,9 +138,9 @@ class LaserServerHandler():
             msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
-            if data == b'1':
+            if data[:-9] == b'1':
                 return True
-            elif data == b'0':
+            elif data[:-9] == b'0':
                 return False
             else:
                 logging.info('***SERVER***: Bad communication. Error 05.')
@@ -167,9 +168,9 @@ class LaserServerHandler():
             msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
-            if data == b'1':
+            if data[:-9] == b'1':
                 return True
-            elif data == b'0':
+            elif data[:-9] == b'0':
                 return False
             else:
                 logging.info('***SERVER***: Bad communication. Error 07.')
@@ -183,9 +184,9 @@ class LaserServerHandler():
             msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
-            if data == b'2':
+            if data[:-9] == b'2':
                 return 2
-            elif data == b'3':
+            elif data[:-9] == b'3':
                 logging.info(
                     "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
                     "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
@@ -228,7 +229,7 @@ class LaserServerHandler():
             msg = msg + b'POWER_SUPPLY'
             self.s.sendall(msg)
             data = self.s.recv(512)
-            return data
+            return data[:-15]
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -269,7 +270,7 @@ class LaserServerHandler():
             msg = msg + b'POWERMETER'+which.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
-            return float(data.decode())
+            return float(data[:-16].decode())
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -307,7 +308,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode():
-                return int(data.decode())
+                return int(data[:-13].decode())
             else:
                 return 0
         except ConnectionResetError:

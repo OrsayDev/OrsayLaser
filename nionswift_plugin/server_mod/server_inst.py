@@ -5,6 +5,7 @@ from nion.utils import Observable
 import threading
 import numpy
 import socket
+import logging
 
 GREEN = (numpy.ones((15, 25), dtype=numpy.uint32)) * 4044400440
 RED = (numpy.ones((15, 25), dtype=numpy.uint32)) * 4000400000
@@ -15,113 +16,226 @@ class serverDevice(Observable.Observable):
 
         self.on_time = 0.01
 
-        self.__colorLaser = RED
-        self.__colorPM0 = RED
-        self.__colorPM1 = RED
-        self.__colorPS = RED
-        self.__colorArd = RED
+        self.__serverStatus = RED
+        self.__Laser = [RED, RED]
+        self.__PM0 = [RED, RED]
+        self.__PM1 = [RED, RED]
+        self.__PS = [RED, RED]
+        self.__Ard = [RED, RED]
 
     def init(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect(('127.0.0.1', 65432))
-        self.s.sendall('bc'.encode())
-        data = self.s.recv(512)
-
-        if data == b'bc':
-            return True
-        else:
+        try:
+            self.s.connect(('127.0.0.1', 65432))
+            self.s.sendall('bc'.encode())
+            data = self.s.recv(512)
+            if data == b'bc':
+                self.server_status = 'green'
+                logging.info('***SERVER STATUS***: Auxiliary client connected.')
+                return True
+        except:
+            self.server_status = 'red'
+            logging.info('***SERVER STATUS***: Auxiliary client not connect. Check server.')
             return False
 
     def off(self, which):
-        if which=='LASER':
-            self.color_laser = 'red'
-        elif which=='PM0':
-            self.color_pm0 = 'red'
-        elif which=='PM1':
-            self.color_pm1 = 'red'
-        elif which=='PS':
-            self.color_ps = 'red'
-        elif which=='ARD':
-            self.color_ard = 'red'
+        if which=='laser_rx':
+            self.laser_rx = 'red'
+        elif which=='laser_tx':
+            self.laser_tx = 'red'
+
+        elif which=='pm0_rx':
+            self.pm0_rx = 'red'
+        elif which == 'pm0_tx':
+            self.pm0_tx = 'red'
+
+        elif which=='pm1_rx':
+            self.pm1_rx = 'red'
+        elif which=='pm1_tx':
+            self.pm1_tx = 'red'
+
+        elif which=='ps_rx':
+            self.ps_rx = 'red'
+        elif which=='ps_tx':
+            self.ps_tx = 'red'
+
+        elif which=='ard_rx':
+            self.ard_rx = 'red'
+        elif which=='ard_tx':
+            self.ard_tx = 'red'
 
     def loop(self):
         threading.Thread(target=self.read, args=(),).start()
 
     def read(self):
         data = self.s.recv(512)
-        if b'LASER' in data:
-            self.color_laser='green'
-        if b'POWER_SUPPLY' in data:
-            self.color_ps='green'
-        if b'POWERMETER0' in data:
-            self.color_pm0='green'
-        if b'POWERMETER1' in data:
-            self.color_pm1='green'
-        if b'ARDUINO' in data:
-            self.color_ard='green'
-        self.loop()
+        if b'LASERRX' in data:
+            self.laser_rx='green'
+        if b'LASERTX' in data:
+            self.laser_tx='green'
+
+        if b'POWER_SUPPLYRX' in data:
+            self.ps_rx='green'
+        if b'POWER_SUPPLYTX' in data:
+            self.ps_tx='green'
+
+        if b'POWERMETER0RX' in data:
+            self.pm0_rx='green'
+        if b'POWERMETER0TX' in data:
+            self.pm0_tx='green'
+
+        if b'POWERMETER1RX' in data:
+            self.pm1_rx='green'
+        if b'POWERMETER1TX' in data:
+            self.pm1_tx='green'
+
+        if b'ARDUINORX' in data:
+            self.ard_rx='green'
+        if b'ARDUINOTX' in data:
+            self.ard_tx='green'
+
+        if data:
+            self.loop()
 
     @property
-    def color_laser(self):
-        return self.__colorLaser
+    def server_status(self):
+        return self.__serverStatus
 
-    @color_laser.setter
-    def color_laser(self, value):
-        if value=='red':
-            self.__colorLaser = RED
-        else:
-            self.__colorLaser = GREEN
-            threading.Timer(self.on_time, self.off, args=(['LASER'])).start()
-        self.property_changed_event.fire("color_laser")
-
-    @property
-    def color_pm0(self):
-        return self.__colorPM0
-
-    @color_pm0.setter
-    def color_pm0(self, value):
+    @server_status.setter
+    def server_status(self, value):
         if value == 'red':
-            self.__colorPM0 = RED
+            self.__serverStatus = RED
         else:
-            self.__colorPM0 = GREEN
-            threading.Timer(self.on_time, self.off, args=(['PM0'])).start()
-        self.property_changed_event.fire('color_pm0')
+            self.__serverStatus = GREEN
+        self.property_changed_event.fire('server_status')
 
     @property
-    def color_pm1(self):
-        return self.__colorPM1
+    def laser_rx(self):
+        return self.__Laser[0]
 
-    @color_pm1.setter
-    def color_pm1(self, value):
+    @laser_rx.setter
+    def laser_rx(self, value):
         if value=='red':
-            self.__colorPM1 = RED
+            self.__Laser[0] = RED
         else:
-            self.__colorPM1 = GREEN
-            threading.Timer(self.on_time, self.off, args=(['PM1'])).start()
-        self.property_changed_event.fire('color_pm1')
+            self.__Laser[0] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['laser_rx'])).start()
+        self.property_changed_event.fire("laser_rx")
 
     @property
-    def color_ps(self):
-        return self.__colorPS
+    def laser_tx(self):
+        return self.__Laser[1]
 
-    @color_ps.setter
-    def color_ps(self, value):
-        if value=='red':
-            self.__colorPS = RED
+    @laser_tx.setter
+    def laser_tx(self, value):
+        if value == 'red':
+            self.__Laser[1] = RED
         else:
-            self.__colorPS = GREEN
-            threading.Timer(self.on_time, self.off, args=(['PS'])).start()
-        self.property_changed_event.fire('color_ps')
+            self.__Laser[1] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['laser_tx'])).start()
+        self.property_changed_event.fire("laser_tx")
 
     @property
-    def color_ard(self):
-        return self.__colorArd
+    def pm0_rx(self):
+        return self.__PM0[0]
 
-    @color_ard.setter
-    def color_ard(self, value):
-        if value=='red':
-            self.__colorArd = RED
+    @pm0_rx.setter
+    def pm0_rx(self, value):
+        if value == 'red':
+            self.__PM0[0] = RED
         else:
-            self.__colorArd = GREEN
-            threading.Timer(self.on_time, self.off, args=(['ARD'])).start()
-        self.property_changed_event.fire('color_ard')
+            self.__PM0[0] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['pm0_rx'])).start()
+        self.property_changed_event.fire('pm0_rx')
+
+    @property
+    def pm0_tx(self):
+        return self.__PM0[1]
+
+    @pm0_tx.setter
+    def pm0_tx(self, value):
+        if value == 'red':
+            self.__PM0[1] = RED
+        else:
+            self.__PM0[1] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['pm0_tx'])).start()
+        self.property_changed_event.fire('pm0_tx')
+
+    @property
+    def pm1_rx(self):
+        return self.__PM1[0]
+
+    @pm1_rx.setter
+    def pm1_rx(self, value):
+        if value == 'red':
+            self.__PM1[0] = RED
+        else:
+            self.__PM1[0] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['pm1_rx'])).start()
+        self.property_changed_event.fire('pm1_rx')
+
+    @property
+    def pm1_tx(self):
+        return self.__PM1[1]
+
+    @pm1_tx.setter
+    def pm1_tx(self, value):
+        if value == 'red':
+            self.__PM1[1] = RED
+        else:
+            self.__PM1[1] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['pm1_tx'])).start()
+        self.property_changed_event.fire('pm1_tx')
+
+    @property
+    def ps_rx(self):
+        return self.__PS[0]
+
+    @ps_rx.setter
+    def ps_rx(self, value):
+        if value=='red':
+            self.__PS[0] = RED
+        else:
+            self.__PS[0] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['ps_rx'])).start()
+        self.property_changed_event.fire('ps_rx')
+
+    @property
+    def ps_tx(self):
+        return self.__PS[1]
+
+    @ps_tx.setter
+    def ps_tx(self, value):
+        if value == 'red':
+            self.__PS[1] = RED
+        else:
+            self.__PS[1] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['ps_tx'])).start()
+        self.property_changed_event.fire('ps_tx')
+
+
+    @property
+    def ard_rx(self):
+        return self.__Ard[0]
+
+    @ard_rx.setter
+    def ard_rx(self, value):
+        if value=='red':
+            self.__Ard[0] = RED
+        else:
+            self.__Ard[0] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['ard_rx'])).start()
+        self.property_changed_event.fire('ard_rx')
+
+    @property
+    def ard_tx(self):
+        return self.__Ard[1]
+
+    @ard_tx.setter
+    def ard_tx(self, value):
+        if value == 'red':
+            self.__Ard[1] = RED
+        else:
+            self.__Ard[1] = GREEN
+            threading.Timer(self.on_time, self.off, args=(['ard_tx'])).start()
+        self.property_changed_event.fire('ard_tx')

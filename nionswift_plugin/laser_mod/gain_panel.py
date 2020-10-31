@@ -406,11 +406,15 @@ class gainhandler:
 
         if not self.__adjusted and camera_data:
 
-            self.cam_pixels = camera_data.data.shape[0]
+            if camera_data.data.shape[1]==1:
+                self.cam_pixels = camera_data.data.shape[0]
+            else:
+                self.cam_pixels = camera_data.data.shape[1]
+
             cam_calibration = camera_data.get_dimensional_calibration(0)
 
-            if camera_data.data.shape[0] != self.cam_array.shape[0]:
-                self.cam_array = numpy.zeros((self.pts * self.avg, camera_data.data.shape[0]))
+            if self.cam_pixels != self.cam_array.shape[1]:
+                self.cam_array = numpy.zeros((self.pts * self.avg, self.cam_pixels))
                 logging.info('***ACQUISITION***: Corrected #PIXELS.')
             try:
                 self.cam_di.set_cam_di_calibration(cam_calibration)
@@ -423,11 +427,7 @@ class gainhandler:
 
         if camera_data: #if it is false, as in transmission, do nothing
             cam_hor = numpy.sum(camera_data.data, axis=0)
-            print(cam_hor.shape)
-            print(self.cam_array.shape)
             self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
-
-            print('end')
 
         if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
         if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control

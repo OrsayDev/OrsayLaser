@@ -376,7 +376,7 @@ class gainDevice(Observable.Observable):
 
         self.__start_wav = 575.0
         self.__finish_wav = 595.0
-        self.__step_wav = 0.5
+        self.__step_wav = 1.0
         self.__cur_wav = self.__start_wav
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
         self.__avg = 10
@@ -401,7 +401,7 @@ class gainDevice(Observable.Observable):
         # create new displays every new acquisition
         self.__powermeter_avg = 10
         self.__servo_step = 2
-        self.__nper_pic = 2
+        self.__nper_pic = 0
         self.__dye = 0
         self.__host = CLIENT_HOST
         self.__port = CLIENT_PORT

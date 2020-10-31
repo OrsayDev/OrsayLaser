@@ -6,16 +6,18 @@ import threading
 import numpy
 import socket
 
-GREEN = (numpy.ones((25, 35), dtype=numpy.uint32)) * 2000000000
-RED = (numpy.ones((25, 35), dtype=numpy.uint32)) * 4000000000
+GREEN = (numpy.ones((15, 25), dtype=numpy.uint32)) * 2000000000
+RED = (numpy.ones((15, 25), dtype=numpy.uint32)) * 4000000000
 
 class serverDevice(Observable.Observable):
     def __init__(self):
         self.property_changed_event = Event.Event()
 
+        self.on_time = 0.02
+
         self.__colorLaser = RED
-        self.__colorPM01 = RED
-        self.__colorPM02 = RED
+        self.__colorPM0 = RED
+        self.__colorPM1 = RED
         self.__colorPS = RED
         self.__colorArd = RED
 
@@ -30,18 +32,33 @@ class serverDevice(Observable.Observable):
         else:
             return False
 
+    def off(self, which):
+        if which=='LASER':
+            self.color_laser = 'red'
+        elif which=='PM0':
+            self.color_pm0 = 'red'
+        elif which=='PM1':
+            self.color_pm1 = 'red'
+        elif which=='PS':
+            self.color_ps = 'red'
+        elif which=='ARD':
+            self.color_ard = 'red'
+
     def loop(self):
-        threading.Timer(0.02, self.read, args=(),).start()
+        threading.Thread(target=self.read, args=(),).start()
 
     def read(self):
-        self.color_laser=self.color_pm01=self.color_pm02=self.color_ps=self.color_ard='red'
         data = self.s.recv(512)
-        if b'get_hardware_wl' in data:
+        if b'LASER' in data:
             self.color_laser='green'
-        elif b'query' in data:
+        if b'POWER_SUPPLY' in data:
             self.color_ps='green'
-        elif b'pw_' in data:
-            self.color_pm01='gren'
+        if b'POWERMETER0' in data:
+            self.color_pm0='green'
+        if b'POWERMETER1' in data:
+            self.color_pm1='green'
+        if b'ARDUINO' in data:
+            self.color_ard='green'
         self.loop()
 
     @property
@@ -54,31 +71,34 @@ class serverDevice(Observable.Observable):
             self.__colorLaser = RED
         else:
             self.__colorLaser = GREEN
+            threading.Timer(self.on_time, self.off, args=(['LASER'])).start()
         self.property_changed_event.fire("color_laser")
 
     @property
-    def color_pm01(self):
-        return self.__colorPM01
+    def color_pm0(self):
+        return self.__colorPM0
 
-    @color_pm01.setter
-    def color_pm01(self, value):
+    @color_pm0.setter
+    def color_pm0(self, value):
         if value == 'red':
-            self.__colorPM01 = RED
+            self.__colorPM0 = RED
         else:
-            self.__colorPM01 = GREEN
-        self.property_changed_event.fire('color_pm01')
+            self.__colorPM0 = GREEN
+            threading.Timer(self.on_time, self.off, args=(['PM0'])).start()
+        self.property_changed_event.fire('color_pm0')
 
     @property
-    def color_pm02(self):
-        return self.__colorPM02
+    def color_pm1(self):
+        return self.__colorPM1
 
-    @color_pm02.setter
-    def color_pm02(self, value):
+    @color_pm1.setter
+    def color_pm1(self, value):
         if value=='red':
-            self.__colorPM02 = RED
+            self.__colorPM1 = RED
         else:
-            self.__colorPM02 = GREEN
-        self.property_changed_event.fire('color_pm02')
+            self.__colorPM1 = GREEN
+            threading.Timer(self.on_time, self.off, args=(['PM1'])).start()
+        self.property_changed_event.fire('color_pm1')
 
     @property
     def color_ps(self):
@@ -90,6 +110,7 @@ class serverDevice(Observable.Observable):
             self.__colorPS = RED
         else:
             self.__colorPS = GREEN
+            threading.Timer(self.on_time, self.off, args=(['PS'])).start()
         self.property_changed_event.fire('color_ps')
 
     @property
@@ -102,4 +123,5 @@ class serverDevice(Observable.Observable):
             self.__colorArd = RED
         else:
             self.__colorArd = GREEN
+            threading.Timer(self.on_time, self.off, args=(['ARD'])).start()
         self.property_changed_event.fire('color_ard')

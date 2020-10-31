@@ -158,12 +158,12 @@ class ServerSirahCredoLaser:
                             ## Power Supply Functions
                             elif b"query" in data:
                                 if data[5:8] == bytes(3):
-                                    my_msg = data[8:]
+                                    my_msg = data[8:-15]
                                     return_data = self.__ps.query(my_msg.decode())
 
                             elif b"comm" in data:
                                 if data[4:7] == bytes(3):
-                                    my_msg = data[7:]
+                                    my_msg = data[7:-15]
                                     self.__ps.comm(my_msg.decode())
                                     return_data = 'None'.encode()
 
@@ -238,7 +238,6 @@ class ServerSirahCredoLaser:
                             s.sendall(return_data)
                             if 'bc' in self.who:
                                 self.who['bc'].sendall(data)
-                                print(data)
                             if (end-start_time > 0.02):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')

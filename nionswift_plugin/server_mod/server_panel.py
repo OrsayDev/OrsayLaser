@@ -53,12 +53,12 @@ class serverView:
         self.client_laser_rgb = ui.create_push_button(icon='@binding(instrument.color_laser)', on_clicked='click', width=25)
         self.laser = ui.create_row(self.client_laser, self.client_laser_rgb)
 
-        self.client_pm01 = ui.create_label(name='client_pm01', text='Client Power 01: ')
-        self.client_pm01_rgb = ui.create_push_button(icon='@binding(instrument.color_pm01)', on_clicked='click', width=25)
+        self.client_pm01 = ui.create_label(name='client_pm01', text='Client Power 0: ')
+        self.client_pm01_rgb = ui.create_push_button(icon='@binding(instrument.color_pm0)', on_clicked='click', width=25)
         self.pm01 = ui.create_row(self.client_pm01, self.client_pm01_rgb)
 
-        self.client_pm02 = ui.create_label(name='client_pm02',text='Client Power 02: ')
-        self.client_pm02_rgb = ui.create_push_button(icon='@binding(instrument.color_pm02)', on_clicked='click', width=25)
+        self.client_pm02 = ui.create_label(name='client_pm02',text='Client Power 1: ')
+        self.client_pm02_rgb = ui.create_push_button(icon='@binding(instrument.color_pm1)', on_clicked='click', width=25)
         self.pm02 = ui.create_row(self.client_pm02, self.client_pm02_rgb)
 
         self.client_ps = ui.create_label(name='client_ps', text='Client Power Supply: ')

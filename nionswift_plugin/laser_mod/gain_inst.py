@@ -74,6 +74,8 @@ class LaserServerHandler():
             header = b'set_hardware_wl'
             msg = header + bytes(4)
             msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+            msg = msg + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -85,6 +87,7 @@ class LaserServerHandler():
         try:
             header = b'get_hardware_wl'
             msg = header + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             return (float(data.decode()), 0)
@@ -101,6 +104,7 @@ class LaserServerHandler():
             msg = msg + bytes(4)
             msg = msg + format(cur_wl, '.8f').rjust(16, '0').encode()
             msg = msg + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data == b'message_01':
@@ -118,6 +122,7 @@ class LaserServerHandler():
         try:
             header = b'abort_control'
             msg = header + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -129,6 +134,7 @@ class LaserServerHandler():
         try:
             header = b'set_scan_thread_locked'
             msg = header + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data == b'1':
@@ -146,6 +152,7 @@ class LaserServerHandler():
         try:
             header = b'set_scan_thread_release'
             msg = header + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -157,6 +164,7 @@ class LaserServerHandler():
         try:
             header = b'set_scan_thread_check'
             msg = header + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data == b'1':
@@ -172,6 +180,7 @@ class LaserServerHandler():
         try:
             header = b'set_scan_thread_hardware_status'
             msg = header + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data == b'2':
@@ -198,6 +207,8 @@ class LaserServerHandler():
             msg = msg + format(step, '.8f').rjust(16, '0').encode()
             msg = msg + bytes(4)
             msg = msg + format(pts, '.0f').rjust(8, '0').encode()  # int is 8 bytes here
+            msg = msg + bytes(4)
+            msg = msg + b'LASER'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -213,6 +224,8 @@ class LaserServerHandler():
             header = b'query'
             msg = header + bytes(3) #power supply sends 00-00-00
             msg = msg + my_message.encode()
+            msg = msg + bytes(3)
+            msg = msg + b'POWER_SUPPLY'
             self.s.sendall(msg)
             data = self.s.recv(512)
             return data
@@ -224,6 +237,8 @@ class LaserServerHandler():
             header = b'comm'
             msg = header + bytes(3) #power supply sends 00-00-00
             msg = msg + my_message.encode()
+            msg = msg + bytes(3)
+            msg = msg + b'POWER_SUPPLY'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -250,6 +265,8 @@ class LaserServerHandler():
             header = b'pw_read'+which.encode()
             msg = header + bytes(5) #power meter sends 00-00-00-00-00
             msg = msg + format(wl, '.8f').rjust(16, '0').encode()
+            msg = msg + bytes(5)
+            msg = msg + b'POWERMETER'+which.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             return float(data.decode())
@@ -260,6 +277,7 @@ class LaserServerHandler():
         try:
             header = b'pw_reset'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
+            msg = msg + b'POWERMETER'+which.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -272,6 +290,8 @@ class LaserServerHandler():
             header = b'pw_set_avg'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
             msg = msg + format(avg, '.0f').rjust(8, '0').encode() # 8 bytes for int
+            msg = msg + bytes(5)
+            msg = msg + b'POWERMETER'+which.encode()
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -283,6 +303,7 @@ class LaserServerHandler():
         try:
             header = b'get_pos'
             msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
+            msg = msg + b'ARDUINO'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode():
@@ -297,6 +318,8 @@ class LaserServerHandler():
             header = b'set_pos'
             msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
             msg = msg + format(pos, '.0f').rjust(8, '0').encode() # 8 bytes for int
+            msg = msg + bytes(6)
+            msg = msg + b'ARDUINO'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -311,6 +334,8 @@ class LaserServerHandler():
             msg = msg + format(pos, '.0f').rjust(8, '0').encode() # 8 bytes for int
             msg = msg + bytes(6)
             msg = msg + format(step, '.0f').rjust(8, '0').encode() # 8 bytes for int
+            msg = msg + bytes(6)
+            msg = msg + b'ARDUINO'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -322,6 +347,7 @@ class LaserServerHandler():
         try:
             header = b'wobbler_off'
             msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
+            msg = msg + b'ARDUINO'
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
@@ -387,6 +413,7 @@ class gainDevice(Observable.Observable):
         self.__status = True #we start it true because before init everything must be blocked. We free after a succesfull init
         self.__abort_force = False
         self.__power_ramp = False
+        self.__isTrans = False
         self.__per_pic = True
         self.__per_pic = True
 
@@ -572,6 +599,7 @@ class gainDevice(Observable.Observable):
     def acq_transThread(self):
         self.run_status_f = True
         self.__abort_force = False
+        self.__isTrans = True
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
@@ -621,9 +649,10 @@ class gainDevice(Observable.Observable):
             # looped here indefinitely than fuck the hardware
             if self.__serverLaser.set_scan_thread_locked():  # releasing everything if locked
                 self.__serverLaser.set_scan_thread_release()
-        self.run_status_f = False  # acquisition is over
+        self.__isTrans = False
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
+        self.run_status_f = False  # acquisition is over
 
 
     def acq_prThread(self):
@@ -732,10 +761,10 @@ class gainDevice(Observable.Observable):
             # looped here indefinitely than fuck the hardware
             if self.__serverLaser.set_scan_thread_locked():  # releasing everything if locked
                 self.__serverLaser.set_scan_thread_release()
-        self.run_status_f = False  # acquisition is over
         self.grab_det("end", self.__acq_number, 0, True)
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
+        self.run_status_f = False  # acquisition is over
 
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
 
@@ -743,8 +772,8 @@ class gainDevice(Observable.Observable):
         def sendMessage(message):
             if message == 101:
                 self.property_changed_event.fire("power_f")
-                #self.property_changed_event.fire("power02_f") #measure both powers
-                #self.property_changed_event.fire("power_transmission_f")
+                if self.__isTrans: self.property_changed_event.fire("power02_f") #measure both powers
+                if self.__isTrans: self.property_changed_event.fire("power_transmission_f")
                 if self.__ctrl_type == 1 and not self.__power_ramp:
                     self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180

@@ -15,14 +15,14 @@ abs_path = os.path.abspath(os.path.join((__file__ + "/../"), "global_settings.js
 with open(abs_path) as savfile:
     settings = json.load(savfile)
 
-DEBUG_pw = settings["PW"]["DEBUG"]
+#DEBUG_pw = settings["PW"]["DEBUG"]
 CAMERA = settings["CAMERA"]["WHICH"]
 SCAN = settings["SCAN"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 CLIENT_HOST = settings["SOCKET_CLIENT"]["HOST"]
 CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 
-DEBUG = DEBUG_pw
+#DEBUG = DEBUG_pw
 
 from . import control_routine as ctrlRout
 
@@ -428,6 +428,8 @@ class gainDevice(Observable.Observable):
         self.__OrsayScanInstrument = None
         self.__camera = None
 
+        self.__DEBUG = False
+
     def server_instrument_ping(self):
         self.__serverLaser.server_ping()
 
@@ -485,6 +487,10 @@ class gainDevice(Observable.Observable):
                                LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
+
+            if self.__host == '127.0.0.1':
+                logging.info('***SERVER***: Connecting o local Host.')
+                self.__DEBUG = True
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser
@@ -892,9 +898,9 @@ class gainDevice(Observable.Observable):
     @property
     def power_f(self):
         try:
-            if DEBUG_pw:
+            if self.__DEBUG:
                 self.__power = (self.__serverPM[0].pw_read('0', self.__cur_wav) + (self.__diode) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[0].pw_read('0', self.__cur_wav)
+                        self.__servo_pos + 1) / 180
             else:
                 self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
                 self.blink.fire()
@@ -905,9 +911,9 @@ class gainDevice(Observable.Observable):
     @property
     def power02_f(self):
         try:
-            if DEBUG_pw:
+            if self.__DEBUG:
                 self.__power02 = (self.__serverPM[1].pw_read('1', self.__cur_wav) + (self.__diode/2.) ** 2) * (
-                        self.__servo_pos + 1) / 180 if self.sht_f == 'OPEN' else self.__serverPM[1].pw_read('1', self.__cur_wav)
+                        self.__servo_pos + 1) / 180
             else:
                 self.__power02 = self.__serverPM[1].pw_read('1', self.__cur_wav)
             return format(self.__power02, '.3f')
@@ -1153,7 +1159,7 @@ class gainDevice(Observable.Observable):
     @laser_delay_f.setter
     def laser_delay_f(self, value):
         self.__delay = float(value) / 1e9
-        if not DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        if not self.__DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
                                                                                       delay=self.__delay)
         self.property_changed_event.fire('laser_delay_f')
         self.free_event.fire('all')
@@ -1165,7 +1171,7 @@ class gainDevice(Observable.Observable):
     @laser_width_f.setter
     def laser_width_f(self, value):
         self.__width = float(value) / 1e9
-        if not DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        if not self.__DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
                                                                                       delay=self.__delay)
         self.property_changed_event.fire('laser_width_f')
         self.free_event.fire('all')

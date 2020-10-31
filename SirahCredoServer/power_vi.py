@@ -17,9 +17,11 @@ class TLPowerMeter:
         self.wl=cur_wl
         return None
 
-    def pw_read(self):
+    def pw_read(self, wl):
+        if abs(wl - self.wl) > 0.1:
+            self.wl = wl
         a=-1.0
-        val = a*self.wl**2-2*a*585*self.wl+585**2*a+100
+        val = a*wl**2-2*a*585*wl+585**2*a+100
         time.sleep(0.003)
         return abs(val + numpy.random.randn(1)[0])
 

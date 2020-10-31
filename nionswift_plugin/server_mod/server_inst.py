@@ -6,14 +6,14 @@ import threading
 import numpy
 import socket
 
-GREEN = (numpy.ones((15, 25), dtype=numpy.uint32)) * 2000000000
-RED = (numpy.ones((15, 25), dtype=numpy.uint32)) * 4000000000
+GREEN = (numpy.ones((15, 25), dtype=numpy.uint32)) * 4044400440
+RED = (numpy.ones((15, 25), dtype=numpy.uint32)) * 4000400000
 
 class serverDevice(Observable.Observable):
     def __init__(self):
         self.property_changed_event = Event.Event()
 
-        self.on_time = 0.02
+        self.on_time = 0.01
 
         self.__colorLaser = RED
         self.__colorPM0 = RED

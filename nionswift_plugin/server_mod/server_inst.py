@@ -26,7 +26,7 @@ class serverDevice(Observable.Observable):
     def init(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.s.connect(('127.0.0.1', 65432))
+            self.s.connect(('129.175.82.159', 65432))
             self.s.sendall('bc'.encode())
             data = self.s.recv(512)
             if data == b'bc':

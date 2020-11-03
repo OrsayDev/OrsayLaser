@@ -28,7 +28,7 @@ class controlRoutine:
     def pw_control_thread(self, interval):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
-            time.sleep(interval+0.25)
+            time.sleep(interval+0.025)
             self.sendmessage(101)
 
     def pw_control_thread_check(self):

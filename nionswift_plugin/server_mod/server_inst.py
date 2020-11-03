@@ -35,7 +35,7 @@ class serverDevice(Observable.Observable):
                 return True
         except:
             self.server_status = 'red'
-            logging.info('***SERVER STATUS***: Auxiliary client not connect. Check server.')
+            logging.info('***SERVER STATUS***: Auxiliary client not connected. Check server.')
             return False
 
     def off(self, which):

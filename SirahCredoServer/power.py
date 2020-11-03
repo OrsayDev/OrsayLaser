@@ -14,6 +14,7 @@ class TLPowerMeter:
         self.id = which
         self.last = None
         self.wl = 585.
+        self.avg = 10
         self.lock = threading.Lock()
 
         try:
@@ -53,11 +54,10 @@ class TLPowerMeter:
     def pw_reset(self):
         try:
             self.tl.close()
-            time.sleep(0.01)
             self.tl = self.rm.open_resource(self.id)
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
-            self.tl.write('SENS:AVERAGE:COUNT '+str(AVG))
+            self.tl.write('SENS:AVERAGE:COUNT '+str(self.avg))
             print(self.tl.query('*IDN?'))
         except:
             sensor = self.tl.query('*IDN?')
@@ -65,6 +65,7 @@ class TLPowerMeter:
 
     def pw_set_avg(self, value):
         try:
+            self.avg = int(value)
             self.tl.write('SENS:AVERAGE:COUNT '+str(value))
         except:
             sensor = self.tl.query('*IDN?')

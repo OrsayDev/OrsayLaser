@@ -904,7 +904,6 @@ class gainDevice(Observable.Observable):
                         self.__servo_pos + 1) / 180
             else:
                 self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
-                self.blink.fire()
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'

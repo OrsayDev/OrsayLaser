@@ -1274,4 +1274,8 @@ class gainDevice(Observable.Observable):
 
     @port_f.setter
     def port_f(self, value):
-        self.__port = value
+        try:
+            self.__port = int(value)
+        except TypeError:
+            logging.info('***SERVER***: Port must be an integer. Using 65432.')
+            self.__port = 65432

@@ -29,20 +29,20 @@ class ServerSirahCredoLaser:
     def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT, TIMEOUT=10.0):
         self.__running = True
         print("***SERVER***: Initializing SirahCredoServer...")
-        if SERVER_HOST == '127.0.0.1':
-            self.__sirah = laser_vi.SirahCredoLaser()
-            self.__ps = power_supply_vi.SpectraPhysics()
-            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
-                              power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
-            self.__ard = ard_vi.Arduino()
-            print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
-        elif SERVER_HOST == '129.175.82.159':
+        if SERVER_HOST == '129.175.82.159':
             self.__sirah = laser.SirahCredoLaser()
             self.__ps = power_supply.SpectraPhysics()
             self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
                               power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             self.__ard = ard.Arduino()
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
+        else:
+            self.__sirah = laser_vi.SirahCredoLaser()
+            self.__ps = power_supply_vi.SpectraPhysics()
+            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
+                              power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__ard = ard_vi.Arduino()
+            print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setblocking(False)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

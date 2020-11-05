@@ -36,6 +36,13 @@ class ServerSirahCredoLaser:
                               power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             self.__ard = ard.Arduino()
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
+        elif SERVER_HOST == '192.168.137.96':
+            self.__sirah = laser.SirahCredoLaser()
+            self.__ps = power_supply_vi.SpectraPhysics()
+            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
+                              power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__ard = ard_vi.Arduino()
+            print('***SERVER***: Server Running in Raspberry Pi. Real Laser employed.')
         else:
             self.__sirah = laser_vi.SirahCredoLaser()
             self.__ps = power_supply_vi.SpectraPhysics()
@@ -90,7 +97,7 @@ class ServerSirahCredoLaser:
                             self.inputs.remove(s)
                             if hasattr(self.__sirah, 'ser'):
                                 self.__sirah.ser.close()
-                            print('***SERVER***: No data received. Hanging for new connection...')
+                            print('***SERVER***: No data received. Waiting new connection.')
                             self.__running = False
                         else:
                             start_time = time.time()
@@ -255,7 +262,7 @@ class ServerSirahCredoLaser:
                         self.inputs.remove(s)
                         if hasattr(self.__sirah, 'ser'):
                             self.__sirah.ser.close()
-                        print('***SERVER***: Client disconnected. Instantiate a new server for a new connection.')
+                        print('***SERVER***: Nionswift closed. Waiting new connection.')
                         self.__running = False
 
 

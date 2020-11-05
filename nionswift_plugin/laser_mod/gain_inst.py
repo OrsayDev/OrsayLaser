@@ -497,7 +497,7 @@ class gainDevice(Observable.Observable):
                 self.__DEBUG = False
             else:
                 logging.info('***SERVER***: Connecting to another server. Debug is OFF.')
-                self.__DEBUG = False
+                self.__DEBUG = True
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser

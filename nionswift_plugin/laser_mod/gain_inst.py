@@ -492,6 +492,12 @@ class gainDevice(Observable.Observable):
             if self.__host == '127.0.0.1':
                 logging.info('***SERVER***: Connecting o local Host.')
                 self.__DEBUG = True
+            elif self.__host == '129.175.82.159':
+                logging.info('***SERVER***: Connecting to VG Lumiere.')
+                self.__DEBUG = False
+            else:
+                logging.info('***SERVER***: Connecting to another server. Debug is OFF.')
+                self.__DEBUG = False
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser

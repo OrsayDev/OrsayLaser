@@ -248,7 +248,6 @@ class ServerSirahCredoLaser:
                                 self.who['bc'].sendall(data+b'RX')
                                 if return_data != b'None':
                                     self.who['bc'].sendall(return_data+b'TX')
-                                    print(return_data)
                             if (end-start_time > 0.03):
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')

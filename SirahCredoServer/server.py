@@ -40,8 +40,8 @@ class ServerSirahCredoLaser:
         elif SERVER_HOST == '192.168.137.96':
             self.__sirah = laser.SirahCredoLaser()
             self.__ps = power_supply.SpectraPhysics()
-            self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
-                              power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
+                              power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             self.__ard = ard_vi.Arduino()
             print('***SERVER***: Server Running in Raspberry Pi. Real Laser employed.')
         else:

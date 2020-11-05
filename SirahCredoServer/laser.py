@@ -32,10 +32,10 @@ class SirahCredoLaser:
         try:
             if not self.ser.is_open:
                 self.ser.open()
-                self.sucessfull = True
+            self.successful = True
         except:
-            print("***LASER***: Could not open serial port. Check if connected and port.")
-            self.sucessfull = False
+            print("***LASER***: Could not open serial port.")
+            self.successful = False
 
     def bytes_to_pos(self, s):
         dec_val = 0

@@ -22,9 +22,11 @@ class TLPowerMeter:
             self.tl.timeout=200
             self.tl.write('SENS:POW:RANG:AUTO 1')
             self.tl.write('CONF:POW')
+            self.successful = True
         except:
             sensor = self.tl.query('*IDN?')
-            print(f'Problem 01 in {sensor}')
+            print(f'***POWERMETER***: Could not open serial port in {sensor}')
+            self.successful = False
 
     
     def pw_set_wl(self, cur_WL):

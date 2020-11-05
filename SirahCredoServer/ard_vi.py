@@ -14,6 +14,7 @@ class Arduino:
     def __init__(self):
         self.pos = b'0'
         self.control_thread = None
+        self.successful = True
 
     def get_pos(self):
         a = int(self.pos.decode())

@@ -19,7 +19,7 @@ class SpectraPhysics:
         self.t1 = b'26.00\n'
         self.t2 = b'34.00\n'
 
-        self.sucessfull = True
+        self.successful = True
 
     def query(self, mes):
         if mes == '?C1\n':

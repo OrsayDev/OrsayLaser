@@ -12,7 +12,6 @@ import ard
 import ard_vi
 import time
 import select
-import queue
 import sys
 
 __author__ = "Yves Auad"
@@ -27,7 +26,7 @@ SERVER_PORT = settings["SOCKET_SERVER"]["PORT"]
 
 class ServerSirahCredoLaser:
 
-    def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT, TIMEOUT=10.0):
+    def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT):
         self.__running = True
         print("***SERVER***: Initializing SirahCredoServer...")
         if SERVER_HOST == '129.175.82.159':
@@ -40,8 +39,8 @@ class ServerSirahCredoLaser:
         elif SERVER_HOST == '192.168.137.96':
             self.__sirah = laser.SirahCredoLaser()
             self.__ps = power_supply.SpectraPhysics()
-            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
-                              power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
+                              power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             self.__ard = ard_vi.Arduino()
             print('***SERVER***: Server Running in Raspberry Pi. Real Laser employed.')
         else:
@@ -52,10 +51,15 @@ class ServerSirahCredoLaser:
             self.__ard = ard_vi.Arduino()
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.setblocking(False)
+        #self.s.setblocking(False)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.s.settimeout(TIMEOUT)
         self.s.bind((SERVER_HOST, SERVER_PORT))
+        self.instruments = list()
+        self.instruments.append(self.__sirah)
+        self.instruments.append(self.__ps)
+        self.instruments.append(self.__pwmeter[0])
+        self.instruments.append(self.__pwmeter[1])
+        self.instruments.append(self.__ard)
 
         self.inputs = [self.s]
         self.outputs = []
@@ -63,41 +67,42 @@ class ServerSirahCredoLaser:
         self.who['server'] = self.s
         self.message_queues = {}
 
-        if not self.__sirah.sucessfull:
+        if not self.__sirah.successful or not self.__ps.successful or not self.__pwmeter[0].successful\
+                or not self.__pwmeter[1].successful or not self.__ard.successful:
             self.s.close()  # quits the server is not successful
-            print('***SERVER***: Server not successfully created because of Sirah. Leaving...')
-        elif not self.__ps.sucessfull:
-            self.s.close()  # quits the server is not successful
-            print('***SERVER***: Server not successfully created because of PS. Leaving...')
+            print('***SERVER***: Server not successfully created. Check instrument message.')
         else:
             self.s.listen()
-            print('***SERVER***: Server OK')
+            print('***SERVER***: Server is listening.')
+
+    def handle_error(self):
+        for inst in self.instruments:
+            if hasattr(inst, 'ser'):
+                inst.ser.close()
+            elif hasattr(inst, 'tl'):
+                inst.tl.close()
+        if hasattr(self.s, 'close'):
+            self.s.close()
 
 
     def main(self):
         while self.__running:
             readable, writable, exceptional = select.select(self.inputs, self.outputs, self.inputs)
-            #for w in writable:
-            #    w.send(b'')
             for s in readable:
                 if s is self.s:
                     clientsocket, address = self.s.accept()
+                    #clientsocket.setblocking(False)
                     data = clientsocket.recv(512)
                     clientsocket.sendall(data)
-                    clientsocket.setblocking(False)
                     self.inputs.append(clientsocket)
-                    #if data.decode() == 'bc': self.outputs.append(clientsocket)
                     self.who[data.decode()] = clientsocket
-                    self.message_queues[clientsocket] = queue.Queue()
                     print(f"***SERVER***: Connection from {address} has been established.")
                 else:
                     try:
                         data = s.recv(512)
-                        self.message_queues[s].put(data)
                         if not data:
                             self.inputs.remove(s)
-                            if hasattr(self.__sirah, 'ser'):
-                                self.__sirah.ser.close()
+                            self.handle_error()
                             print('***SERVER***: No data received. Waiting new connection.')
                             self.__running = False
                         else:
@@ -184,18 +189,6 @@ class ServerSirahCredoLaser:
 
                             ## Power Meter Functions
 
-
-                            #elif b"pw_set_wl" in data:
-                            #    which=int(data[9:10])
-                            #    if data[10:15] == bytes(5):
-                            #        wl = float(data[15: 31].decode())
-                            #        try:
-                            #            self.__pwmeter[which].pw_set_wl(wl)
-                            #        except:
-                            #            print(f'***WARNING***: Power Meter {which} is disconnected.')
-                            #        return_data = 'None'.encode()
-
-
                             elif b"pw_read" in data:
                                 which=int(data[7:8])
                                 if data[8:13] == bytes(5):
@@ -261,8 +254,7 @@ class ServerSirahCredoLaser:
                                 print(f'Sent data was {data}')
                     except ConnectionResetError:
                         self.inputs.remove(s)
-                        if hasattr(self.__sirah, 'ser'):
-                            self.__sirah.ser.close()
+                        self.handle_error()
                         print('***SERVER***: Nionswift closed. Waiting new connection.')
                         self.__running = False
 
@@ -271,9 +263,10 @@ class ServerSirahCredoLaser:
 try:
     HOST = str(sys.argv[1])
     PORT = int(sys.argv[2])
-    print(HOST, PORT)
-    ss = ServerSirahCredoLaser(HOST, PORT)
-    ss.main()
+    while True:
+        print(f'***SERVER***: Looping Server without GUI over {HOST} @ {PORT}')
+        ss = ServerSirahCredoLaser(HOST, PORT)
+        ss.main()
 except IndexError:
     print('***SERVER***: No HOST and/or PORT were given. UI starting...')
     layout = [
@@ -301,8 +294,8 @@ except IndexError:
 
         if event == "Start":
             try:
-                ss = ServerSirahCredoLaser(values['HOST_NAME'], int(values['PORT']), float(values['TIMEOUT']))
-                if ss._ServerSirahCredoLaser__sirah.sucessfull:
+                ss = ServerSirahCredoLaser(values['HOST_NAME'], int(values['PORT']))
+                if ss._ServerSirahCredoLaser__sirah.successful:
                     window.FindElement('Hang').Update(disabled=False)
                     window.FindElement('Start').Update(disabled=True)
                     window.FindElement('LOCAL_HOST').Update(disabled=True)

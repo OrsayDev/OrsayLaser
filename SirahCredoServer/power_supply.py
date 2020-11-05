@@ -25,9 +25,10 @@ class SpectraPhysics:
         try:
             if not self.ser.is_open:
                 self.ser.open()
-                self.sucessfull = True
+            self.successful = True
         except:
-            self.sucessfull = False
+            print('***POWER SUPPLY***: Could not open serial port.')
+            self.successful = False
 
         self.ser.write('D:0\n'.encode())
         self.ser.readline()

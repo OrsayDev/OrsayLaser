@@ -26,8 +26,10 @@ class Arduino:
             if not self.ser.is_open:
                 self.ser.open()
                 self.ser.readline()
+            self.successful = True
         except:
-            print('ok')
+            print("***ARDUINO***: Could not open serial port.")
+            self.successful = False
 
 
     def get_pos(self):

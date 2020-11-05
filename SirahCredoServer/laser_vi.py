@@ -15,7 +15,7 @@ class SirahCredoLaser:
         self.thread_wl = 575.0
         self.lock = threading.Lock()
 
-        self.sucessfull = True
+        self.successful = True
 
     def set_hardware_wl(self, wl):
         self.thread_wl = wl

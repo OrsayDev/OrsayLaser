@@ -12,6 +12,7 @@ class TLPowerMeter:
     def __init__(self, which):
         self.id = which
         self.wl = 580.
+        self.successful = True
 
     def pw_set_wl(self, cur_wl):
         self.wl=cur_wl

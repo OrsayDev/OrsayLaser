@@ -16,7 +16,7 @@ class SpectraPhysics:
         self.ser = serial.Serial()
         self.ser.baudrate = 57600
         #self.ser.port = 'COM11'
-        self.ser.port = '/dev/ttyUSB0'
+        self.ser.port = '/dev/ttyUSB1'
         self.ser.parity = serial.PARITY_NONE
         self.ser.stopbits = serial.STOPBITS_ONE
         self.ser.bytesize = serial.EIGHTBITS

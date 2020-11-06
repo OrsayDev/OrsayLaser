@@ -100,7 +100,6 @@ class ServerSirahCredoLaser:
                 else:
                     try:
                         data = s.recv(512)
-                        print(data)
                         if not data:
                             self.inputs.remove(s)
                             self.handle_error()
@@ -246,7 +245,6 @@ class ServerSirahCredoLaser:
 
                             end = time.time()
                             s.sendall(return_data)
-                            print(return_data)
                             if 'bc' in self.who:
                                 self.who['bc'].sendall(data+b'RX')
                                 if return_data != b'None':

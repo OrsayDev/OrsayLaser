@@ -51,7 +51,7 @@ class ServerSirahCredoLaser:
             self.__ard = ard_vi.Arduino('COM15')
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.setblocking(False)
+        #self.s.setblocking(False)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind((SERVER_HOST, SERVER_PORT))
         self.instruments = list()
@@ -91,7 +91,7 @@ class ServerSirahCredoLaser:
             for s in readable:
                 if s is self.s:
                     clientsocket, address = self.s.accept()
-                    clientsocket.setblocking(False)
+                    #clientsocket.setblocking(False)
                     data = clientsocket.recv(512)
                     clientsocket.sendall(data)
                     self.inputs.append(clientsocket)

@@ -26,6 +26,10 @@ class Arduino:
             if not self.ser.is_open:
                 self.ser.open()
                 self.ser.readline()
+            else:
+                self.ser.close()
+                self.ser.open()
+                self.ser.readline()
             self.successful = True
         except:
             print("***ARDUINO***: Could not open serial port.")

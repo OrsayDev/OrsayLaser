@@ -186,6 +186,8 @@ class gainhandler:
                 self.server_value.text = 'LH'
             elif self.host_value.text == '129.175.82.159':
                 self.server_value.text = 'VGLum'
+            elif self.host_value.text == '192.168.137.96':
+                self.server_value.text = 'Raspberry π'
             else:
                 self.server_value.text = 'User-Defined'
             self.event_loop.create_task(
@@ -208,8 +210,11 @@ class gainhandler:
             self.host_value.text = '129.175.82.159'
             self.port_value.text = '65432'
         if current_index == 2:
-            self.host_value.text = '127.127.127.127'
-            self.port_value.text = '9999'
+            self.host_value.text = '192.168.137.96'
+            self.port_value.text = '65432'
+        if current_index == 3:
+            self.host_value.text = '1.0.0.1'
+            self.port_value.text = '65432'
 
         self.instrument.host_f = self.host_value.text
         self.instrument.port_f = int(self.port_value.text)
@@ -999,7 +1004,7 @@ class gainView:
         self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)')
         self.server_label = ui.create_label(text='Server: ')
         self.server_value = ui.create_label(name='server_value', text='OFF')
-        self.server_choice = ui.create_combo_box(items=['Local Host', 'VG Lumiere', 'User-Defined'], on_current_index_changed='server_choice_pick')
+        self.server_choice = ui.create_combo_box(items=['Local Host', 'VG Lumiere', 'Raspberry Pi', 'User-Defined'], on_current_index_changed='server_choice_pick')
         self.server_shutdown = ui.create_push_button(name='server_shutdown', text='Shutdown', on_clicked='server_shutdown_push')
         self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
                                       self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), self.server_shutdown, spacing=12)

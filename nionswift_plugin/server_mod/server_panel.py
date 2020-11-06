@@ -46,6 +46,13 @@ class serverView:
     def __init__(self, instrument: server_inst.serverDevice):
         ui = Declarative.DeclarativeUI()
 
+        self.host_label = ui.create_label(text='Host:')
+        self.host_value = ui.create_line_edit(text='@binding(instrument.host)')
+        self.host_row = ui.create_row(self.host_label, self.host_value, spacing=12)
+        self.port_label = ui.create_label(text='Port:')
+        self.port_value = ui.create_line_edit(text='@binding(instrument.port)')
+        self.port_row = ui.create_row(self.port_label, self.port_value, spacing=12)
+
         self.init_pb = ui.create_push_button(name='init_pb', on_clicked='init', text='[Re-]Connect', icon='@binding(instrument.server_status)')
 
         self.header_rx = ui.create_label(text='Rx')
@@ -88,7 +95,7 @@ class serverView:
         self.ard = ui.create_row(self.client_ard,  self.client_ard_rx, self.client_ard_tx)
 
 
-        self.ui_view = ui.create_column(self.init_pb, self.header_row, self.laser, self.pm01, self.pm02, self.ps, self.ard)
+        self.ui_view = ui.create_column(self.host_row, self.port_row, self.init_pb, self.header_row, self.laser, self.pm01, self.pm02, self.ps, self.ard)
 
 def create_spectro_panel(document_controller, panel_id, properties):
     instrument = properties["instrument"]

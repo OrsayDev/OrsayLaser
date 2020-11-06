@@ -26,7 +26,6 @@ class SirahCredoLaser:
         self.ser = serial.Serial()
         self.ser.baudrate = 19200
         self.ser.port = SERIAL_PORT
-        #self.ser.port = '/dev/ttyUSB0'
         self.ser.timeout = 0.2
 
         try:

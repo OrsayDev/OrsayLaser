@@ -23,11 +23,14 @@ class serverDevice(Observable.Observable):
         self.__PS = [RED, RED]
         self.__Ard = [RED, RED]
 
+        self.__host = '127.0.0.1'
+        self.__port = 65432
+
     def init(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             #self.s.connect(('129.175.82.159', 65432))
-            self.s.connect(('127.0.0.1', 65432))
+            self.s.connect((self.__host, self.__port))
             self.s.sendall('bc'.encode())
             data = self.s.recv(512)
             if data == b'bc':
@@ -97,6 +100,26 @@ class serverDevice(Observable.Observable):
 
         if data:
             self.loop()
+
+    @property
+    def host(self):
+        return self.__host
+
+    @host.setter
+    def host(self, value):
+        self.__host = value
+
+    @property
+    def port(self):
+        return self.__port
+
+    @port.setter
+    def port(self, value):
+        try:
+            self.__port = int(value)
+        except TypeError:
+            logging.info('***SERVER***: Port must be an integer. Using 65432.')
+            self.__port = 65432
 
     @property
     def server_status(self):

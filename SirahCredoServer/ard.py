@@ -35,7 +35,10 @@ class Arduino:
     def get_pos(self):
         self.ser.write(b'?POS\n')
         a = self.ser.readline()
-        return int(a.decode())
+        try:
+            return int(a.decode())
+        except:
+            return 'None'
 
     def set_pos(self, position):
         if position > 180:

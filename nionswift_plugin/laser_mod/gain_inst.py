@@ -570,6 +570,7 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire('t_d2_f')
         self.property_changed_event.fire('cur_d1_f')
         self.property_changed_event.fire('cur_d2_f')
+
         if not self.__status:
             self.free_event.fire("all")
 
@@ -1097,15 +1098,14 @@ class gainDevice(Observable.Observable):
 
     @property
     def servo_f(self):
-        if not self.__status:
-            return self.__serverArd.get_pos()
-        else:
-            return self.__servo_pos
+        return self.__servo_pos
 
     @servo_f.setter
     def servo_f(self, value: int):
         if self.servo_wobbler_f: self.servo_wobbler_f = False
         self.__servo_pos = value
+        if self.__servo_pos<0: self.__servo_pos=0
+        if self.__servo_pos>180: self.__servo_pos=180
         self.__serverArd.set_pos(self.__servo_pos)
         if not self.__status:
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)

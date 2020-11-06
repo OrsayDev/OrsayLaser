@@ -41,17 +41,11 @@ class Arduino:
             return 'None'
 
     def set_pos(self, position):
-        if position > 180:
-            return None
-        if position < 0:
-            return None
-        try:
-            self.ser.write(('POS:' + str(position) + '\n').encode())
-            return None
-        except:
-            self.ser.flush()
-            self.ser.write(('POS:' + str(position) + '\n').encode())
-            return None
+        if position < 180 and position > 0:
+            try:
+                self.ser.write(('POS:' + str(position) + '\n').encode())
+            except:
+                print("***ARDUINO***: Problem writing on arduino.")
 
     def wobbler_on(self, current, intensity):
         self.wobbler_thread = threading.Thread(target=self.wobbler_loop, args=(current, intensity), )

@@ -11,12 +11,12 @@ def _isPython3():
 
 class Arduino:
 
-    def __init__(self):
+    def __init__(self, SERIAL_PORT='COM15'):
         self.pow = 20.
         self.control_thread = None
         self.ser = serial.Serial()
         self.ser.baudrate = 9600
-        self.ser.port = 'COM15'
+        self.ser.port = SERIAL_PORT
         self.ser.parity = serial.PARITY_NONE
         self.ser.stopbits = serial.STOPBITS_ONE
         self.ser.bytesize = serial.EIGHTBITS

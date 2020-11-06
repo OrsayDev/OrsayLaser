@@ -11,7 +11,7 @@ def _isPython3():
 
 class Arduino:
 
-    def __init__(self):
+    def __init__(self, SERIAL_PORT = None):
         self.pos = b'0'
         self.control_thread = None
         self.successful = True

@@ -8,7 +8,7 @@ __author__ = "Yves Auad"
 
 class SirahCredoLaser:
 
-    def __init__(self)->None:
+    def __init__(self, SERIAL_PORT=None)->None:
         self.abort_ctrl = False
         self.laser_thread = None
         self.thread = None

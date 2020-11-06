@@ -9,7 +9,7 @@ def _isPython3():
 
 class SpectraPhysics:
 
-    def __init__(self):
+    def __init__(self, SERIAL_PORT=None):
         self.control_thread = None
         self.cur1 = b'1\n'
         self.cur2 = b'1\n'

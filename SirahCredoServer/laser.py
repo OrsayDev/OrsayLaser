@@ -17,7 +17,7 @@ __author__ = "Yves Auad"
 
 class SirahCredoLaser:
 
-    def __init__(self) -> None:
+    def __init__(self, SERIAL_PORT='COM12') -> None:
         self.abort_ctrl = False
         self.laser_thread = None
         self.thread = None
@@ -25,7 +25,7 @@ class SirahCredoLaser:
 
         self.ser = serial.Serial()
         self.ser.baudrate = 19200
-        self.ser.port = 'COM12'
+        self.ser.port = SERIAL_PORT
         #self.ser.port = '/dev/ttyUSB0'
         self.ser.timeout = 0.2
 

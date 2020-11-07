@@ -34,7 +34,7 @@ class LaserServerHandler():
     def __init__(self, callback, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT, which = 'None'):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((CLIENT_HOST, CLIENT_PORT))
-        self.s.settimeout(0.5)
+        self.s.settimeout(None)
         self.callback = callback
         self.name = which.encode()
         self.on = True
@@ -484,9 +484,12 @@ class gainDevice(Observable.Observable):
         try:
             logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
+            time.sleep(0.01)
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
                                LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
+            time.sleep(0.01)
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
+            time.sleep(0.01)
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
 
             if self.__host == '127.0.0.1':
@@ -589,8 +592,11 @@ class gainDevice(Observable.Observable):
 
     def abt(self):
         logging.info('***LASER***: Abort Measurement.')
-        self.__abort_force = True
-        self.__serverLaser.abort_control()  # abort laser thread as well.
+        if not self.__abort_force:
+            self.__abort_force = True
+            self.__serverLaser.abort_control()  # abort laser thread as well.
+            time.sleep(1)
+        logging.info(f'Number of Threads current alive is {threading.active_count()}')
         self.run_status_f = False  # force free GUI
 
     def acq_mon(self):
@@ -622,12 +628,15 @@ class gainDevice(Observable.Observable):
     def acq_monThread(self):
         self.run_status_f = True
         self.__abort_force = False
+        self.__bothPM = True
         self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
         while not self.__abort_force:
             self.combo_data_f = True
-            print(self.combo_data_f)
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()
+
+        self.__bothPM = False
+        self.run_status_f = False
 
 
     #This is for transmission measurements with the laser. Scan wavelength and get power in both powermeters

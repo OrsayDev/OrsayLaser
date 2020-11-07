@@ -414,7 +414,7 @@ class gainDevice(Observable.Observable):
         self.__status = True #we start it true because before init everything must be blocked. We free after a succesfull init
         self.__abort_force = False
         self.__power_ramp = False
-        self.__isTrans = False
+        self.__bothPM = False
         self.__per_pic = True
         self.__per_pic = True
 
@@ -593,6 +593,11 @@ class gainDevice(Observable.Observable):
         self.__serverLaser.abort_control()  # abort laser thread as well.
         self.run_status_f = False  # force free GUI
 
+    def acq_mon(self):
+        if self.__serverLaser.server_ping():
+            self.__thread = threading.Thread(target=self.acq_monThread)
+            self.__thread.start()
+
     def acq_trans(self):
         self.__acq_number += 1
         # check if laser server is alive
@@ -613,11 +618,23 @@ class gainDevice(Observable.Observable):
             self.__thread = threading.Thread(target=self.acqThread)
             self.__thread.start()
 
+    #This is to monitor my Power whitout using TL software dependent on windows
+    def acq_monThread(self):
+        self.run_status_f = True
+        self.__abort_force = False
+        self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
+        while not self.__abort_force:
+            self.combo_data_f = True
+            print(self.combo_data_f)
+        if self.__controlRout.pw_control_thread_check():
+            self.__controlRout.pw_control_thread_off()
+
+
     #This is for transmission measurements with the laser. Scan wavelength and get power in both powermeters
     def acq_transThread(self):
         self.run_status_f = True
         self.__abort_force = False
-        self.__isTrans = True
+        self.__bothPM = True
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
@@ -667,7 +684,7 @@ class gainDevice(Observable.Observable):
             # looped here indefinitely than fuck the hardware
             if self.__serverLaser.set_scan_thread_locked():  # releasing everything if locked
                 self.__serverLaser.set_scan_thread_release()
-        self.__isTrans = False
+        self.__bothPM = False
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over
@@ -790,8 +807,8 @@ class gainDevice(Observable.Observable):
         def sendMessage(message):
             if message == 101:
                 self.property_changed_event.fire("power_f")
-                if self.__isTrans: self.property_changed_event.fire("power02_f") #measure both powers
-                if self.__isTrans: self.property_changed_event.fire("power_transmission_f")
+                if self.__bothPM: self.property_changed_event.fire("power02_f") #measure both powers
+                if self.__bothPM: self.property_changed_event.fire("power_transmission_f")
                 if self.__ctrl_type == 1 and not self.__power_ramp:
                     self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180

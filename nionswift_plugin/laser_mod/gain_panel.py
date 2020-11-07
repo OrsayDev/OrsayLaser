@@ -232,6 +232,9 @@ class gainhandler:
     def acq_push(self, widget):
         self.instrument.acq()
 
+    def mon_push(self, widget):
+        self.instrument.acq_mon()
+
     #Transmission Tab
     def acq_trans_push(self, widget):
         self.instrument.acq_trans()
@@ -1189,9 +1192,10 @@ class gainView:
 
         self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
         self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push", width=150)
+        self.mon_pb = ui.create_push_button(text='Monitor Power', name="mon_pb", on_clicked="mon_push", width=150)
         self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push", width=150)
 
-        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.abt_pb, ui.create_stretch(), spacing=12)
+        self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.mon_pb, self.abt_pb, ui.create_stretch(), spacing=12)
 
         self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=150)
         self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=150)

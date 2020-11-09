@@ -365,8 +365,11 @@ class gainDevice(Observable.Observable):
         self.communicating_event = Event.Event()
         self.busy_event = Event.Event()
 
+        self.call_monitor = Event.Event()
         self.call_data = Event.Event()
+        self.append_monitor_data = Event.Event()
         self.append_data = Event.Event()
+        self.end_data_monitor = Event.Event()
         self.end_data = Event.Event()
 
         #below is related to handling an unexpected server shutdown
@@ -629,12 +632,19 @@ class gainDevice(Observable.Observable):
         self.run_status_f = True
         self.__abort_force = False
         self.__bothPM = True
+        loop_index = 0
+        self.call_monitor.fire()
         self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
         while not self.__abort_force:
             self.combo_data_f = True
+            self.append_monitor_data.fire(self.combo_data_f, loop_index)
+            loop_index += 1
+            time.sleep(0.005)
+            if loop_index == 100: loop_index=0
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()
 
+        self.end_data_monitor.fire()
         self.__bothPM = False
         self.run_status_f = False
 

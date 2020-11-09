@@ -135,8 +135,11 @@ class gainhandler:
         self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.free_event_listener = self.instrument.free_event.listen(self.prepare_free_widget_enable)
 
+        self.call_monitor_listener = self.instrument.call_monitor.listen(self.call_monitor)
         self.call_data_listener = self.instrument.call_data.listen(self.call_data)
+        self.append_monitor_data_listener = self.instrument.append_monitor_data.listen(self.append_monitor_data)
         self.append_data_listener = self.instrument.append_data.listen(self.append_data)
+        self.end_data_monitor = self.instrument.end_data_monitor.listen(self.end_data_monitor)
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
 
         self.server_shutdown_listener = self.instrument.server_shutdown.listen(self.server_shut)
@@ -354,6 +357,33 @@ class gainhandler:
 
             if show: self.event_loop.create_task(self.data_item_show(data_item))
 
+    def call_monitor(self):
+        self.pow_mon_array = numpy.zeros(100)
+        self.pow02_mon_array = numpy.zeros(100)
+        self.trans_mon_array = numpy.zeros(100)
+
+        self.pow_mon_di = DataItemLaserCreation("Power", self.pow_mon_array, "POW")
+        self.pow02_mon_di = DataItemLaserCreation("Power Fiber", self.pow02_mon_array, "POW")
+        self.trans_mon_di = DataItemLaserCreation("Transmission", self.trans_mon_array, "transmission_as_wav")
+
+        self.event_loop.create_task(self.data_item_show(self.pow_mon_di.data_item))
+        self.event_loop.create_task(self.data_item_show(self.pow02_mon_di.data_item))
+        self.event_loop.create_task(self.data_item_show(self.trans_mon_di.data_item))
+
+    def append_monitor_data(self, value, index):
+        try:
+            cur_wav, power, control, power02 = value
+        except:
+            cur_wav, power, power02 = value
+
+        self.pow_mon_array[index] = power
+        self.pow02_mon_array[index] = power02
+        self.trans_mon_array[index] = (power02 / (self.instrument.rt_f * power))
+
+        self.pow_mon_di.update_data_only(self.pow_mon_array)
+        self.pow02_mon_di.update_data_only(self.pow02_mon_array)
+        self.trans_mon_di.update_data_only(self.trans_mon_array)
+
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
         if self.current_acquition != nacq:
             self.__adjusted = False
@@ -447,6 +477,11 @@ class gainhandler:
         if camera_data: self.cam_di.update_data_only(self.cam_array)
         if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
+
+    def end_data_monitor(self):
+        if self.pow_mon_di: self.event_loop.create_task(self.data_item_exit_live(self.pow_mon_di.data_item))
+        if self.pow02_mon_di: self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
+        if self.trans_mon_di: self.event_loop.create_task(self.data_item_exit_live(self.trans_mon_di.data_item))
 
     def end_data(self):
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))

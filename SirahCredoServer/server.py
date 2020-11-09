@@ -36,7 +36,7 @@ class ServerSirahCredoLaser:
                               power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             self.__ard = ard.Arduino('COM15')
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
-        elif SERVER_HOST == '192.168.137.96':
+        elif SERVER_HOST == '129.175.81.128':
             self.__sirah = laser.SirahCredoLaser('/dev/ttyUSB0')
             self.__ps = power_supply.SpectraPhysics('/dev/ttyUSB1')
             self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),

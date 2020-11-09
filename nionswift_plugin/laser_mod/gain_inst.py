@@ -636,10 +636,8 @@ class gainDevice(Observable.Observable):
         self.call_monitor.fire()
         self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
         while not self.__abort_force:
-            self.combo_data_f = True
             self.append_monitor_data.fire(self.combo_data_f, loop_index)
             loop_index += 1
-            time.sleep(0.005)
             if loop_index == 100: loop_index=0
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()

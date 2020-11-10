@@ -290,6 +290,9 @@ class gainhandler:
     async def data_item_show(self, DI):
         self.document_controller.document_model.append_data_item(DI)
 
+    async def data_item_remove(self, DI):
+        self.document_controller.document_model.remove_data_item(DI)
+
     async def data_item_exit_live(self, DI):
         DI._exit_live_state()
 
@@ -479,9 +482,15 @@ class gainhandler:
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data_monitor(self):
-        if self.pow_mon_di: self.event_loop.create_task(self.data_item_exit_live(self.pow_mon_di.data_item))
-        if self.pow02_mon_di: self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
-        if self.trans_mon_di: self.event_loop.create_task(self.data_item_exit_live(self.trans_mon_di.data_item))
+        if self.pow_mon_di:
+            self.event_loop.create_task(self.data_item_exit_live(self.pow_mon_di.data_item))
+            self.event_loop.create_task(self.data_item_remove(self.pow_mon_di.data_item))
+        if self.pow02_mon_di:
+            self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
+            self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
+        if self.trans_mon_di:
+            self.event_loop.create_task(self.data_item_exit_live(self.trans_mon_di.data_item))
+            self.event_loop.create_task(self.data_item_remove(self.trans_mon_di.data_item))
 
     def end_data(self):
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))

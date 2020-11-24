@@ -1145,7 +1145,6 @@ class gainDevice(Observable.Observable):
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
             self.property_changed_event.fire("servo_f")  # this updates my label
-            time.sleep(0.1)
             self.free_event.fire('all')
 
     @property

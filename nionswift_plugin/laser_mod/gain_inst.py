@@ -521,7 +521,7 @@ class gainDevice(Observable.Observable):
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
                     self.sht_f = False  # shutter off
                     self.run_status_f = False
-                    self.servo_f = 180 #maximum transmission
+                    self.servo_f = 0 #maximum transmission
                     self.powermeter_avg_f = self.__powermeter_avg
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
 
@@ -636,9 +636,9 @@ class gainDevice(Observable.Observable):
         self.call_monitor.fire()
         self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
         while not self.__abort_force:
-            self.append_monitor_data.fire(self.combo_data_f, loop_index)
+            self.append_monitor_data.fire(self.__power02, loop_index)
             loop_index += 1
-            if loop_index == 100: loop_index=0
+            if loop_index == 200: loop_index=0
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()
 

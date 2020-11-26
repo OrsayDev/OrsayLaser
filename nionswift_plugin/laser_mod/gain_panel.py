@@ -114,9 +114,10 @@ class DataItemLaserCreation():
         if is_live: self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
-        self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
-                                                           timezone=self.timezone, timezone_offset=self.timezone_offset)
-        self.data_item.set_xdata(self.xdata)
+        #self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+        #                                                   timezone=self.timezone, timezone_offset=self.timezone_offset)
+        #self.data_item.set_xdata(self.xdata)
+        self.data_item.set_data(array)
 
     def set_cam_di_calibration(self, calib: Calibration.Calibration()):
         self.dimensional_calibrations[1] = calib
@@ -361,31 +362,35 @@ class gainhandler:
             if show: self.event_loop.create_task(self.data_item_show(data_item))
 
     def call_monitor(self):
-        self.pow_mon_array = numpy.zeros(100)
-        self.pow02_mon_array = numpy.zeros(100)
-        self.trans_mon_array = numpy.zeros(100)
+        #self.pow_mon_array = numpy.zeros(200)
+        self.pow02_mon_array = numpy.zeros(200)
+        #self.trans_mon_array = numpy.zeros(200)
 
-        self.pow_mon_di = DataItemLaserCreation("Power", self.pow_mon_array, "POW")
+        #self.pow_mon_di = DataItemLaserCreation("Power", self.pow_mon_array, "POW")
         self.pow02_mon_di = DataItemLaserCreation("Power Fiber", self.pow02_mon_array, "POW")
-        self.trans_mon_di = DataItemLaserCreation("Transmission", self.trans_mon_array, "transmission_as_wav")
+        #self.trans_mon_di = DataItemLaserCreation("Transmission", self.trans_mon_array, "transmission_as_wav")
 
-        self.event_loop.create_task(self.data_item_show(self.pow_mon_di.data_item))
+        #self.event_loop.create_task(self.data_item_show(self.pow_mon_di.data_item))
         self.event_loop.create_task(self.data_item_show(self.pow02_mon_di.data_item))
-        self.event_loop.create_task(self.data_item_show(self.trans_mon_di.data_item))
+        #self.event_loop.create_task(self.data_item_show(self.trans_mon_di.data_item))
 
     def append_monitor_data(self, value, index):
-        try:
-            cur_wav, power, control, power02 = value
-        except:
-            cur_wav, power, power02 = value
 
-        self.pow_mon_array[index] = power
+        power02 = value
+
+        if index==0:
+            self.pow02_mon_array = numpy.zeros(200)
+
+        #self.pow_mon_array[index] = power
         self.pow02_mon_array[index] = power02
-        self.trans_mon_array[index] = (power02 / (self.instrument.rt_f * power))
+        #self.trans_mon_array[index] = (power02 / (self.instrument.rt_f * power))
 
-        self.pow_mon_di.update_data_only(self.pow_mon_array)
+        #self.pow_mon_di.update_data_only(self.pow_mon_array)
         self.pow02_mon_di.update_data_only(self.pow02_mon_array)
-        self.trans_mon_di.update_data_only(self.trans_mon_array)
+        #self.trans_mon_di.update_data_only(self.trans_mon_array)
+
+
+
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
         if self.current_acquition != nacq:
@@ -482,15 +487,15 @@ class gainhandler:
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data_monitor(self):
-        if self.pow_mon_di:
-            self.event_loop.create_task(self.data_item_exit_live(self.pow_mon_di.data_item))
-            self.event_loop.create_task(self.data_item_remove(self.pow_mon_di.data_item))
+        #if self.pow_mon_di:
+        #    self.event_loop.create_task(self.data_item_exit_live(self.pow_mon_di.data_item))
+        #    self.event_loop.create_task(self.data_item_remove(self.pow_mon_di.data_item))
         if self.pow02_mon_di:
             self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
             self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
-        if self.trans_mon_di:
-            self.event_loop.create_task(self.data_item_exit_live(self.trans_mon_di.data_item))
-            self.event_loop.create_task(self.data_item_remove(self.trans_mon_di.data_item))
+        #if self.trans_mon_di:
+        #    self.event_loop.create_task(self.data_item_exit_live(self.trans_mon_di.data_item))
+        #    self.event_loop.create_task(self.data_item_remove(self.trans_mon_di.data_item))
 
     def end_data(self):
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))

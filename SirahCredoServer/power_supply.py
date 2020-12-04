@@ -21,6 +21,14 @@ class SpectraPhysics:
         self.ser.bytesize = serial.EIGHTBITS
         self.ser.timeout = 1
 
+        self.cur1 = 'None'
+        self.cur2 = 'None'
+        self.shutter = 'None'
+        self.diode = 'None'
+        self.q = 'None'
+        self.t1 = 'None'
+        self.t2 = 'None'
+
         try:
             if not self.ser.is_open:
                 self.ser.open()
@@ -50,7 +58,22 @@ class SpectraPhysics:
     def query(self, mes):
         try:
             self.ser.write(mes.encode())
-            return self.ser.readline()
+            answ = self.ser.readline()
+            if mes=='?SHT\n':
+                self.shutter = answ
+            elif mes=='?T2\n':
+                self.t2 = answ
+            elif mes=='?T1\n':
+                self.t1=answ
+            elif mes=='?D\n':
+                self.diode=answ
+            elif mes=='?G\n':
+                self.q=answ
+            elif mes=='?C1\n':
+                self.cur1 = answ
+            elif mes=='?C2\n':
+                self.cur2 = answ
+            return answ
         except:
             self.ser.close()
             time.sleep(0.05)

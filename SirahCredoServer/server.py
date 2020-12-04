@@ -13,6 +13,7 @@ import ard_vi
 import time
 import select
 import sys
+import pickle
 
 __author__ = "Yves Auad"
 
@@ -96,7 +97,11 @@ class ServerSirahCredoLaser:
                 if s is self.s:
                     clientsocket, address = self.s.accept()
                     data = clientsocket.recv(512)
-                    clientsocket.sendall(data)
+                    if data==b'snitch':
+                        print(f'Snitch is connected.')
+                        clientsocket.sendall(pickle.dumps(self.__ps.__dict__))
+                    else:
+                        clientsocket.sendall(data)
                     clientsocket.setblocking(False)
                     self.inputs.append(clientsocket)
                     self.who[data.decode()] = clientsocket

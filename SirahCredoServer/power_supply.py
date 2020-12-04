@@ -21,13 +21,13 @@ class SpectraPhysics:
         self.ser.bytesize = serial.EIGHTBITS
         self.ser.timeout = 1
 
-        self.cur1 = 'None'
-        self.cur2 = 'None'
-        self.shutter = 'None'
-        self.diode = 'None'
-        self.q = 'None'
-        self.t1 = 'None'
-        self.t2 = 'None'
+        self.cur1 = '0.10\n'
+        self.cur2 = '0.10\n'
+        self.shutter = 'CLOSED\n'
+        self.diode = 'OFF\n'
+        self.q = 'OFF\n'
+        self.t1 = '26.00\n'
+        self.t2 = '34.00\n'
 
         try:
             if not self.ser.is_open:

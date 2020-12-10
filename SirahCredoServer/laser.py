@@ -85,7 +85,7 @@ class SirahCredoLaser:
             abs1 = data[4:8]
             pos = self.bytes_to_pos(abs1)
             cur_wl = self.pos_to_wl(pos)
-            if (error == 0):
+            if (error == bytes(1)):
                 return (cur_wl, status[0])
             else:
                 print(f'***LASER***: Laser error message n. {error}.')

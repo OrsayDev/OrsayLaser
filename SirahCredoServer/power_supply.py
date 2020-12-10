@@ -1,6 +1,7 @@
 import serial
 import sys
 import time
+import numpy
 
 __author__ = "Yves Auad"
 
@@ -48,8 +49,7 @@ class SpectraPhysics:
         init_cur1 = float(self.cur1.decode('UTF-8').replace('\n', ''))
         init_cur2 = float(self.cur2.decode('UTF-8').replace('\n', ''))
 
-        if init_cur1>2.0 or init_cur2>2.0:
-            self.handle_start()
+        self.handle_start(init_cur1, init_cur2)
 
         self.ser.write('D:0\n'.encode())
         self.ser.readline()
@@ -57,17 +57,24 @@ class SpectraPhysics:
         self.ser.write('G:0\n'.encode())
         self.ser.readline()
 
-        self.ser.write('C1:00.10\n'.encode())
-        self.ser.readline()
+        #self.ser.write('C1:00.10\n'.encode())
+        #self.ser.readline()
 
-        self.ser.write('C2:00.10\n'.encode())
-        self.ser.readline()
+        #self.ser.write('C2:00.10\n'.encode())
+        #self.ser.readline()
 
         self.ser.write('Q:0\n'.encode())
         self.ser.readline()
 
-    def handle_start(self):
+    def handle_start(self, init_c1, init_c2):
         print('handling power supply start ***BETA TEST***')
+        for cur_val in numpy.linspace(init_c1, 0.10, 10):
+            cur_val = format(float(cur_val), '.2f')
+            self.comm('C1:' + str(cur_val) + '\n')
+            self.comm('C2:' + str(cur_val) + '\n')
+            print(cur_val)
+            time.sleep(0.1)
+
 
     def flush(self):
         self.ser.flush()

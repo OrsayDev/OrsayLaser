@@ -57,23 +57,15 @@ class SpectraPhysics:
         self.ser.write('G:0\n'.encode())
         self.ser.readline()
 
-        #self.ser.write('C1:00.10\n'.encode())
-        #self.ser.readline()
-
-        #self.ser.write('C2:00.10\n'.encode())
-        #self.ser.readline()
-
         self.ser.write('Q:0\n'.encode())
         self.ser.readline()
 
     def handle_start(self, init_c1, init_c2):
-        print('handling power supply start ***BETA TEST***')
         for cur_val in numpy.linspace(init_c1, 0.10, 10):
             cur_val = format(float(cur_val), '.2f')
             self.comm('C1:' + str(cur_val) + '\n')
             self.comm('C2:' + str(cur_val) + '\n')
-            print(cur_val)
-            time.sleep(0.1)
+            time.sleep(2.0)
 
 
     def flush(self):

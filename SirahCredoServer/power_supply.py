@@ -19,7 +19,7 @@ class SpectraPhysics:
         self.ser.parity = serial.PARITY_NONE
         self.ser.stopbits = serial.STOPBITS_ONE
         self.ser.bytesize = serial.EIGHTBITS
-        self.ser.timeout = 1
+        self.ser.timeout = 0.2
 
         self.cur1 = b'0.10\n'
         self.cur2 = b'0.10\n'
@@ -37,6 +37,20 @@ class SpectraPhysics:
             print('***POWER SUPPLY***: Could not open serial port.')
             self.successful = False
 
+        mes = '?SHT\n'; self.ser.write(mes.encode()); self.shutter=self.ser.readline()
+        mes = '?T2\n'; self.ser.write(mes.encode()); self.t2 = self.ser.readline()
+        mes = '?T1\n'; self.ser.write(mes.encode()); self.t1 = self.ser.readline()
+        mes = '?D\n'; self.ser.write(mes.encode()); self.diode = self.ser.readline()
+        mes = '?G\n'; self.ser.write(mes.encode()); self.q = self.ser.readline()
+        mes = '?C1\n'; self.ser.write(mes.encode()); self.cur1 = self.ser.readline()
+        mes = '?C2\n'; self.ser.write(mes.encode()); self.cur2 = self.ser.readline()
+
+        init_cur1 = float(self.cur1.decode('UTF-8').replace('\n', ''))
+        init_cur2 = float(self.cur2.decode('UTF-8').replace('\n', ''))
+
+        if init_cur1>2.0 or init_cur2>2.0:
+            self.handle_start()
+
         self.ser.write('D:0\n'.encode())
         self.ser.readline()
 
@@ -51,6 +65,9 @@ class SpectraPhysics:
 
         self.ser.write('Q:0\n'.encode())
         self.ser.readline()
+
+    def handle_start(self):
+        print('handling power supply start ***BETA TEST***')
 
     def flush(self):
         self.ser.flush()
@@ -73,13 +90,11 @@ class SpectraPhysics:
                 self.cur1 = answ
             elif mes=='?C2\n':
                 self.cur2 = answ
+            else:
+                print('***POWER SUPPLY***: Unknown message.')
             return answ
         except:
-            self.ser.close()
-            time.sleep(0.05)
-            self.ser.open()
-            time.sleep(0.05)
-            self.ser.write(mes.encode())
+            print(f'***POWER SUPPLY***: Could not write/read in laser serial port. Check port.')
             return self.ser.readline()
 
     def comm(self, mes):

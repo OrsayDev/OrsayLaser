@@ -26,7 +26,7 @@ class SirahCredoLaser:
         self.ser = serial.Serial()
         self.ser.baudrate = 19200
         self.ser.port = SERIAL_PORT
-        self.ser.timeout = 0.2
+        self.ser.timeout = 0.1
 
         try:
             if not self.ser.is_open:
@@ -85,24 +85,11 @@ class SirahCredoLaser:
             abs1 = data[4:8]
             pos = self.bytes_to_pos(abs1)
             cur_wl = self.pos_to_wl(pos)
-            if (status[0] == 2 or status[0] == 3):
+            if (error == 0):
                 return (cur_wl, status[0])
             else:
-                print('***LASER***: Status was not 02 or 03. Problem receiving bytes from laser hardware.')
-                self.ser.close()
-                time.sleep(0.05)
-                self.ser.open()
-                time.sleep(0.05)
-                self.ser.write(bs)
-                self.ser.read(1)
-                error = self.ser.read(1)
-                self.ser.read(1)
-                status = self.ser.read(1)
-                abs1 = self.ser.read(4)
-                self.ser.read(6)  # clear buffer
-                pos = self.bytes_to_pos(abs1)
-                cur_wl = self.pos_to_wl(pos)
-                return (cur_wl, status[0])
+                print(f'***LASER***: Laser error message n. {error}.')
+                return (cur_wl, None)
         except:
             print("***LASER***: Could not write/read in laser serial port. Check port.")
             return (580., None)

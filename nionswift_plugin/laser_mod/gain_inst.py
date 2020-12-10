@@ -851,7 +851,7 @@ class gainDevice(Observable.Observable):
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
             self.property_changed_event.fire("cur_wav_f")  # don't need a thread.
-            time.sleep(0.05) ##this reading takes 25ms so 50ms is safe.
+            time.sleep(0.1) ##this reading takes 25ms so 50ms is safe.
             self.wavelength_ready()
         else:
             self.power_wav_f = self.__cur_wav

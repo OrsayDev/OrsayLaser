@@ -61,12 +61,12 @@ class SpectraPhysics:
         self.ser.readline()
 
     def handle_start(self, init_c1, init_c2):
-        for cur_val in numpy.linspace(init_c1, 0.10, 10):
-            cur_val = format(float(cur_val), '.2f')
-            self.comm('C1:' + str(cur_val) + '\n')
-            self.comm('C2:' + str(cur_val) + '\n')
-            time.sleep(2.0)
-
+        if init_c1>2.0 or init_c2>2.0:
+            for cur_val in numpy.linspace(init_c1, 0.10, 10):
+                cur_val = format(float(cur_val), '.2f')
+                self.comm('C1:' + str(cur_val) + '\n')
+                self.comm('C2:' + str(cur_val) + '\n')
+                time.sleep(0.25)
 
     def flush(self):
         self.ser.flush()

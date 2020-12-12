@@ -13,11 +13,12 @@ from nion.swift.model import Utility
 
 from . import gain_inst
 from . import gain_data
-import numpy
+
 import os
 import json
 import logging
 import numpy
+import datetime
 
 _ = gettext.gettext
 
@@ -320,15 +321,34 @@ class gainhandler:
                                   ]))
 
     def save_delay(self, widget):
-        print('not yet boy')
+        width_value = int(self.width_value.text); width_value = 5 * round(width_value/5)
+        delay_value = int(self.delay_value.text); delay_value = 10 * round(delay_value/10)
+        diode_value = float(self.diode_cur_value_label.text); diode_value = 0.05 * round(diode_value/0.05)
+        abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files/dif_delays"), str(width_value)+'.txt'))
+        file = open(abs_path, 'a')
+        file.write(str(format(diode_value, '.2f') + ',' + str(delay_value) + ',' + str(datetime.datetime.now()))+'\n')
+        file.close()
 
     def show_delay(self, widget):
-        abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.npy"))
-        array_597 = numpy.load(abs_path)
-        print(array_597)
+        width_value = int(self.width_value.text);
+        width_value = 5 * round(width_value / 5)
+        try:
+            abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files/dif_delays"), str(width_value) + '.txt'))
+            file = open(abs_path, 'r')
+            content = file.readlines()
+            vals = dict()
+            for line in content:
+                current_line = line.split(',')
+                cur = current_line[0]; delay = current_line[1]
+                vals[str(cur)] = delay
+            file.close()
+            vals = ({key: value for key, value in sorted(vals.items(), key=lambda item: item[0])})
+            print('my dict is')
+            print(vals)
+        except FileNotFoundError:
+            logging.info('***PANEL***: Delay not yet catalogued.')
 
     def show_dye(self, widget):
-
         if self.dye_value.current_index == 0:
             abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.json"))
             with open(abs_path) as savfile:
@@ -1147,9 +1167,9 @@ class gainView:
                                       self.shutter_pb, spacing=12)
 
         self.diode_cur_label = ui.create_label(text='Current 01: ')
-        self.diode_cur_value_label = ui.create_label(text="@binding(instrument.cur_d1_f)")
+        self.diode_cur_value_label = ui.create_label(name='diode_cur_value_label', text="@binding(instrument.cur_d1_f)")
         self.diode_cur2_label = ui.create_label(text='Current 02: ')
-        self.diode_cur2_value_label = ui.create_label(text='@binding(instrument.cur_d2_f)')
+        self.diode_cur2_value_label = ui.create_label(name='diode_cur2_value_label', text='@binding(instrument.cur_d2_f)')
         self.shutter_label02 = ui.create_label(text='Shutter: ')
         self.shutter_label02_value = ui.create_label(text='@binding(instrument.sht_f)')
 
@@ -1219,18 +1239,18 @@ class gainView:
         self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)', width=100)
         self.delay_slider = ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)',
                                              minimum=1740, maximum=1850)
-        self.save_delay = ui.create_push_button(name='save_delay', text='Save Delay', on_clicked='save_delay')
+        self.save_delay_pb= ui.create_push_button(name='save_delay_pb', text='Save Delay', on_clicked='save_delay')
         self.delay_row = ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider,
-                                       ui.create_stretch(), self.save_delay)
+                                       ui.create_stretch(), self.save_delay_pb)
 
         self.width_label = ui.create_label(text='Width (ns): ')
         self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)', width=100)
         self.frequency_label = ui.create_label(text='Frequency (Hz): ')
         self.frequency_value = ui.create_line_edit(name='frequency_value',
                                                    text='@binding(instrument.laser_frequency_f)', width=100)
-        self.show_delay = ui.create_push_button(name='show_delay', text='Show Delay', on_clicked='show_delay')
+        self.show_delay_pb = ui.create_push_button(name='show_delay_pb', text='Show Delay', on_clicked='show_delay')
         self.width_row = ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
-                                       self.frequency_label, self.frequency_value, ui.create_stretch(), self.show_delay)
+                                       self.frequency_label, self.frequency_value, ui.create_stretch(), self.show_delay_pb)
 
         self.stop_pb = ui.create_push_button(name='stop_pb', text='Stop All', on_clicked='stop_function')
         self.fast_blanker_checkbox = ui.create_check_box(name='fast_blanker_checkbox',

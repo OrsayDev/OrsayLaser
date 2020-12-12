@@ -80,17 +80,20 @@ class SirahCredoLaser:
         try:
             self.ser.write(bs)
             data = self.ser.read(14)
+            assert data[0]==91
             error = data[1:2]
             status=data[3:4]
             abs1 = data[4:8]
             pos = self.bytes_to_pos(abs1)
             cur_wl = self.pos_to_wl(pos)
-            if (error == 0):
+            if (error == bytes(1)):
                 return (cur_wl, status[0])
             else:
                 print(f'***LASER***: Laser error message n. {error}.')
                 return (cur_wl, None)
         except:
+            self.ser.close()
+            self.ser.open()
             print("***LASER***: Could not write/read in laser serial port. Check port.")
             return (580., None)
 

@@ -319,16 +319,24 @@ class gainhandler:
                                   'cancel_pb'
                                   ]))
 
+    def save_delay(self, widget):
+        print('not yet boy')
+
+    def show_delay(self, widget):
+        abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.npy"))
+        array_597 = numpy.load(abs_path)
+        print(array_597)
+
     def show_dye(self, widget):
 
         if self.dye_value.current_index == 0:
-            abs_path = os.path.abspath(os.path.join((__file__ + "/../Dyes"), "Pyrromethene_597.json"))
+            abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.json"))
             with open(abs_path) as savfile:
                 pyr_597 = json.load(savfile)
 
             spatial_calibs = pyr_597["spatial_calibrations"][0]
 
-            abs_path = os.path.abspath(os.path.join((__file__ + "/../Dyes"), "Pyrromethene_597.npy"))
+            abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.npy"))
             array_597 = numpy.load(abs_path)
             di_597 = DataItemLaserCreation('Pyrromethene 597', array_597, "power_as_wav",
                                            spatial_calibs["offset"], None, None,
@@ -1211,16 +1219,18 @@ class gainView:
         self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)', width=100)
         self.delay_slider = ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)',
                                              minimum=1740, maximum=1850)
+        self.save_delay = ui.create_push_button(name='save_delay', text='Save Delay', on_clicked='save_delay')
         self.delay_row = ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider,
-                                       ui.create_stretch())
+                                       ui.create_stretch(), self.save_delay)
 
         self.width_label = ui.create_label(text='Width (ns): ')
         self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)', width=100)
         self.frequency_label = ui.create_label(text='Frequency (Hz): ')
         self.frequency_value = ui.create_line_edit(name='frequency_value',
                                                    text='@binding(instrument.laser_frequency_f)', width=100)
+        self.show_delay = ui.create_push_button(name='show_delay', text='Show Delay', on_clicked='show_delay')
         self.width_row = ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
-                                       self.frequency_label, self.frequency_value, ui.create_stretch())
+                                       self.frequency_label, self.frequency_value, ui.create_stretch(), self.show_delay)
 
         self.stop_pb = ui.create_push_button(name='stop_pb', text='Stop All', on_clicked='stop_function')
         self.fast_blanker_checkbox = ui.create_check_box(name='fast_blanker_checkbox',

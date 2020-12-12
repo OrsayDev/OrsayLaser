@@ -485,17 +485,11 @@ class gainDevice(Observable.Observable):
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
 
         try:
-            logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
-            self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
-            time.sleep(0.01)
-            self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
-                               LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
-            time.sleep(0.01)
-            self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
-            time.sleep(0.01)
-            self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
 
             if self.__host == '127.0.0.1':
+                from SirahCredoServer.server import ServerSirahCredoLaser
+                ss = ServerSirahCredoLaser(self.__host, self.__port)
+                threading.Thread(target=ss.main, args=()).start()
                 logging.info('***SERVER***: Connecting o local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
@@ -507,6 +501,18 @@ class gainDevice(Observable.Observable):
             else:
                 logging.info('***SERVER***: Connecting to another server. Debug is OFF.')
                 self.__DEBUG = False
+
+
+            logging.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
+            self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
+            time.sleep(0.01)
+            self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
+                               LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
+            time.sleep(0.01)
+            self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
+            time.sleep(0.01)
+            self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
+
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser

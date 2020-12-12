@@ -1,18 +1,13 @@
 import socket
-import os
 import json
-import PySimpleGUI as sg
-import laser_vi
-import laser
-import power_supply_vi
-import power_supply
-import power
-import power_vi
-import ard
-import ard_vi
 import time
 import select
-import sys
+import sys, os
+sys.path.append(os.path.dirname(__file__)+"/../")
+#print(sys.path)
+
+from SirahCredoServer import laser_vi, laser, power_supply_vi, power_supply, \
+    power, power_vi, ard, ard_vi
 
 __author__ = "Yves Auad"
 
@@ -266,85 +261,85 @@ class ServerSirahCredoLaser:
                         print('***SERVER***: Nionswift closed. Waiting new connection.')
                         self.__running = False
 
+if __name__ == '__main__':
+    try:
+        HOST = str(sys.argv[1])
+        PORT = int(sys.argv[2])
+        while True:
+            print(f'***SERVER***: Looping Server without GUI over {HOST} @ {PORT}')
+            ss = ServerSirahCredoLaser(HOST, PORT)
+            ss.main()
+            time.sleep(5)
+    except IndexError:
+        import PySimpleGUI as sg
+        print('***SERVER***: No HOST and/or PORT were given. UI starting...')
+        layout = [
+            [sg.Text('Hanging Timeout (s): '), sg.In('10.00', size=(25, 1), enable_events=True, key='TIMEOUT')],
+            [sg.Radio("Local Host", "Radio", size=(10, 1), key='LOCAL_HOST', enable_events=True, default=True),
+             sg.Radio("VG Lumiere", "Radio", size=(10, 1), key='VG_LUMIERE', enable_events=True),
+             sg.Radio("User Defined", "Radio", size=(10, 1), key='USER_DEFINED', enable_events=True)],
+            [sg.Text('Host: '), sg.In('127.0.0.1', size=(25, 1), enable_events=True, key='HOST_NAME', disabled=True)],
+            [sg.Text('Port: '), sg.In('65432', size=(25, 1), enable_events=True, key='PORT', disabled=True)],
+            [sg.Button("Start"), sg.Button('Hang', disabled=True), sg.Button("Reset")]
+        ]
+        window = sg.Window("Sirah Credo Server", layout)
+        while True:
+            event, values = window.read()
 
+            if event == 'LOCAL_HOST':
+                window.FindElement('HOST_NAME').Update('127.0.0.1', disabled=True)
+                window.FindElement('PORT').Update('65432', disabled=True)
+            if event == 'VG_LUMIERE':
+                window.FindElement('HOST_NAME').Update('129.175.82.159', disabled=True)
+                window.FindElement('PORT').Update('65432', disabled=True)
+            if event == 'USER_DEFINED':
+                window.FindElement('HOST_NAME').Update('0.0.0.0', disabled=False)
+                window.FindElement('PORT').Update('1', disabled=False)
 
-try:
-    HOST = str(sys.argv[1])
-    PORT = int(sys.argv[2])
-    while True:
-        print(f'***SERVER***: Looping Server without GUI over {HOST} @ {PORT}')
-        ss = ServerSirahCredoLaser(HOST, PORT)
-        ss.main()
-        time.sleep(5)
-except IndexError:
-    print('***SERVER***: No HOST and/or PORT were given. UI starting...')
-    layout = [
-        [sg.Text('Hanging Timeout (s): '), sg.In('10.00', size=(25, 1), enable_events=True, key='TIMEOUT')],
-        [sg.Radio("Local Host", "Radio", size=(10, 1), key='LOCAL_HOST', enable_events=True, default=True),
-         sg.Radio("VG Lumiere", "Radio", size=(10, 1), key='VG_LUMIERE', enable_events=True),
-         sg.Radio("User Defined", "Radio", size=(10, 1), key='USER_DEFINED', enable_events=True)],
-        [sg.Text('Host: '), sg.In('127.0.0.1', size=(25, 1), enable_events=True, key='HOST_NAME', disabled=True)],
-        [sg.Text('Port: '), sg.In('65432', size=(25, 1), enable_events=True, key='PORT', disabled=True)],
-        [sg.Button("Start"), sg.Button('Hang', disabled=True), sg.Button("Reset")]
-    ]
-    window = sg.Window("Sirah Credo Server", layout)
-    while True:
-        event, values = window.read()
-
-        if event == 'LOCAL_HOST':
-            window.FindElement('HOST_NAME').Update('127.0.0.1', disabled=True)
-            window.FindElement('PORT').Update('65432', disabled=True)
-        if event == 'VG_LUMIERE':
-            window.FindElement('HOST_NAME').Update('129.175.82.159', disabled=True)
-            window.FindElement('PORT').Update('65432', disabled=True)
-        if event == 'USER_DEFINED':
-            window.FindElement('HOST_NAME').Update('0.0.0.0', disabled=False)
-            window.FindElement('PORT').Update('1', disabled=False)
-
-        if event == "Start":
-            try:
-                ss = ServerSirahCredoLaser(values['HOST_NAME'], int(values['PORT']))
-                if ss._ServerSirahCredoLaser__sirah.successful:
-                    window.FindElement('Hang').Update(disabled=False)
-                    window.FindElement('Start').Update(disabled=True)
-                    window.FindElement('LOCAL_HOST').Update(disabled=True)
-                    window.FindElement('VG_LUMIERE').Update(disabled=True)
-                    window.FindElement('USER_DEFINED').Update(disabled=True)
-            except OSError:
-                ss.s.close()
-                print('***SERVER***: Could not BIND probably. MUST work on LOCALHOST.')
-        if event == "Hang":
+            if event == "Start":
                 try:
-                    ss.main()
+                    ss = ServerSirahCredoLaser(values['HOST_NAME'], int(values['PORT']))
+                    if ss._ServerSirahCredoLaser__sirah.successful:
+                        window.FindElement('Hang').Update(disabled=False)
+                        window.FindElement('Start').Update(disabled=True)
+                        window.FindElement('LOCAL_HOST').Update(disabled=True)
+                        window.FindElement('VG_LUMIERE').Update(disabled=True)
+                        window.FindElement('USER_DEFINED').Update(disabled=True)
+                except OSError:
+                    ss.s.close()
+                    print('***SERVER***: Could not BIND probably. MUST work on LOCALHOST.')
+            if event == "Hang":
                     try:
+                        ss.main()
+                        try:
+                            ss.s.close()
+                            ss = None
+                        except:
+                            print('***SERVER***: Server already reseted. There is no Socket object anymore.')
+                        window.FindElement('Hang').Update(disabled=True)
+                        window.FindElement('Start').Update(disabled=False)
+                        window.FindElement('LOCAL_HOST').Update(disabled=False)
+                        window.FindElement('VG_LUMIERE').Update(disabled=False)
+                        window.FindElement('USER_DEFINED').Update(disabled=False)
+
+                    except socket.timeout:
                         ss.s.close()
-                        ss = None
-                    except:
-                        print('***SERVER***: Server already reseted. There is no Socket object anymore.')
-                    window.FindElement('Hang').Update(disabled=True)
-                    window.FindElement('Start').Update(disabled=False)
+                        print('***SERVER***: Socket timeout. Retry connection.')
+                        window.FindElement('Hang').Update(disabled=True)
+                        window.FindElement('Start').Update(disabled=False)
                     window.FindElement('LOCAL_HOST').Update(disabled=False)
                     window.FindElement('VG_LUMIERE').Update(disabled=False)
                     window.FindElement('USER_DEFINED').Update(disabled=False)
-
-                except socket.timeout:
+            if event == "Reset":
+                try:
                     ss.s.close()
-                    print('***SERVER***: Socket timeout. Retry connection.')
-                    window.FindElement('Hang').Update(disabled=True)
-                    window.FindElement('Start').Update(disabled=False)
+                    ss = None
+                except:
+                    print('***SERVER***: Server already reseted. There is no Socket object anymore.')
+                window.FindElement('Hang').Update(disabled=True)
+                window.FindElement('Start').Update(disabled=False)
                 window.FindElement('LOCAL_HOST').Update(disabled=False)
                 window.FindElement('VG_LUMIERE').Update(disabled=False)
                 window.FindElement('USER_DEFINED').Update(disabled=False)
-        if event == "Reset":
-            try:
-                ss.s.close()
-                ss = None
-            except:
-                print('***SERVER***: Server already reseted. There is no Socket object anymore.')
-            window.FindElement('Hang').Update(disabled=True)
-            window.FindElement('Start').Update(disabled=False)
-            window.FindElement('LOCAL_HOST').Update(disabled=False)
-            window.FindElement('VG_LUMIERE').Update(disabled=False)
-            window.FindElement('USER_DEFINED').Update(disabled=False)
-        if event == sg.WIN_CLOSED:
-            break
+            if event == sg.WIN_CLOSED:
+                break

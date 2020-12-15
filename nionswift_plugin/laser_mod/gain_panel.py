@@ -115,13 +115,18 @@ class DataItemLaserCreation():
         if is_live: self.data_item._enter_live_state()
 
     def update_data_only(self, array: numpy.array):
-        #self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
-        #                                                   timezone=self.timezone, timezone_offset=self.timezone_offset)
-        #self.data_item.set_xdata(self.xdata)
+        self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+                                                           timezone=self.timezone, timezone_offset=self.timezone_offset)
+        self.data_item.set_xdata(self.xdata)
+
+    def fast_update_data_only(self, array: numpy.array):
         self.data_item.set_data(array)
 
     def set_cam_di_calibration(self, calib: Calibration.Calibration()):
         self.dimensional_calibrations[1] = calib
+
+    def set_dim_calibration(self):
+        self.data_item.dimensional_calibrations = self.dimensional_calibrations
 
 
 class gainhandler:
@@ -390,35 +395,16 @@ class gainhandler:
             if show: self.event_loop.create_task(self.data_item_show(data_item))
 
     def call_monitor(self):
-        #self.pow_mon_array = numpy.zeros(200)
         self.pow02_mon_array = numpy.zeros(200)
-        #self.trans_mon_array = numpy.zeros(200)
-
-        #self.pow_mon_di = DataItemLaserCreation("Power", self.pow_mon_array, "POW")
         self.pow02_mon_di = DataItemLaserCreation("Power Fiber", self.pow02_mon_array, "POW")
-        #self.trans_mon_di = DataItemLaserCreation("Transmission", self.trans_mon_array, "transmission_as_wav")
-
-        #self.event_loop.create_task(self.data_item_show(self.pow_mon_di.data_item))
         self.event_loop.create_task(self.data_item_show(self.pow02_mon_di.data_item))
-        #self.event_loop.create_task(self.data_item_show(self.trans_mon_di.data_item))
 
     def append_monitor_data(self, value, index):
-
         power02 = value
-
         if index==0:
             self.pow02_mon_array = numpy.zeros(200)
-
-        #self.pow_mon_array[index] = power
         self.pow02_mon_array[index] = power02
-        #self.trans_mon_array[index] = (power02 / (self.instrument.rt_f * power))
-
-        #self.pow_mon_di.update_data_only(self.pow_mon_array)
-        self.pow02_mon_di.update_data_only(self.pow02_mon_array)
-        #self.trans_mon_di.update_data_only(self.trans_mon_array)
-
-
-
+        self.pow02_mon_di.fast_update_data_only(self.pow02_mon_array)
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
         if self.current_acquition != nacq:
@@ -441,10 +427,6 @@ class gainhandler:
             for data_items in self.document_controller.document_model._DocumentModel__data_items:
                 if data_items.title == 'Laser Wavelength ' + str(nacq):
                     nacq += 1
-
-            #while self.document_controller.document_model.get_data_item_by_title(
-            #        'Laser Wavelength ' + str(nacq)) is not None:
-            #    nacq += 1  # this puts always a new set even if swift crashes and counts perfectly
 
             self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
             self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
@@ -485,7 +467,7 @@ class gainhandler:
             else:
                 self.cam_pixels = camera_data.data.shape[1]
 
-            cam_calibration = camera_data.get_dimensional_calibration(0)
+            cam_calibration = camera_data.get_dimensional_calibration(1)
 
             if self.cam_pixels != self.cam_array.shape[1]:
                 self.cam_array = numpy.zeros((self.pts * self.avg, self.cam_pixels))
@@ -515,15 +497,9 @@ class gainhandler:
         if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
 
     def end_data_monitor(self):
-        #if self.pow_mon_di:
-        #    self.event_loop.create_task(self.data_item_exit_live(self.pow_mon_di.data_item))
-        #    self.event_loop.create_task(self.data_item_remove(self.pow_mon_di.data_item))
         if self.pow02_mon_di:
             self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
             self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
-        #if self.trans_mon_di:
-        #    self.event_loop.create_task(self.data_item_exit_live(self.trans_mon_di.data_item))
-        #    self.event_loop.create_task(self.data_item_remove(self.trans_mon_di.data_item))
 
     def end_data(self):
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))
@@ -539,8 +515,6 @@ class gainhandler:
 
     def grab_data_item(self, widget):
         try:
-            #self.__current_DI = self.document_controller.document_model.get_data_item_by_title(
-            #    self.file_name_value.text
             for data_items in self.document_controller.document_model._DocumentModel__data_items:
                 if data_items.title == self.file_name_value.text:
                     self.__current_DI = data_items
@@ -640,8 +614,6 @@ class gainhandler:
             temp_dict['time_width'] = None
             temp_dict['start_ps_cur'] = None
             temp_dict['control'] = None
-
-        print(temp_dict)
 
         temp_data = self.__current_DI.data
         cam_pixels = len(self.__current_DI.data[0])

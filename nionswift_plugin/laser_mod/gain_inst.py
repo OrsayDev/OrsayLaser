@@ -485,7 +485,6 @@ class gainDevice(Observable.Observable):
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
 
         try:
-
             if self.__host == '127.0.0.1':
                 from SirahCredoServer.server import ServerSirahCredoLaser
                 ss = ServerSirahCredoLaser(self.__host, self.__port)

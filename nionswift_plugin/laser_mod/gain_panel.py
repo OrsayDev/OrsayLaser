@@ -540,8 +540,7 @@ class gainhandler:
     def grab_data_item(self, widget):
         try:
             #self.__current_DI = self.document_controller.document_model.get_data_item_by_title(
-            #    self.file_name_value.text)
-
+            #    self.file_name_value.text
             for data_items in self.document_controller.document_model._DocumentModel__data_items:
                 if data_items.title == self.file_name_value.text:
                     self.__current_DI = data_items
@@ -576,16 +575,13 @@ class gainhandler:
             if "Gain" in self.file_name_value.text:
                 for data_items in self.document_controller.document_model._DocumentModel__data_items:
                     if data_items.title == "Power " + str(temp_acq):
-                        self.__current_DI = data_items
-                    elif data_items.title == 'Laser Wavelength " + str(temp_acq)':
+                        self.__current_DI_POW = data_items
+                    elif data_items.title == 'Laser Wavelength ' + str(temp_acq):
                         self.__current_DI_WAV = data_items
 
-                #self.__current_DI_POW = self.document_controller.document_model.get_data_item_by_title(
-                #    "Power " + str(temp_acq))
-                self.power_file_detected_value.text = bool(self.__current_DI_POW)
-                #self.__current_DI_WAV = self.document_controller.document_model.get_data_item_by_title(
-                #    "Laser Wavelength " + str(temp_acq))
-                self.wav_file_detected_value.text = bool(self.__current_DI_WAV)
+                self.power_file_detected_value.text = str(bool(self.__current_DI_POW))
+                self.wav_file_detected_value.text = str(bool(self.__current_DI_WAV))
+
                 if self.__current_DI_POW and self.__current_DI_WAV:
                     self.align_zlp_max.enabled = self.plot_power_wav.enabled = True
                     self.align_zlp_fit.enabled = False  # fit not yet implemented

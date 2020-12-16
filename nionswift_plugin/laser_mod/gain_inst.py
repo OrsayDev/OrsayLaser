@@ -11,6 +11,28 @@ import time
 import numpy
 import socket
 
+logger = logging.getLogger('Gain Instrument')
+logger.setLevel(logging.INFO)
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+
+# 'application' code
+logger.debug('debug message')
+logger.info('info message')
+logger.warning('warn message')
+logger.error('error message')
+logger.critical('critical message')
+
 abs_path = os.path.abspath(os.path.join((__file__ + "/../"), "global_settings.json"))
 with open(abs_path) as savfile:
     settings = json.load(savfile)

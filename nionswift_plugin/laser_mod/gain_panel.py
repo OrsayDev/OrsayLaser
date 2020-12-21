@@ -482,7 +482,11 @@ class gainhandler:
             self.__adjusted = True
 
         if camera_data: #if it is false, as in transmission, do nothing
-            cam_hor = numpy.sum(camera_data.data, axis=0)
+            if len(camera_data.data.shape)>1:
+                cam_hor = numpy.sum(camera_data.data, axis=0)
+            else:
+                cam_hor = camera_data.data
+
             self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
 
         if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control

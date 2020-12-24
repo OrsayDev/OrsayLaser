@@ -225,7 +225,6 @@ class LaserServerHandler():
                 logger.error('***SERVER***: Bad communication. Error 09.')
         except ConnectionResetError:
             self.connection_error_handler()
-            self.connection_error_handler()
 
     ## POWER SUPPLY RELATED FUNCTIONS ##
 
@@ -562,12 +561,6 @@ class gainDevice(Observable.Observable):
     def hard_reset(self):
         self.__serverPM[0].pw_reset('0')
         self.__serverPM[1].pw_reset('1')
-
-    def diode(self, val):
-        self.d_f = val
-
-    def q(self, val):
-        self.q_f = val
 
     def upt(self):
         self.property_changed_event.fire("cur_wav_f")
@@ -988,7 +981,7 @@ class gainDevice(Observable.Observable):
 
     @cur_d_f.setter
     def cur_d_f(self, value: int):
-        self.__diode = value / 100
+        self.__diode = value / 100.
         cvalue = format(float(self.__diode), '.2f')  # how to format and send to my hardware
         if self.__diode < MAX_CURRENT:
             self.__serverPS.comm('C1:' + str(cvalue) + '\n')
@@ -1071,9 +1064,11 @@ class gainDevice(Observable.Observable):
     @property
     def d_f(self):
         try:
-            return self.__serverPS.query('?D\n').decode('UTF-8').replace('\n', '')
-        except:
-            return 'None'
+            if self.__serverPS.query('?D\n').decode('UTF-8').replace('\n', '') == 'ON': return True
+            else: return False
+            #return self.__serverPS.query('?D\n').decode('UTF-8').replace('\n', '')
+        except AttributeError:
+            return False
 
     @d_f.setter
     def d_f(self, value: bool):
@@ -1089,9 +1084,11 @@ class gainDevice(Observable.Observable):
     @property
     def q_f(self):
         try:
-            return self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '')
-        except:
-            return 'None'
+            if self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '') == 'ON': return True
+            else: return False
+            #return self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '')
+        except AttributeError:
+            return False
 
     @q_f.setter
     def q_f(self, value: bool):

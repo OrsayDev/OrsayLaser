@@ -268,12 +268,6 @@ class gainhandler:
     def pw_hard_reset(self, widget):
         self.instrument.hard_reset()
 
-    def dio_check(self, widget, checked):
-        self.instrument.diode(checked)
-
-    def q_check(self, widget, checked):
-        self.instrument.q(checked)
-
     def more_push(self, widget):
         self.instrument.cur_d_f += 5
 
@@ -1118,19 +1112,16 @@ class gainView:
             self.power_row00, self.power_row01, self.power_row02, self.power_row03, self.power_row04)
                                                 )
 
-        self.diode_label = ui.create_label(text='Diodes: ')
-        self.diode_checkbox = ui.create_check_box(name="diode_checkbox", on_checked_changed='dio_check')
-        self.diode_value_label = ui.create_label(text="@binding(instrument.d_f)")
-        self.q_label = ui.create_label(text='Q Switch: ')
-        self.q_checkbox = ui.create_check_box(name="q_checkbox", on_checked_changed='q_check')
-        self.q_value_label = ui.create_label(text='@binding(instrument.q_f)')
+        self.diode_checkbox = ui.create_check_box(text='Diodes', name="diode_checkbox",
+                                                  checked='@binding(instrument.d_f)')
+        self.q_checkbox = ui.create_check_box(text='Q Switch', name="q_checkbox", checked='@binding(instrument.q_f)')
         self.control_label = ui.create_label(text="Control: ")
         self.control_list = ui.create_combo_box(items=['None', 'Servo', 'Laser PS'],
                                                 current_index='@binding(instrument.pw_ctrl_type_f)',
                                                 name='control_list')
         self.shutter_pb = ui.create_push_button(text='Shutter', name="sht_pb", on_clicked='sht_push')
-        self.ui_view8 = ui.create_row(self.diode_label, self.diode_checkbox, self.diode_value_label,
-                                      ui.create_stretch(), self.q_label, self.q_checkbox, self.q_value_label,
+        self.ui_view8 = ui.create_row(self.diode_checkbox,
+                                      ui.create_stretch(), self.q_checkbox,
                                       ui.create_stretch(), self.control_label, self.control_list, ui.create_stretch(),
                                       self.shutter_pb, spacing=12)
 

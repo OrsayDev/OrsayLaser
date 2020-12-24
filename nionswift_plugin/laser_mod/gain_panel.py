@@ -456,12 +456,12 @@ class gainhandler:
 
         if not self.__adjusted and camera_data:
 
-            if len(camera_data.data.shape)>1 and camera_data.data.shape[0]==1:
+            if len(camera_data.data.shape)>1:
                 self.cam_pixels = camera_data.data.shape[1]
+                cam_calibration = camera_data.get_dimensional_calibration(1)
             else:
                 self.cam_pixels = camera_data.data.shape[0]
-
-            cam_calibration = camera_data.get_dimensional_calibration(0)
+                cam_calibration = camera_data.get_dimensional_calibration(0)
 
             if self.cam_pixels != self.cam_array.shape[1]:
                 self.cam_array = numpy.zeros((self.pts * self.avg, self.cam_pixels))

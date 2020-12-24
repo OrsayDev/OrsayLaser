@@ -965,7 +965,7 @@ class gainDevice(Observable.Observable):
     @property
     def power_transmission_f(self):
         try:
-            self.__power_transmission = self.__power02 / self.__power
+            self.__power_transmission = self.__power02 / (self.__power * self.__rt)
             return format(self.__power_transmission, '.5f')
         except:
             'None'
@@ -977,7 +977,10 @@ class gainDevice(Observable.Observable):
 
     @property
     def cur_d_f(self) -> int:
-        return int(self.__diode * 100)
+        try:
+            return int(self.__diode*100)
+        except AttributeError:
+            return 0
 
     @cur_d_f.setter
     def cur_d_f(self, value: int):
@@ -990,8 +993,6 @@ class gainDevice(Observable.Observable):
             logger.warning('***LASER PS***: Attempt to put a current outside allowed range. Check global_settings.')
 
         if not self.__status:
-            self.property_changed_event.fire("power_f")
-            self.property_changed_event.fire("power02_f")
             self.property_changed_event.fire("cur_d1_f")
             self.property_changed_event.fire("cur_d2_f")
             self.property_changed_event.fire("cur_d_f")
@@ -1004,22 +1005,14 @@ class gainDevice(Observable.Observable):
 
     @cur_d_edit_f.setter
     def cur_d_edit_f(self, value):
-        self.__diode = float(value)
-
-        if not self.__status:
-            self.property_changed_event.fire("power_f")
-            self.property_changed_event.fire("power02_f")
-            self.property_changed_event.fire("cur_d1_f")
-            self.property_changed_event.fire("cur_d2_f")
-            self.property_changed_event.fire(
-                "cur_d_f")  # He will call slider setter so no need to actually update value
-            self.property_changed_event.fire("cur_d_edit_f")
-            self.free_event.fire("all")
+        value = float(value)*100
+        self.cur_d_f = value
 
     @property
     def cur_d1_f(self):
         try:
-            return self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
+            self.__diode = float(self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', ''))
+            return format(self.__diode, '.2f')
         except:
             return 'None'
 

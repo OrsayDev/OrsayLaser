@@ -3,7 +3,7 @@ import json
 import time
 import select
 import sys, os
-sys.path.append(os.path.dirname(__file__)+"/../")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
 #print(sys.path)
 
 from SirahCredoServer import laser_vi, laser, power_supply_vi, power_supply, \

@@ -385,6 +385,7 @@ class gainDevice(Observable.Observable):
         self.__rt = 10.
         self.__power_transmission = 0.
         self.__power_ref = 0.
+        self.__autoLock = True
         self.__diode = 0.10
         self.__servo_pos = 0
         self.__servo_pos_initial = self.__servo_pos
@@ -932,6 +933,7 @@ class gainDevice(Observable.Observable):
                         self.__servo_pos + 1) / 180
             else:
                 self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
+            if self.__autoLock and not self.__status: self.property_changed_event.fire("locked_power_f")
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'
@@ -972,6 +974,14 @@ class gainDevice(Observable.Observable):
     def locked_power_f(self):
         self.__power_ref = self.__power
         return format(self.__power_ref, '.3f')
+
+    @property
+    def auto_lock_f(self):
+        return self.__autoLock
+
+    @auto_lock_f.setter
+    def auto_lock_f(self, value):
+        self.__autoLock = value
 
     @property
     def cur_d_f(self) -> int:

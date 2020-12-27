@@ -498,6 +498,7 @@ class gainhandler:
         if self.pow02_mon_di:
             self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
             self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
+            self.pow02_mon_di = None
 
     def end_data(self):
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))
@@ -1088,11 +1089,12 @@ class gainView:
                                            )
 
         self.power_label = ui.create_label(text='Power (uW): ')
+        self.auto_power_lock = ui.create_check_box(name='auto_powe_lock', text='Auto Lock', checked='@binding(instrument.auto_lock_f)')
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
         self.power_lock_button = ui.create_push_button(text='Lock Current Power', name='Lock_power',
                                                        on_clicked='lock_push')
         self.power_row00 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(),
-                                         self.power_lock_button)
+                                         self.auto_power_lock, self.power_lock_button)
         self.power_lock_label = ui.create_label(text='Control Power (uW): ')
         self.power_lock_value = ui.create_label(text='@binding(instrument.locked_power_f)')
         self.power_row01 = ui.create_row(self.power_lock_label, self.power_lock_value, ui.create_stretch())

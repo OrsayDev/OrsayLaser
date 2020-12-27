@@ -180,7 +180,7 @@ class gainhandler:
         self.savgol_window_value.text = '3'
         self.savgol_poly_order_value.text = '1'
         self.savgol_oversample_value.text = '1'
-        self.many_replicas.text = '4'
+        self.many_replicas.text = '1'
         self.tolerance_energy_value.text = '0.00'
 
     def server_shut(self):

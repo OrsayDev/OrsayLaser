@@ -104,7 +104,7 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
             #this is pump laser wavelength and show us there is an error
-            return (532,000, 0)
+            return (532.000, 0)
 
     def setWL(self, wl, cur_wl):
         try:
@@ -377,7 +377,6 @@ class gainDevice(Observable.Observable):
         self.__start_wav = 575.0
         self.__finish_wav = 595.0
         self.__step_wav = 1.0
-        self.__cur_wav = self.__start_wav
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
         self.__avg = 10
         self.__tpts = int(self.__avg * self.__pts)
@@ -522,7 +521,7 @@ class gainDevice(Observable.Observable):
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
                     self.sht_f = False  # shutter off
                     self.run_status_f = False
-                    self.servo_f = 0 #maximum transmission
+                    self.servo_f = 0 #minimum transmission
                     self.powermeter_avg_f = self.__powermeter_avg
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
 
@@ -555,7 +554,6 @@ class gainDevice(Observable.Observable):
 
     def lock(self):
         self.property_changed_event.fire("locked_power_f")
-        self.property_changed_event.fire("locked_power02_f")
         self.free_event.fire("all")
 
     def hard_reset(self):
@@ -753,7 +751,7 @@ class gainDevice(Observable.Observable):
             pics_array = pics_array[1:]  # exclude zero
             self.__serverLaser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1) #this is mandatory as it measures power
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1)
         else:
             logger.warning(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
@@ -966,14 +964,14 @@ class gainDevice(Observable.Observable):
     def power_transmission_f(self):
         try:
             self.__power_transmission = self.__power02 / (self.__power * self.__rt)
-            return format(self.__power_transmission, '.5f')
+            return format(self.__power_transmission, '.3f')
         except:
             'None'
 
     @property
     def locked_power_f(self):
         self.__power_ref = self.__power
-        return format(self.__power_ref, '.2f')
+        return format(self.__power_ref, '.3f')
 
     @property
     def cur_d_f(self) -> int:

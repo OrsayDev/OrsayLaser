@@ -99,7 +99,7 @@ class serverDevice(Observable.Observable):
             self.ard_tx='green'
 
         if data:
-            self.loop()
+            self.read()
 
     @property
     def host(self):

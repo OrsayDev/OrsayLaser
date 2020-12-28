@@ -1150,7 +1150,7 @@ class gainView:
         self.less_pb = ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)
         self.more_pb = ui.create_push_button(text=">>", name="more_pb", on_clicked="more_push", width=25)
         self.ui_view10 = ui.create_row(self.diode_cur_label, self.diode_cur_slider, self.text_label,
-                                       self.diode_cur_line, ui.create_spacing(12), self.less_pb, ui.create_spacing(5),
+                                       ui.create_spacing(12), self.less_pb, ui.create_spacing(5),
                                        self.more_pb, ui.create_stretch())
 
         self.diode1_temp_label = ui.create_label(text='T1 (°C): ')

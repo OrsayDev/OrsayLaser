@@ -1008,21 +1008,12 @@ class gainDevice(Observable.Observable):
             self.free_event.fire("all")
 
     @property
-    def cur_d_edit_f(self):
-        return self.__diode
-
-    @cur_d_edit_f.setter
-    def cur_d_edit_f(self, value):
-        value = float(value)*100
-        self.cur_d_f = value
-
-    @property
     def cur_d1_f(self):
         try:
-            self.__diode = float(self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', ''))
-            return format(self.__diode, '.2f')
+            return self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
         except:
             return 'None'
+
 
     @property
     def cur_d2_f(self):
@@ -1067,7 +1058,6 @@ class gainDevice(Observable.Observable):
         try:
             if self.__serverPS.query('?D\n').decode('UTF-8').replace('\n', '') == 'ON': return True
             else: return False
-            #return self.__serverPS.query('?D\n').decode('UTF-8').replace('\n', '')
         except AttributeError:
             return False
 
@@ -1085,9 +1075,8 @@ class gainDevice(Observable.Observable):
     @property
     def q_f(self):
         try:
-            if self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '') == 'ON': return True
+            if self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '') == 'OPEN': return True
             else: return False
-            #return self.__serverPS.query('?G\n').decode('UTF-8').replace('\n', '')
         except AttributeError:
             return False
 

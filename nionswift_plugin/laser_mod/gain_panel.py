@@ -497,8 +497,7 @@ class gainhandler:
     def end_data_monitor(self):
         if self.pow02_mon_di:
             self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
-            self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
-            self.pow02_mon_di = None
+            #self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
 
     def end_data(self):
         if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))

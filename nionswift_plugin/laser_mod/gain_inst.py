@@ -382,7 +382,6 @@ class gainDevice(Observable.Observable):
         self.__tpts = int(self.__avg * self.__pts)
         self.__power = 0.
         self.__power02 = 0.
-        self.__rt = 10.
         self.__power_transmission = 0.
         self.__power_ref = 0.
         self.__autoLock = True
@@ -690,6 +689,7 @@ class gainDevice(Observable.Observable):
                 self.__serverLaser.set_scan_thread_release()
         self.__bothPM = False
         #self.start_wav_f = self.__start_wav
+        print('here')
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over
 
@@ -810,15 +810,15 @@ class gainDevice(Observable.Observable):
     def sendMessageFactory(self):
         def sendMessage(message):
             if message == 101:
-                self.property_changed_event.fire("power_f")
-                if self.__bothPM: self.property_changed_event.fire("power02_f") #measure both powers
+                self.property_changed_event.fire("power02_f")
+                if self.__bothPM: self.property_changed_event.fire("power_f") #measure both powers
                 if self.__bothPM: self.property_changed_event.fire("power_transmission_f")
                 if self.__ctrl_type == 1 and not self.__power_ramp:
-                    self.servo_f = self.servo_f + 1 if self.__power < self.__power_ref else self.servo_f - 1
+                    self.servo_f = self.servo_f + 1 if self.__power02 < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180
                     if self.__servo_pos < 0: self.__servo_pos = 0
                 if self.__ctrl_type == 2:
-                    self.__diode = self.__diode + 0.02 if self.__power < self.__power_ref else self.__diode - 0.02
+                    self.__diode = self.__diode + 0.02 if self.__power02 < self.__power_ref else self.__diode - 0.02
                     self.cur_d_f = self.__diode
             elif message == 666:
                 self.__abort_force = True
@@ -933,7 +933,6 @@ class gainDevice(Observable.Observable):
                         self.__servo_pos + 1) / 180
             else:
                 self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
-            if self.__autoLock and not self.__status: self.property_changed_event.fire("locked_power_f")
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'
@@ -946,33 +945,22 @@ class gainDevice(Observable.Observable):
                         self.__servo_pos + 1) / 180
             else:
                 self.__power02 = self.__serverPM[1].pw_read('1', self.__cur_wav)
+            if self.__autoLock and not self.__status: self.property_changed_event.fire("locked_power_f")
             return format(self.__power02, '.3f')
         except:
             return 'None'
 
     @property
-    def rt_f(self): #this func is the R/T factor for the first powermeter. This will normalize power correctly
-        return self.__rt
-
-    @rt_f.setter
-    def rt_f(self, value):
-        try:
-            self.__rt = float(value)
-        except:
-            self.__rt = 100.
-            logger.warning('***POWERMETER***: [R]/T factor must be a float. If R/T is 10/90, put 10. Now using 100')
-
-    @property
     def power_transmission_f(self):
         try:
-            self.__power_transmission = self.__power02 / (self.__power * self.__rt)
+            self.__power_transmission = self.__power02 / self.__power
             return format(self.__power_transmission, '.3f')
         except:
             'None'
 
     @property
     def locked_power_f(self):
-        self.__power_ref = self.__power
+        self.__power_ref = self.__power02
         return format(self.__power_ref, '.3f')
 
     @property
@@ -1005,6 +993,10 @@ class gainDevice(Observable.Observable):
             self.property_changed_event.fire("cur_d2_f")
             self.property_changed_event.fire("cur_d_f")
             self.property_changed_event.fire("cur_d_edit_f")
+            # Power measurement helps us to see where we are
+            self.property_changed_event.fire("power_f")
+            self.property_changed_event.fire("power02_f")
+            self.property_changed_event.fire("power_transmission_f")
             self.free_event.fire("all")
 
     @property
@@ -1124,6 +1116,10 @@ class gainDevice(Observable.Observable):
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
             self.property_changed_event.fire("servo_f")  # this updates my label
+            #Power measurement to help us
+            self.property_changed_event.fire("power_f")
+            self.property_changed_event.fire("power02_f")
+            self.property_changed_event.fire("power_transmission_f")
             self.free_event.fire('all')
 
     @property

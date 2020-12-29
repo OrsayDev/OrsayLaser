@@ -431,10 +431,10 @@ class gainhandler:
             if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
 
             self.event_loop.create_task(self.data_item_show(self.wav_di.data_item))
-            self.event_loop.create_task(self.data_item_show(self.pow_di.data_item))
+            self.event_loop.create_task(self.data_item_show(self.pow02_di.data_item))
             if self.ctrl == 2: self.event_loop.create_task(self.data_item_show(self.ps_di.data_item))
             if self.ctrl == 1: self.event_loop.create_task(self.data_item_show(self.ser_di.data_item))
-            if trans: self.event_loop.create_task(self.data_item_show(self.pow02_di.data_item))
+            if trans: self.event_loop.create_task(self.data_item_show(self.pow_di.data_item))
             if trans: self.event_loop.create_task(self.data_item_show(self.trans_di.data_item))
 
             # CAMERA CALL
@@ -452,7 +452,7 @@ class gainhandler:
         self.wav_array[index2 + index1 * self.avg] = cur_wav
         self.pow_array[index2 + index1 * self.avg] = power
         self.pow02_array[index2 + index1 * self.avg] = power02
-        self.trans_array[index1] += (power02 / (self.instrument.rt_f * power) ) / self.avg
+        self.trans_array[index1] += (power02 / power ) / self.avg
 
         if not self.__adjusted and camera_data:
 
@@ -1099,10 +1099,7 @@ class gainView:
         self.power_row01 = ui.create_row(self.power_lock_label, self.power_lock_value, ui.create_stretch())
         self.pm2_label = ui.create_label(text='Power 02 (uW): ')
         self.power02_value_label = ui.create_label(text="@binding(instrument.power02_f)")
-        self.pm1_factor_label = ui.create_label(text='[R]/T Factor for PM1: ')
-        self.pm1_factor_value = ui.create_line_edit(name='pm1_factor_value', text='@binding(instrument.rt_f)', width=100)
-        self.power_row02 = ui.create_row(self.pm2_label, self.power02_value_label, ui.create_stretch(),
-                                         self.pm1_factor_label, self.pm1_factor_value)
+        self.power_row02 = ui.create_row(self.pm2_label, self.power02_value_label, ui.create_stretch())
         self.trans_label = ui.create_label(text='Transmission: ')
         self.trans_value = ui.create_label(text='@binding(instrument.power_transmission_f)')
         self.power_row03 = ui.create_row(self.trans_label, self.trans_value, ui.create_stretch(), spacing=12)

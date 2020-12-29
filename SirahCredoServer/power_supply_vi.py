@@ -15,7 +15,7 @@ class SpectraPhysics:
         self.cur2 = b'1\n'
         self.shutter = b'CLOSED\n'
         self.diode = b'OFF\n'
-        self.q = b'OFF\n'
+        self.q = b'CLOSED\n'
         self.t1 = b'26.00\n'
         self.t2 = b'34.00\n'
 
@@ -61,8 +61,8 @@ class SpectraPhysics:
         if mes == 'D:1\n':
             self.diode = b'ON\n'
         if mes == 'G:0\n':
-            self.q = b'OFF\n'
+            self.q = b'CLOSED\n'
         if mes == 'G:1\n':
-            self.q = b'ON\n'
+            self.q = b'OPEN\n'
         return None
 

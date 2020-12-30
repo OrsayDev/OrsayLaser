@@ -384,6 +384,7 @@ class gainDevice(Observable.Observable):
         self.__power02 = 0.
         self.__power_transmission = 0.
         self.__power_ref = 0.
+        self.__cubeRT = 10
         self.__autoLock = True
         self.__diode = 0.10
         self.__servo_pos = 0
@@ -929,10 +930,10 @@ class gainDevice(Observable.Observable):
     def power_f(self):
         try:
             if self.__DEBUG:
-                self.__power = (self.__serverPM[0].pw_read('0', self.__cur_wav) + (self.__diode) ** 2) * (
+                self.__power = self.__cubeRT * (self.__serverPM[0].pw_read('0', self.__cur_wav) + (self.__diode) ** 2) * (
                         self.__servo_pos + 1) / 180
             else:
-                self.__power = self.__serverPM[0].pw_read('0', self.__cur_wav)
+                self.__power = self.__cubeRT * self.__serverPM[0].pw_read('0', self.__cur_wav)
             return format(self.__power, '.3f')
         except AttributeError:
             return 'None'
@@ -941,10 +942,10 @@ class gainDevice(Observable.Observable):
     def power02_f(self):
         try:
             if self.__DEBUG:
-                self.__power02 = (self.__serverPM[1].pw_read('1', self.__cur_wav) + (self.__diode/2.) ** 2) * (
+                self.__power02 = self.__cubeRT * (self.__serverPM[1].pw_read('1', self.__cur_wav) + (self.__diode/2.) ** 2) * (
                         self.__servo_pos + 1) / 180
             else:
-                self.__power02 = self.__serverPM[1].pw_read('1', self.__cur_wav)
+                self.__power02 = self.__cubeRT * self.__serverPM[1].pw_read('1', self.__cur_wav)
             if self.__autoLock and not self.__status: self.property_changed_event.fire("locked_power_f")
             return format(self.__power02, '.3f')
         except:

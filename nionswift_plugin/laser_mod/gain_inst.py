@@ -522,7 +522,7 @@ class gainDevice(Observable.Observable):
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
                     self.sht_f = False  # shutter off
                     self.run_status_f = False
-                    self.servo_f = 0 #minimum transmission
+                    self.servo_f = 165 #minimum transmission
                     self.powermeter_avg_f = self.__powermeter_avg
                     self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
 
@@ -619,9 +619,22 @@ class gainDevice(Observable.Observable):
             self.__thread.start()
 
     def acq_monThread(self):
-        self.run_status_f = True
+        '''
+        Monitor thread. This blocks GUI and is used to loop over second powermeter in order to align
+        optical fiber or do whatever you want.
+
+        Notes
+        -----
+        Power ramp is there just for a mere convenience. If you measuring power using the side thread, power will
+        be automatically controlled depending on your control UI drop down value. If you, for some reason, forget to
+        put control to None and start a monitor thread, you will align your fiber with the servo trying to control
+        the power! Putting power ramp means that servo is involved in the measurement (by your control value) but
+        proportional control must be turned off during measurement. This is exactly what is done using power ramp
+        thread.
+
+        '''
+        self.run_status_f = self.__power_ramp = self.__bothPM = True
         self.__abort_force = False
-        self.__bothPM = True
         loop_index = 0
         self.call_monitor.fire()
         self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
@@ -633,7 +646,7 @@ class gainDevice(Observable.Observable):
             self.__controlRout.pw_control_thread_off()
 
         self.end_data_monitor.fire()
-        self.__bothPM = False
+        self.__bothPM = self.__power_ramp = False
         self.run_status_f = False
 
     def acq_transThread(self):

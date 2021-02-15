@@ -1190,7 +1190,7 @@ class gainDevice(Observable.Observable):
     @laser_delay_f.setter
     def laser_delay_f(self, value):
         self.__delay = float(value) / 1e9
-        if not self.__DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
                                                                                       delay=self.__delay)
         self.property_changed_event.fire('laser_delay_f')
         self.free_event.fire('all')
@@ -1202,7 +1202,7 @@ class gainDevice(Observable.Observable):
     @laser_width_f.setter
     def laser_width_f(self, value):
         self.__width = float(value) / 1e9
-        if not self.__DEBUG: self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
                                                                                       delay=self.__delay)
         self.property_changed_event.fire('laser_width_f')
         self.free_event.fire('all')

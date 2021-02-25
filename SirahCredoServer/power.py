@@ -24,8 +24,7 @@ class TLPowerMeter:
             self.tl.write('CONF:POW')
             self.successful = True
         except:
-            sensor = self.tl.query('*IDN?')
-            print(f'***POWERMETER***: Could not open serial port in {sensor}')
+            print(f'***POWERMETER***: Could not open serial port. Available devices are: {self.rm.list_resources()}')
             self.successful = False
 
     

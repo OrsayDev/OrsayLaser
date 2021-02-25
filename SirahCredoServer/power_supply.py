@@ -33,6 +33,8 @@ class SpectraPhysics:
         try:
             if not self.ser.is_open:
                 self.ser.open()
+            mes = '?SHT\n'; self.ser.write(mes.encode()); shutter=self.ser.readline()
+            if shutter==b'': raise Exception
             self.successful = True
         except:
             print('***POWER SUPPLY***: Could not open serial port.')

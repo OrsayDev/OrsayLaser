@@ -780,8 +780,7 @@ class gainDevice(Observable.Observable):
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
                 last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
-                self.combo_data_f = True  # check laser now
-                self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+                self.append_data.fire(self.__power02, i, j, last_cam_acq)
                 j += 1
             j = 0
             if i in pics_array and self.__per_pic:
@@ -792,6 +791,7 @@ class gainDevice(Observable.Observable):
                 # check if laser changes have finished and thread step is over
                 self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
                 logger.debug("***ACQUISITION***: Moving to next wavelength...")
+                self.combo_data_f = True  # check laser now
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
 
@@ -1232,10 +1232,13 @@ class gainDevice(Observable.Observable):
     @property
     def combo_data_f(self):
         if self.__ctrl_type == 1 or self.__power_ramp:
-            return [self.__cur_wav, self.__power, self.__servo_pos, self.__power02]
+            #return [self.__cur_wav, self.__power, self.__servo_pos, self.__power02]
+            return [self.__power]
         if self.__ctrl_type == 2:
+            #return [self.__cur_wav, self.__power, self.__diode, self.__power02]
             return [self.__cur_wav, self.__power, self.__diode, self.__power02]
         else:
+            #return [self.__cur_wav, self.__power, self.__power02]
             return [self.__cur_wav, self.__power, self.__power02]
 
     @combo_data_f.setter

@@ -392,8 +392,8 @@ class gainDevice(Observable.Observable):
         self.__servo_pts = 0
         self.__servo_wobbler = False
         self.__ctrl_type = 0
-        self.__delay = 1810 * 1e-9
-        self.__width = 50 * 1e-9
+        self.__delay = 0 #905 * 1e-9
+        self.__width = 0 # 50 * 1e-9
         self.__fb_status = False
         self.__counts = 0
         self.__frequency = 10000
@@ -583,7 +583,7 @@ class gainDevice(Observable.Observable):
         # note that i dont know if i defined pixel_time super correctely in orsay_scan_device. I know the number is
         # relatively nice, but i need to check the definition
         det_di = self.__OrsayScanInstrument.grab_next_to_start()
-        self.__OrsayScanInstrument.stop_playing()
+        self.__OrsayScanInstrument.abort_playing()
         time.sleep(frame_time * 1.2)  # 20% more of the time for a single frame
         self.det_acq.fire(det_di, mode, index, npic, show)
 

@@ -168,8 +168,6 @@ class gainhandler:
         self.cam_di = None
         self.aligned_cam_di = None
 
-        self.current_acquition = None
-
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(True, ['']))
         self.event_loop.create_task(self.do_enable(False, ['init_pb', 'server_ping_push', 'host_value', 'port_value',
@@ -401,63 +399,29 @@ class gainhandler:
         self.pow02_mon_di.fast_update_data_only(self.pow02_mon_array)
 
     def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
-        if self.current_acquition != nacq:
-            self.__adjusted = False
-            self.current_acquition = nacq
-            self.avg = avg
-            self.start_wav = start
-            self.end_wav = end
-            self.ctrl = ctrl
-            self.pts = pts
-            self.step = step
-            self.cam_pixels = 1600
-            #self.wav_array = numpy.zeros(pts * avg)
-            #self.pow_array = numpy.zeros(pts * avg)
-            self.pow02_array = numpy.zeros(pts * avg)
-            #self.trans_array = numpy.zeros(pts)
-            #if self.ctrl == 1: self.ser_array = numpy.zeros(pts * avg)
-            #if self.ctrl == 2: self.ps_array = numpy.zeros(pts * avg)
+        self.__adjusted = False
+        self.cam_pixels = 1024
+        self.avg = avg
 
-            for data_items in self.document_controller.document_model._DocumentModel__data_items:
-                if data_items.title == 'Laser Wavelength ' + str(nacq):
-                    nacq += 1
+        for data_items in self.document_controller.document_model._DocumentModel__data_items:
+            if data_items.title == 'Gain Data ' + str(nacq):
+                nacq += 1
 
-            #self.wav_di = DataItemLaserCreation("Laser Wavelength " + str(nacq), self.wav_array, "WAV")
-            #self.pow_di = DataItemLaserCreation("Power " + str(nacq), self.pow_array, "POW")
-            self.pow02_di = DataItemLaserCreation("Power 02 " + str(nacq), self.pow02_array, "POW")
-            #self.trans_di = DataItemLaserCreation("Transmission " + str(nacq), self.trans_array, "transmission_as_wav",
-            #                                      start, end, pts, avg, step, delay, width, diode_cur, ctrl)
-            #if self.ctrl == 1: self.ser_di = DataItemLaserCreation("Servo Angle " + str(nacq), self.ser_array, "SER")
-            #if self.ctrl == 2: self.ps_di = DataItemLaserCreation("Power Supply " + str(nacq), self.ps_array, "PS")
+        # Power Meter call
+        self.pow02_array = numpy.zeros(pts * avg)
+        self.pow02_di = DataItemLaserCreation("Power 02 " + str(nacq), self.pow02_array, "POW")
 
-            #self.event_loop.create_task(self.data_item_show(self.wav_di.data_item))
-            #self.event_loop.create_task(self.data_item_show(self.pow02_di.data_item))
-            #if self.ctrl == 2: self.event_loop.create_task(self.data_item_show(self.ps_di.data_item))
-            #if self.ctrl == 1: self.event_loop.create_task(self.data_item_show(self.ser_di.data_item))
-            #if trans: self.event_loop.create_task(self.data_item_show(self.pow_di.data_item))
-            #if trans: self.event_loop.create_task(self.data_item_show(self.trans_di.data_item))
-
-            # CAMERA CALL
-            self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
-                                                avg, step, delay, width, diode_cur, ctrl)
-            if not trans: self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
+        # CAMERA CALL
+        self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
+        self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
+                                            avg, step, delay, width, diode_cur, ctrl)
+        self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
     def append_data(self, value, index1, index2, camera_data):
-        #try:
-        #    cur_wav, power, control, power02 = value
-        #except:
-        #    cur_wav, power, power02 = value
-
         power02 = value
-
-        #self.wav_array[index2 + index1 * self.avg] = cur_wav
-        #self.pow_array[index2 + index1 * self.avg] = power
         self.pow02_array[index2 + index1 * self.avg] = power02
-        #self.trans_array[index1] += (power02 / power ) / self.avg
 
         if not self.__adjusted and camera_data:
-
             if len(camera_data.data.shape)>1:
                 self.cam_pixels = camera_data.data.shape[1]
                 cam_calibration = camera_data.get_dimensional_calibration(1)
@@ -477,37 +441,24 @@ class gainhandler:
 
             self.__adjusted = True
 
-        if camera_data: #if it is false, as in transmission, do nothing
-            if len(camera_data.data.shape)>1:
-                cam_hor = numpy.sum(camera_data.data, axis=0)
-            else:
-                cam_hor = camera_data.data
+        if len(camera_data.data.shape)>1:
+            cam_hor = numpy.sum(camera_data.data, axis=0)
+        else:
+            cam_hor = camera_data.data
 
-            self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
+        self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
 
-        #if self.ctrl == 1: self.ser_array[index2 + index1 * self.avg] = control
-        #if self.ctrl == 2: self.ps_array[index2 + index1 * self.avg] = control
-
-        #self.wav_di.update_data_only(self.wav_array)
-        #self.pow_di.update_data_only(self.pow_array)
         self.pow02_di.update_data_only(self.pow02_array)
-        #self.trans_di.update_data_only(self.trans_array)
-        if camera_data: self.cam_di.update_data_only(self.cam_array)
-        #if self.ctrl == 1: self.ser_di.update_data_only(self.ser_array)
-        #if self.ctrl == 2: self.ps_di.update_data_only(self.ps_array)
+        self.cam_di.update_data_only(self.cam_array)
 
     def end_data_monitor(self):
         if self.pow02_mon_di:
             self.event_loop.create_task(self.data_item_exit_live(self.pow02_mon_di.data_item))
-            #self.event_loop.create_task(self.data_item_remove(self.pow02_mon_di.data_item))
 
     def end_data(self):
-        if self.wav_di: self.event_loop.create_task(self.data_item_exit_live(self.wav_di.data_item))
-        if self.pow_di: self.event_loop.create_task(self.data_item_exit_live(self.pow_di.data_item))
-        if self.pow02_di: self.event_loop.create_task(self.data_item_exit_live(self.pow02_di.data_item))
-        if self.trans_di: self.event_loop.create_task(self.data_item_exit_live(self.trans_di.data_item))
-        if self.ser_di: self.event_loop.create_task(self.data_item_exit_live(self.ser_di.data_item))
-        if self.ps_di: self.event_loop.create_task(self.data_item_exit_live(self.ps_di.data_item))
+        if self.pow02_di:
+            self.event_loop.create_task(self.data_item_show(self.pow02_di.data_item))
+            self.event_loop.create_task(self.data_item_exit_live(self.pow02_di.data_item))
         if self.cam_di: self.event_loop.create_task(self.data_item_exit_live(self.cam_di.data_item))
 
     def stop_function(self, wiget):
@@ -531,39 +482,23 @@ class gainhandler:
             self.zlp_value.text = ''
             self.energy_window_value.text = ''
 
-            try:
-                self.file_type_value.text = str(self.__current_DI.description['which'])
-                self.pts_detected_value.text = str(self.__current_DI.description['pts'])
-                self.avg_detected_value.text = str(self.__current_DI.description['averages'])
-                self.start_detected_value.text = format(self.__current_DI.description['start_wav'], '.3f')
-                self.final_detected_value.text = format(self.__current_DI.description['final_wav'], '.3f')
-                self.step_detected_value.text = format(self.__current_DI.description['step_wav'], '.3f')
-            except:
-                self.file_type_value.text = 'Unknown'
-                self.pts_detected_value.text = 'Unknown'
-                self.avg_detected_value.text = 'Unknown'
-                self.start_detected_value.text = 'Unknown'
-                self.final_detected_value.text = 'Unknown'
-                self.step_detected_value.text = 'Unknown'
+            self.file_type_value.text = str(self.__current_DI.description['which'])
+            self.pts_detected_value.text = str(self.__current_DI.description['pts'])
+            self.avg_detected_value.text = str(self.__current_DI.description['averages'])
+            self.start_detected_value.text = format(self.__current_DI.description['start_wav'], '.3f')
+            self.final_detected_value.text = format(self.__current_DI.description['final_wav'], '.3f')
+            self.step_detected_value.text = format(self.__current_DI.description['step_wav'], '.3f')
 
             if "Gain" in self.file_name_value.text:
                 for data_items in self.document_controller.document_model._DocumentModel__data_items:
-                    if data_items.title == "Power " + str(temp_acq):
+                    if data_items.title == "Power 02 " + str(temp_acq):
                         self.__current_DI_POW = data_items
-                    elif data_items.title == 'Laser Wavelength ' + str(temp_acq):
-                        self.__current_DI_WAV = data_items
 
                 self.power_file_detected_value.text = str(bool(self.__current_DI_POW))
-                self.wav_file_detected_value.text = str(bool(self.__current_DI_WAV))
 
-                if self.__current_DI_POW and self.__current_DI_WAV:
+                if self.__current_DI_POW:
                     self.align_zlp_max.enabled = self.plot_power_wav.enabled = True
                     self.align_zlp_fit.enabled = False  # fit not yet implemented
-
-            elif "Power" in self.file_name_value.text:
-                pass  # something to do with only power?
-            elif "Wavelength" in self.file_name_value.text:
-                pass  # something to do with only laser wavelength?
         else:
             logging.info('***ACQUISTION***: Could not find referenced Data Item.')
 

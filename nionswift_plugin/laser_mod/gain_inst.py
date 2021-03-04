@@ -707,7 +707,6 @@ class gainDevice(Observable.Observable):
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over
 
-
     def acq_prThread(self):
         self.run_status_f = self.__power_ramp = self.sht_f = True
         self.__abort_force = False
@@ -799,9 +798,9 @@ class gainDevice(Observable.Observable):
         logger.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
-            self.combo_data_f = True
-            self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+            self.append_data.fire(self.__power02, i, j, last_cam_acq)
             j += 1
+        self.combo_data_f = True
 
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.

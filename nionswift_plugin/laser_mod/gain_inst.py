@@ -765,7 +765,7 @@ class gainDevice(Observable.Observable):
             pics_array = pics_array[1:]  # exclude zero
             self.__serverLaser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
-            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1)
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*4.0)
         else:
             logger.warning(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
@@ -782,14 +782,13 @@ class gainDevice(Observable.Observable):
                 self.append_data.fire(self.__power02, i, j, last_cam_acq)
                 j += 1
             j = 0
-            if i in pics_array and self.__per_pic:
-                self.grab_det("middle", self.__acq_number, i, True)
             i += 1
             if (
                     self.__serverLaser.set_scan_thread_hardware_status() == 2 and self.__serverLaser.set_scan_thread_locked()):
                 # check if laser changes have finished and thread step is over
                 self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
                 logger.debug("***ACQUISITION***: Moving to next wavelength...")
+                time.sleep(0.25)
                 self.combo_data_f = True  # check laser now
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)

@@ -522,32 +522,6 @@ class gainhandler:
 
     def align_zlp(self, widget):
         temp_dict = self.__current_DI.description
-        if not temp_dict:
-            temp_dict = dict()
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter number of points ('
-                         'including last off laser one): ')
-            temp_dict['pts'] = int(input())
-            self.pts_detected_value.text = temp_dict['pts']
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter number of averages: ')
-            temp_dict['averages'] = int(input())
-            self.avg_detected_value.text = temp_dict['averages']
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter start wavelength: ')
-            temp_dict['start_wav'] = float(input())
-            self.start_detected_value.text = format(temp_dict['start_wav'], '.3f')
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter final wavelength: ')
-            temp_dict['final_wav'] = float(input())
-            self.final_detected_value.text = format(temp_dict['final_wav'], '.3f')
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter step wavelength: ')
-            temp_dict['step_wav'] = float(input())
-            self.step_detected_value.text = format(temp_dict['step_wav'], '.3f')
-            logging.info('***ACQUISITION***: Data Item dictionary incomplete. Please enter original title: ')
-            temp_dict['title'] = input()
-            # as we dont have this, we certainly dont have delay, width and control. We put it here none so we dont
-            # conflict when creating data_item, as we would like to save this info if it is available
-            temp_dict['delay'] = None
-            temp_dict['time_width'] = None
-            temp_dict['start_ps_cur'] = None
-            temp_dict['control'] = None
 
         temp_data = self.__current_DI.data
         cam_pixels = len(self.__current_DI.data[0])

@@ -1230,13 +1230,10 @@ class gainDevice(Observable.Observable):
     @property
     def combo_data_f(self):
         if self.__ctrl_type == 1 or self.__power_ramp:
-            #return [self.__cur_wav, self.__power, self.__servo_pos, self.__power02]
-            return [self.__power]
+            return [self.__cur_wav, self.__power, self.__servo_pos, self.__power02]
         if self.__ctrl_type == 2:
-            #return [self.__cur_wav, self.__power, self.__diode, self.__power02]
             return [self.__cur_wav, self.__power, self.__diode, self.__power02]
         else:
-            #return [self.__cur_wav, self.__power, self.__power02]
             return [self.__cur_wav, self.__power, self.__power02]
 
     @combo_data_f.setter

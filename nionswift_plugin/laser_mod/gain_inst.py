@@ -779,7 +779,7 @@ class gainDevice(Observable.Observable):
         while i < i_max and not self.__abort_force:  # i means our laser WL's
             while j < j_max and not self.__abort_force:  # j is our averages
                 last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
-                self.append_data.fire(self.__power02, i, j, last_cam_acq)
+                self.append_data.fire(self.__power02, i, j, last_cam_acq, j==j_max-1 and i%2==0)
                 j += 1
             j = 0
             i += 1
@@ -797,7 +797,7 @@ class gainDevice(Observable.Observable):
         logger.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
-            self.append_data.fire(self.__power02, i, j, last_cam_acq)
+            self.append_data.fire(self.__power02, i, j, last_cam_acq, j==j_max-1)
             j += 1
         self.combo_data_f = True
 

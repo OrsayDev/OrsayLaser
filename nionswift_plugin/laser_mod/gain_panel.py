@@ -417,9 +417,7 @@ class gainhandler:
                                             avg, step, delay, width, diode_cur, ctrl)
         self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
-    def append_data(self, value, index1, index2, camera_data):
-        power02 = value
-        self.pow02_array[index2 + index1 * self.avg] = power02
+    def append_data(self, value, index1, index2, camera_data, update=True):
 
         if not self.__adjusted and camera_data:
             if len(camera_data.data.shape)>1:
@@ -446,10 +444,11 @@ class gainhandler:
         else:
             cam_hor = camera_data.data
 
+        power02 = value
+        self.pow02_array[index2 + index1 * self.avg] = power02
         self.cam_array[index2 + index1 * self.avg] = cam_hor  # Get raw data
 
-        self.pow02_di.update_data_only(self.pow02_array)
-        self.cam_di.update_data_only(self.cam_array)
+        if update: self.cam_di.update_data_only(self.cam_array)
 
     def end_data_monitor(self):
         if self.pow02_mon_di:

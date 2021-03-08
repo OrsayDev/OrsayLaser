@@ -790,7 +790,7 @@ class gainDevice(Observable.Observable):
                 # check if laser changes have finished and thread step is over
                 self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
                 logger.debug("***ACQUISITION***: Moving to next wavelength...")
-                time.sleep(0.25 * self.__step_wav / (0.5))
+                time.sleep(0.3 * self.__step_wav / (0.5))
                 self.combo_data_f = True  # check laser now
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
@@ -817,6 +817,7 @@ class gainDevice(Observable.Observable):
         self.grab_det("end", self.__acq_number, 0, True)
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
+        self.run_status_f = False  # acquisition is over
 
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
 

@@ -763,6 +763,7 @@ class gainDevice(Observable.Observable):
             self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
             pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero
+            self.__camera.start_playing()
             self.__serverLaser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*4.0)

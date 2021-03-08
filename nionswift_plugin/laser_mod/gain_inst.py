@@ -580,11 +580,11 @@ class gainDevice(Observable.Observable):
         det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
         # this multiplies pixels(x) * pixels(y) * pixel_time
         frame_time = self.__OrsayScanInstrument.calculate_frame_time(det_frame_parameters)
-        # note that i dont know if i defined pixel_time super correctely in orsay_scan_device. I know the number is
-        # relatively nice, but i need to check the definition
-        det_di = self.__OrsayScanInstrument.grab_next_to_start()
-        self.__OrsayScanInstrument.abort_playing()
+        self.__OrsayScanInstrument.start_playing()
         time.sleep(frame_time * 1.2)  # 20% more of the time for a single frame
+        det_di = self.__OrsayScanInstrument.grab_next_to_start()
+
+        self.__OrsayScanInstrument.abort_playing()
         self.det_acq.fire(det_di, mode, index, npic, show)
 
     def abt(self):
@@ -703,7 +703,6 @@ class gainDevice(Observable.Observable):
                 self.__serverLaser.set_scan_thread_release()
         self.__bothPM = False
         #self.start_wav_f = self.__start_wav
-        print('here')
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over
 
@@ -755,7 +754,8 @@ class gainDevice(Observable.Observable):
 
         # Laser thread begins
         if (self.__serverLaser.set_scan_thread_check() and abs(
-                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
+                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and
+                self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus'):
 
             self.__acq_number += 1
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
@@ -768,8 +768,10 @@ class gainDevice(Observable.Observable):
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*4.0)
         else:
             logger.warning(
-                "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
-            self.__abort_force = True
+                "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav || Not Focus mode.")
+            self.run_status_f = False  # acquisition is over
+            return
+            #self.__abort_force = True
 
         i = 0  # e-point counter
         i_max = self.__pts
@@ -815,7 +817,6 @@ class gainDevice(Observable.Observable):
         self.grab_det("end", self.__acq_number, 0, True)
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
-        self.run_status_f = False  # acquisition is over
 
         # 0-20: laser; 21-40: power meter; 41-60: data analyses; 61-80: power supply; 81-100: servo; 101-120: control
 

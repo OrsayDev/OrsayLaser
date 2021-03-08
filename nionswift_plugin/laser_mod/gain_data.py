@@ -113,6 +113,8 @@ class gainData:
         proc_array = numpy.zeros((pts, pixels))
         zlp_fit = numpy.zeros(avg)
 
+        raw_array[numpy.isnan((raw_array))] = 0.
+
         if 'max' in mode or 'fit' in mode:
             logging.info('***ACQUISITION***: MAX is the only method currently available.')
             for i in range(len(proc_array)):

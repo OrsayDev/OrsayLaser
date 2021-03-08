@@ -111,7 +111,7 @@ class gainData:
             return A*numpy.exp(-(x-mu)**2/(2.*sigma**2)) + AG*numpy.exp(-(x-muG)**2/(2.*sigma**2)) + AL*numpy.exp(-(x-muL)**2/(2.*sigma**2))
         
         proc_array = numpy.zeros((pts, pixels))
-        zlp_fit = numpy.zeros(avg)
+        #zlp_fit = numpy.zeros(avg)
 
         raw_array[numpy.isnan((raw_array))] = 0.
 
@@ -121,15 +121,17 @@ class gainData:
                 for j in range(avg):
                     current_max_index = numpy.where(raw_array[i*avg+j]==numpy.max(raw_array[i*avg+j]))[0][0]
                     proc_array[i] = proc_array[i] + numpy.roll(raw_array[i*avg+j], -current_max_index + int(pixels/2))
-                    x = numpy.linspace((-pixels/2.-1)*disp, (pixels/2.)*disp, pixels)
-                    energy_window = 3.0
-                    window_pixels = int(energy_window / disp)
-                    half_pixels = int(pixels/2)
-                    p0 = [max(proc_array[i]), 0., 1]
-                    coeff, var_matrix = curve_fit(_gaussian, x[half_pixels-window_pixels:half_pixels+window_pixels], proc_array[i][half_pixels-window_pixels:half_pixels+window_pixels], p0 = p0)
-                    if i==(len(proc_array)-1):
-                        zlp_fit[j] = coeff[2]
-            return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2)), energy_window
+            return proc_array
+                    #x = numpy.linspace((-pixels/2.-1)*disp, (pixels/2.)*disp, pixels)
+                    #energy_window = 3.0
+                    #window_pixels = int(energy_window / disp)
+                    #half_pixels = int(pixels/2)
+                    #p0 = [max(proc_array[i]), 0., 1]
+                    #coeff, var_matrix = curve_fit(_gaussian, x[half_pixels-window_pixels:half_pixels+window_pixels], proc_array[i][half_pixels-window_pixels:half_pixels+window_pixels], p0 = p0)
+                    #if i==(len(proc_array)-1):
+                    #    zlp_fit[j] = coeff[2]
+
+            #return proc_array, 2*numpy.mean(zlp_fit)*numpy.sqrt(2.*numpy.log(2)), energy_window
 
         #if 'fit' in mode: #I HAVE SUB PIXEL WITH MAX_INDEX. How to improve further with fit? I am not sure.
         #    for i in range(len(proc_array)):

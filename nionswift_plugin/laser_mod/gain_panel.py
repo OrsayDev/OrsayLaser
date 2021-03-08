@@ -537,7 +537,7 @@ class gainhandler:
         # ## HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT
         # FOR CALIBRATION ***
         if widget == self.align_zlp_max:
-            self.aligned_cam_array, zlp_fwhm, energy_window = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
+            self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
                                                                                        temp_dict['averages'],
                                                                                        cam_pixels,
                                                                                        eels_dispersion, 'max')
@@ -547,11 +547,11 @@ class gainhandler:
             pass  # not yet implemented
 
         # here is the window of the fitting of the ZLP with no laser ON
-        self.energy_window_value.text = format(energy_window, '.3f') + ' eV'
+        #self.energy_window_value.text = format(energy_window, '.3f') + ' eV'
 
-        self.zlp_fwhm = zlp_fwhm
-        self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[
-            1].units  # displaying
+        #self.zlp_fwhm = zlp_fwhm
+        #self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[
+        #    1].units  # displaying
         temp_title_name += temp_dict['title']  # Final name of Data_Item
 
         self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA",
@@ -561,7 +561,8 @@ class gainhandler:
                                                     temp_dict['control'], is_live=False,
                                                     eels_dispersion=eels_dispersion, hor_pixels=cam_pixels)
 
-        if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
+        #if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
+        if self.aligned_cam_di:
             # step, we need the data and FWHM
             self.smooth_zlp.enabled = True
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = False

@@ -849,7 +849,7 @@ class gainDevice(Observable.Observable):
         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
     def wavelength_ready(self):
-        if not abs(self.__start_wav - self.__cur_wav) <= 0.001:
+        if not abs(self.__start_wav - self.__cur_wav) <= 0.005:
             self.property_changed_event.fire("cur_wav_f")  # don't need a thread.
             time.sleep(0.25)
             self.wavelength_ready()

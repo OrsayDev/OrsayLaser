@@ -52,12 +52,14 @@ class SirahCredoLaser:
         return val
 
     def pos_to_wl(self, pos):
-        wl = -5.26094211e-17 * pos ** 3 + 8.28867083e-11 * pos ** 2 - 4.28775800e-4 * pos + 1.10796664e3
+        #wl = -5.26094211e-17 * pos ** 3 + 8.28867083e-11 * pos ** 2 - 4.28775800e-4 * pos + 1.10796664e3
+        wl = -2.15526062e-29 * pos ** 5 + 9.30395551e-23 * pos ** 4 - 1.74481321e-16 * pos ** 3 + 8.86231664e-11 * pos ** 2 - 3.35640502e-4 * pos + 1.05924149e3
         return wl
 
     def wl_to_pos(self, wl):
-        pos = -1.42336972e-4 * wl ** 3 - 8.58549626e-1 * wl ** 2 - 9.54738134e2 * wl + 2.16000371e6
-        return int(pos)
+        #pos = -1.42336972e-4 * wl ** 3 - 8.58549626e-1 * wl ** 2 - 9.54738134e2 * wl + 2.16000371e6
+        pos = -1.13589576e-9 * wl**5 + 2.47645046e-6 * wl**4 - 2.06566072e-3 * wl**3 - 2.92571534e-1 * wl**2 - 9.60273999e2 * wl + 2.14239058e6
+        return round(pos)
 
     def set_hardware_wl(self, wl):
         pos = self.wl_to_pos(wl)

@@ -1176,7 +1176,7 @@ class gainDevice(Observable.Observable):
         if value:
             self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
                                                                             delay=self.__delay)
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 5000000, False, -1)
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
             self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
         else:
             self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()

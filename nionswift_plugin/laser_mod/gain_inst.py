@@ -857,6 +857,16 @@ class gainDevice(Observable.Observable):
             self.power_wav_f = self.__cur_wav
             self.run_status_f = False  # this already frees GUI
 
+    def prepare_spim_TP3(self):
+        self.sht_f = False
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(12000, 0, False, -1)
+        self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(3, 5)
+        self.sht_f = True # This prevents the first laser shot, which is stronger than others.
+
+    def over_spim_TP3(self):
+        self.fast_blanker_status_f = False
+        self.sht_f = False
+
     @property
     def start_wav_f(self) -> float:
         return self.__start_wav

@@ -846,7 +846,6 @@ class gainDevice(Observable.Observable):
     def Laser_stop_all(self):
         self.sht_f = False
         self.fast_blanker_status_f = False
-        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
 
     def wavelength_ready(self):
         if not abs(self.__start_wav - self.__cur_wav) <= 0.005:
@@ -859,11 +858,13 @@ class gainDevice(Observable.Observable):
 
     def prepare_spim_TP3(self):
         self.sht_f = False
-        self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(12000, 0, False, -1)
+        self.laser_frequency_f = 12000
+        self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
         self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(3, 5)
         self.sht_f = True # This prevents the first laser shot, which is stronger than others.
 
     def over_spim_TP3(self):
+        self.laser_frequency_f = 10000
         self.fast_blanker_status_f = False
         self.sht_f = False
 
@@ -1233,10 +1234,6 @@ class gainDevice(Observable.Observable):
     @laser_frequency_f.setter
     def laser_frequency_f(self, value):
         self.__frequency = int(value)
-        if self.fast_blanker_status_f:
-            self.fast_blanker_status_f = False
-            time.sleep(0.1)
-            self.fast_blanker_status_f = True
         self.property_changed_event.fire('laser_frequency_f')
         self.free_event.fire('all')
 

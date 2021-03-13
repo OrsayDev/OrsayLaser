@@ -104,6 +104,7 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[1].offset = -hor_pixels / 2. * eels_dispersion
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+                                                           metadata=self.acq_parameters,
                                                            timezone=self.timezone, timezone_offset=self.timezone_offset)
 
         self.data_item = DataItem.DataItem()
@@ -116,6 +117,7 @@ class DataItemLaserCreation():
 
     def update_data_only(self, array: numpy.array):
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+                                                           metadata = self.acq_parameters,
                                                            timezone=self.timezone, timezone_offset=self.timezone_offset)
         self.data_item.set_xdata(self.xdata)
 

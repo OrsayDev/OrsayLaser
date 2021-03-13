@@ -601,6 +601,7 @@ class gainDevice(Observable.Observable):
             self.__thread = threading.Thread(target=self.acq_monThread)
             self.__thread.start()
 
+    """
     def acq_trans(self):
         self.__acq_number += 1
         if self.__serverLaser.server_ping():
@@ -612,6 +613,7 @@ class gainDevice(Observable.Observable):
         if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acq_prThread)
             self.__thread.start()
+    """
 
     def acq(self):
         if self.__serverLaser.server_ping():
@@ -649,6 +651,7 @@ class gainDevice(Observable.Observable):
         self.__bothPM = self.__power_ramp = False
         self.run_status_f = False
 
+    """
     def acq_transThread(self):
         self.run_status_f = True
         self.__abort_force = False
@@ -746,6 +749,7 @@ class gainDevice(Observable.Observable):
         self.grab_det("end", self.__acq_number, 0, True)
         self.end_data.fire()
         self.run_status_f = False
+    """
 
     def acqThread(self):
         self.run_status_f = True
@@ -759,7 +763,7 @@ class gainDevice(Observable.Observable):
 
             self.__acq_number += 1
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
-                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode)
+                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, self.__power_transmission)
             self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
             pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero

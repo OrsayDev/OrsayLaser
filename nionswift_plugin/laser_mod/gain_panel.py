@@ -31,7 +31,7 @@ MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
 
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
-                 time_width=None, start_ps_cur=None, ctrl=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
+                 time_width=None, start_ps_cur=None, ctrl=None, trans=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
                  oversample=1, power_min=0, power_inc=1, power_array_itp=None):
         self.acq_parameters = {
             "title": title,
@@ -44,7 +44,8 @@ class DataItemLaserCreation():
             "delay": delay,
             "time_width": time_width,
             "start_ps_cur": start_ps_cur,
-            "control": ctrl
+            "control": ctrl,
+            "initial_trans": trans
         }
         self.timezone = Utility.get_local_timezone()
         self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
@@ -245,19 +246,18 @@ class gainhandler:
     def mon_push(self, widget):
         self.instrument.acq_mon()
 
-    #Transmission Tab
     def acq_trans_push(self, widget):
-        self.instrument.acq_trans()
+        logging.info("***PANEL***: Transmission is disabled. This probably"
+                     " happened because we have a broken function.")
+        #self.instrument.acq_trans()
 
     def acq_pr_push(self, widget):
-        self.instrument.acq_pr()
+        logging.info("***PANEL***: Power resolved (PR) is disabled. This probably"
+                     " happened because we have a broken function.")
+        #self.instrument.acq_pr()
 
     def abt_push(self, widget):
         self.instrument.abt()
-
-    #Transmission Tab
-    def abt_trans_push(self, widget):
-        pass
 
     def sht_push(self, widget):
         self.instrument.sht()
@@ -400,7 +400,7 @@ class gainhandler:
         self.pow02_mon_array[index] = power02
         self.pow02_mon_di.fast_update_data_only(self.pow02_mon_array)
 
-    def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans=0):
+    def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans):
         self.__adjusted = False
         self.cam_pixels = 1024
         self.avg = avg
@@ -416,7 +416,7 @@ class gainhandler:
         # CAMERA CALL
         self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
         self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
-                                            avg, step, delay, width, diode_cur, ctrl)
+                                            avg, step, delay, width, diode_cur, ctrl, trans)
         self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
     def append_data(self, value, index1, index2, camera_data, update=True):
@@ -516,7 +516,7 @@ class gainhandler:
                                           temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
                                           temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
                                           temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                          temp_dict['control'], is_live=False)
+                                          temp_dict['control'], temp_dict['initial_trans'], is_live=False)
 
         self.plot_power_wav.enabled = False
         self.event_loop.create_task(self.data_item_show(power_avg.data_item))
@@ -713,14 +713,14 @@ class gainhandler:
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                     temp_dict['control'], is_live=False)
+                                                     temp_dict['control'], temp_dict['initial_trans'], is_live=False)
 
                 self.loss_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_loss_title_name, loss_array[k],
                                                      "sEEGS/sEELS", temp_dict['start_wav'],
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                     temp_dict['control'], is_live=False)
+                                                     temp_dict['control'], temp_dict['initial_trans'], is_live=False)
 
                 if not k: self.zlp_di = DataItemLaserCreation('_' + str(k) + '_' + temp_zlp_title_name, zlp_array,
                                                               "sEEGS/sEELS", temp_dict['start_wav'],
@@ -728,7 +728,7 @@ class gainhandler:
                                                               temp_dict['averages'],
                                                               temp_dict['step_wav'], temp_dict['delay'],
                                                               temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                              temp_dict['control'], is_live=False)
+                                                              temp_dict['control'], temp_dict['initial_trans'], is_live=False)
 
                 self.event_loop.create_task(self.data_item_show(self.gain_di.data_item))
                 self.event_loop.create_task(self.data_item_show(self.loss_di.data_item))
@@ -745,7 +745,7 @@ class gainhandler:
                                                         temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                         temp_dict['step_wav'], temp_dict['delay'],
                                                         temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                        temp_dict['control'], is_live=False,
+                                                        temp_dict['control'], temp_dict['initial_trans'], is_live=False,
                                                         power_min=power_array_itp.min(), power_inc=power_inc)
 
                     self.event_loop.create_task(self.data_item_show(self.zlp_di.data_item))
@@ -756,7 +756,7 @@ class gainhandler:
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                     temp_dict['control'], is_live=False,
+                                                     temp_dict['control'], temp_dict['initial_trans'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
 
                 self.event_loop.create_task(self.data_item_show(self.gain_di.data_item))
@@ -767,7 +767,7 @@ class gainhandler:
                                                      temp_dict['final_wav'], temp_dict['pts'], temp_dict['averages'],
                                                      temp_dict['step_wav'], temp_dict['delay'],
                                                      temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                     temp_dict['control'], is_live=False,
+                                                     temp_dict['control'], temp_dict['initial_trans'], is_live=False,
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
                 self.event_loop.create_task(self.data_item_show(self.loss_di.data_item))
 

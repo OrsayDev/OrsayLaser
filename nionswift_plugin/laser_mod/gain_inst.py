@@ -865,12 +865,12 @@ class gainDevice(Observable.Observable):
         self.laser_frequency_f = 12000
         self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
         self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(3, 5)
-        self.sht_f = True # This prevents the first laser shot, which is stronger than others.
+        logging.info('***LASER***: Please open shutter.')
 
     def over_spim_TP3(self):
-        self.laser_frequency_f = 10000
-        self.fast_blanker_status_f = False
         self.sht_f = False
+        self.laser_frequency_f = 10000
+        self.fast_blanker_status_f = True
 
     @property
     def start_wav_f(self) -> float:

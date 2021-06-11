@@ -426,11 +426,8 @@ class gainDevice(Observable.Observable):
         self.__serverLaser.server_ping()
 
     def server_instrument_shutdown(self):
-        if self.__serverLaser: self.__serverLaser.shutdown()
-        for server in self.__serverPM:
+        for server in [self.__serverLaser, self.__serverPM[0], self.__serverPS, self.__serverArd]:
             server.shutdown()
-        if self.__serverPS: self.__serverPS.shutdown()
-        if self.__serverArd: self.__serverArd.shutdown()
 
     def init(self):
         #Looking for orsay_camera_eels. If not, check orsay_camera_tp3. If not, grab usim

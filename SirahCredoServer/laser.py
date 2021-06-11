@@ -1,17 +1,12 @@
 import numpy
-import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import serial
-import os
-import json
 
-abs_path = os.path.abspath(os.path.join((__file__ + "/../../nionswift_plugin/laser_mod/"), "global_settings.json"))
-with open(abs_path) as savfile:
-    settings = json.load(savfile)
 
-MAX_WAV = settings["LASER"]["MAX_WAV"]
-MIN_WAV = settings["LASER"]["MIN_WAV"]
+
+MAX_WAV = 800
+MIN_WAV = 532
 
 __author__ = "Yves Auad"
 

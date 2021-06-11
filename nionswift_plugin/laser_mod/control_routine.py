@@ -1,17 +1,8 @@
-import os
-import json
 import sys
 import time
 import threading
 
 __author__ = "Yves Auad"
-
-
-abs_path = os.path.abspath(os.path.join((__file__+"/../"), "global_settings.json"))
-with open(abs_path) as savfile:
-    settings = json.load(savfile)
-
-DEBUG_pw = settings["PW"]["DEBUG"]
 
 def _isPython3():
     return sys.version_info[0] >= 3

@@ -5,8 +5,6 @@ from nion.swift.model import HardwareSource
 
 import logging
 import threading
-import os
-import json
 import time
 import numpy
 import socket
@@ -23,14 +21,8 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 ch.setFormatter(formatter) # add formatter to ch
 logger.addHandler(ch) # add ch to logger
 
-abs_path = os.path.abspath(os.path.join((__file__ + "/../"), "global_settings.json"))
-with open(abs_path) as savfile:
-    settings = json.load(savfile)
-
-#DEBUG_pw = settings["PW"]["DEBUG"]
-CAMERA = settings["CAMERA"]["WHICH"]
-SCAN = settings["SCAN"]["WHICH"]
-MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
+CAMERA = "orsay_camera_eels"
+SCAN = "orsay_scan_device"
 
 from . import control_routine as ctrlRout
 
@@ -195,7 +187,7 @@ class LaserServerHandler():
                 return 2
             elif data[:-9] == b'3':
                 logger.warning(
-                    "***LASER***: Laser Motor is moving. You can not change wavelength while last one is still "
+                    "***SERVER***: Laser Motor is moving. You can not change wavelength while last one is still "
                     "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
                     "hardware.")
                 return 3
@@ -439,12 +431,19 @@ class gainDevice(Observable.Observable):
         if self.__serverArd: self.__serverArd.shutdown()
 
     def init(self):
-
+        #Looking for orsay_camera_eels. If not, check orsay_camera_tp3. If not, grab usim
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
             # find, use usim eels
             if hasattr(hards, 'hardware_source_id'):
                 if hards.hardware_source_id == CAMERA:
                     self.__camera = hards
+
+        if self.__camera == None:
+            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+                # find, use usim eels
+                if hasattr(hards, 'hardware_source_id'):
+                    if hards.hardware_source_id == 'orsay_camera_timepix3':
+                        self.__camera = hards
 
         if self.__camera == None:
             for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
@@ -456,11 +455,10 @@ class gainDevice(Observable.Observable):
         if not self.__camera:
             logger.warning('***LASER***: No camera was found.')
         else:
-            logger.debug('***LASER***: Camera properly loaded. EELS/EEGS acquistion is good to go.')
+            logger.debug(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
         self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
             SCAN)
-
         if not self.__OrsayScanInstrument:
             logger.warning('***LASER***: Could not find SCAN module. Check for issues.')
             logger.info('***LASER***: If usim available, grabbing usim Scan Device.')
@@ -474,7 +472,7 @@ class gainDevice(Observable.Observable):
             # self.__OrsayScanInstrument) are identical
 
         else:
-            logger.info('***LASER***: SCAN module properly loaded. Fast blanker is good to go.')
+            logger.info('***LASER***: SCAN module properly loaded.')
 
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
 
@@ -483,12 +481,12 @@ class gainDevice(Observable.Observable):
                 from SirahCredoServer.server import ServerSirahCredoLaser
                 ss = ServerSirahCredoLaser(self.__host, self.__port)
                 threading.Thread(target=ss.main, args=()).start()
-                logger.info('***SERVER***: Connecting o local Host.')
+                logger.info('***LASER***: Connecting o local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
-                logger.info('***SERVER***: Connecting to VG Lumiere.')
+                logger.info('***LASER***: Connecting to VG Lumiere.')
             elif self.__host == '129.175.81.128':
-                logger.info('***SERVER***: Connecting to Raspberry Pi.')
+                logger.info('***LASER***: Connecting to Raspberry Pi.')
 
 
             logger.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
@@ -504,12 +502,9 @@ class gainDevice(Observable.Observable):
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser
-                logger.info('***SERVER***: Connection with server successful.')
+                logger.info('***LASER***: Connection with server successful.')
                 #if self.__OrsayScanInstrument and self.__camera:
-                if self.__camera:
-                    # Handling the beginning. I have put it here instead of simply returning True and
-                    # self.__OrsayScanInstrument and self.__camera because these properties affect GUI. I would like
-                    # to release GUI only in complete True case
+                if self.__camera and self.__OrsayScanInstrument:
                     if hasattr(self.__OrsayScanInstrument.scan_device, 'orsayscan'):
                         self.fast_blanker_status_f = False #fast blanker OFF
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
@@ -534,10 +529,10 @@ class gainDevice(Observable.Observable):
                     return False
             else:
                 logger.warning(
-                    '***SERVER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
+                    '***LASER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
                 return False
         except ConnectionRefusedError:
-            logger.error('***SERVER***: No server was found. Check if server is hanging and it is in the good host.')
+            logger.error('***LASER***: No server was found. Check if server is hanging and it is in the good host.')
             return False
 
     def sht(self):
@@ -568,7 +563,7 @@ class gainDevice(Observable.Observable):
             self.free_event.fire("all")
 
     def grab_det(self, mode, index, npic, show):
-        logger.info("***ACQUISITION***: Scanning Full Image.")
+        logger.info("***LASER***: Scanning Full Image.")
         # this gets frame parameters
         det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
         # this multiplies pixels(x) * pixels(y) * pixel_time
@@ -749,7 +744,6 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
-        print(self.__camera.get_current_frame_parameters())
         p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
         q =  self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
         if (self.__serverLaser.set_scan_thread_check() and abs(
@@ -788,14 +782,14 @@ class gainDevice(Observable.Observable):
                     self.__serverLaser.set_scan_thread_hardware_status() == 2 and self.__serverLaser.set_scan_thread_locked()):
                 # check if laser changes have finished and thread step is over
                 self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
-                logger.debug("***ACQUISITION***: Moving to next wavelength...")
+                logger.debug("***LASER***: Moving to next wavelength...")
                 time.sleep(0.3 * self.__step_wav / (0.5))
                 self.combo_data_f = True  # check laser now
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
 
         self.sht_f = False
-        logger.info("***ACQUISITION***: Finishing laser measurement. Acquiring conventional EELS for reference.")
+        logger.info("***LASER***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
             self.append_data.fire(self.__power02, i, j, last_cam_acq, j==j_max-1)
@@ -835,10 +829,10 @@ class gainDevice(Observable.Observable):
                     self.cur_d_f = self.__diode
             elif message == 666:
                 self.__abort_force = True
-                logger.error('***SERVER***: Lost connection with server. Please check if server is active.')
+                logger.error('***LASER***: Lost connection with server. Please check if server is active.')
                 self.server_shutdown.fire()
             else:
-                logger.warning(f'***WARNING***: Message {message} is not recognizable')
+                logger.warning(f'***LASER***: Message {message} is not recognizable')
         return sendMessage
 
     def Laser_stop_all(self):
@@ -1006,11 +1000,11 @@ class gainDevice(Observable.Observable):
     def cur_d_f(self, value: int):
         self.__diode = value / 100.
         cvalue = format(float(self.__diode), '.2f')  # how to format and send to my hardware
-        if self.__diode < MAX_CURRENT:
+        if self.__diode < 30:
             self.__serverPS.comm('C1:' + str(cvalue) + '\n')
             self.__serverPS.comm('C2:' + str(cvalue) + '\n')
         else:
-            logger.warning('***LASER PS***: Attempt to put a current outside allowed range. Check global_settings.')
+            logger.warning('***LASER***: Attempt to put a current outside allowed range. Check global_settings.')
 
         if not self.__status:
             self.property_changed_event.fire("cur_d1_f")
@@ -1157,7 +1151,7 @@ class gainDevice(Observable.Observable):
             self.__servo_step = int(value)
         except:
             self.__servo_step = 1
-            logger.warning('***SERVO***: Please enter an integer. Using 1.')
+            logger.warning('***LASER***: Please enter an integer for servo step.')
         if not self.__status:
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
@@ -1263,7 +1257,7 @@ class gainDevice(Observable.Observable):
             self.__serverPM[1].pw_set_avg(self.__powermeter_avg, '1')
         except:
             self.__powermeter_avg = 10
-            logger.warning("***POWERMETER***: Please enter an integer. Using 10.")
+            logger.warning("***LASER***: Please enter an integer. Using 10.")
 
     @property
     def per_pic_f(self):
@@ -1283,7 +1277,7 @@ class gainDevice(Observable.Observable):
             self.__nper_pic = int(value)
         except:
             self.__nper_pic = 0
-            logger.warning('***LASER***: Please enter an integer for detectors grab. Using 0.')
+            logger.warning('***LASER***: Please enter an integer for detectors grab.')
 
     @property
     def dye_f(self):
@@ -1311,4 +1305,4 @@ class gainDevice(Observable.Observable):
             self.__port = int(value)
         except TypeError:
             self.__port = 65432
-            logger.warning('***SERVER***: Port must be an integer. Using 65432.')
+            logger.warning('***LASER***: Port must be an integer. Using 65432.')

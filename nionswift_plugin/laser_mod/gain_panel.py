@@ -22,13 +22,6 @@ import datetime
 
 _ = gettext.gettext
 
-abs_path = os.path.abspath(os.path.join((__file__ + "/../"), "global_settings.json"))
-with open(abs_path) as savfile:
-    settings = json.load(savfile)
-
-MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
-
-
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
                  time_width=None, start_ps_cur=None, ctrl=None, trans=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
@@ -1050,7 +1043,7 @@ class gainView:
 
         self.diode_cur_label = ui.create_label(text='Diode(1, 2) (A): ')
         self.diode_cur_slider = ui.create_slider(name="cur_slider", value='@binding(instrument.cur_d_f)', minimum=0,
-                                                 maximum=int(MAX_CURRENT * 100))
+                                                 maximum=int(30 * 100))
         self.text_label = ui.create_label(text='       ||       ')
         self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_edit_f)', name='cur_line', width=100)
         self.less_pb = ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)

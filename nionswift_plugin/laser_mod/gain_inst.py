@@ -749,9 +749,11 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
+        print(self.__camera.get_current_frame_parameters())
+        p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
+        q =  self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
         if (self.__serverLaser.set_scan_thread_check() and abs(
-                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and
-                self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus'):
+                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
 
             self.__acq_number += 1
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,

@@ -9,6 +9,8 @@ import time
 import numpy
 import socket
 
+from SirahCredoServer import power
+
 log_level = logging.DEBUG
 
 logger = logging.getLogger(__name__)
@@ -493,7 +495,11 @@ class gainDevice(Observable.Observable):
             self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
             time.sleep(0.01)
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
-                               LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm02')]
+                               power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            if not self.__serverPM[1].successful:
+                logging.info('***SERVER***: 2nd powermeter not found. Entering in debug mode.')
+                from SirahCredoServer.virtualInstruments import power_vi
+                self.__serverPM[1] = power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
             time.sleep(0.01)
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
             time.sleep(0.01)
@@ -547,7 +553,7 @@ class gainDevice(Observable.Observable):
 
     def hard_reset(self):
         self.__serverPM[0].pw_reset('0')
-        self.__serverPM[1].pw_reset('1')
+        self.__serverPM[1].pw_reset()
 
     def upt(self):
         self.property_changed_event.fire("cur_wav_f")
@@ -959,10 +965,10 @@ class gainDevice(Observable.Observable):
     def power02_f(self):
         try:
             if self.__DEBUG:
-                self.__power02 = self.__cubeRT * (self.__serverPM[1].pw_read('1', self.__cur_wav) + (self.__diode/2.) ** 2) * (
+                self.__power02 = self.__cubeRT * (self.__serverPM[1].pw_read(self.__cur_wav) + (self.__diode/2.) ** 2) * (
                         self.__servo_pos + 1) / 180
             else:
-                self.__power02 = self.__cubeRT * self.__serverPM[1].pw_read('1', self.__cur_wav)
+                self.__power02 = self.__cubeRT * self.__serverPM[1].pw_read(self.__cur_wav)
             if self.__autoLock and not self.__status: self.property_changed_event.fire("locked_power_f")
             return format(self.__power02, '.3f')
         except:
@@ -1254,7 +1260,7 @@ class gainDevice(Observable.Observable):
         try:
             self.__powermeter_avg = int(float(value))
             self.__serverPM[0].pw_set_avg(self.__powermeter_avg, '0')
-            self.__serverPM[1].pw_set_avg(self.__powermeter_avg, '1')
+            self.__serverPM[1].pw_set_avg(self.__powermeter_avg)
         except:
             self.__powermeter_avg = 10
             logger.warning("***LASER***: Please enter an integer. Using 10.")

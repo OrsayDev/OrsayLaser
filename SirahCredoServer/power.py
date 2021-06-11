@@ -1,7 +1,4 @@
 import pyvisa
-import time
-import os
-import json
 import threading
 
 __author__ = "Yves Auad"

@@ -1,12 +1,13 @@
 import socket
-import json
 import time
 import select
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
 
-from SirahCredoServer import laser_vi, laser, power_supply_vi, power_supply, \
-    power, power_vi, ard, ard_vi
+from SirahCredoServer import laser, power_supply, \
+    power, ard
+
+from SirahCredoServer.virtualInstruments import ard_vi, laser_vi, power_supply_vi, power_vi
 
 __author__ = "Yves Auad"
 
@@ -18,15 +19,14 @@ class ServerSirahCredoLaser:
         if SERVER_HOST == '129.175.82.159':
             self.__sirah = laser.SirahCredoLaser('COM12')
             self.__ps = power_supply.SpectraPhysics('COM11')
-            self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
-                              power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR')]
             self.__ard = ard.Arduino('COM15')
             print('***SERVER***: Server Running in VG Lumiere. Real laser employed.')
         elif SERVER_HOST == '129.175.81.128':
             self.__sirah = laser.SirahCredoLaser('/dev/ttyUSB0')
             self.__ps = power_supply.SpectraPhysics('/dev/ttyUSB1')
-            self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
-                              power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR')]
+                              #power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             try:
                 self.__ard = ard.Arduino('/dev/ttyACM0')
             except:
@@ -35,8 +35,7 @@ class ServerSirahCredoLaser:
         else:
             self.__sirah = laser_vi.SirahCredoLaser()
             self.__ps = power_supply_vi.SpectraPhysics()
-            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR'),
-                              power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
+            self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR')]
             self.__ard = ard_vi.Arduino()
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,7 +46,6 @@ class ServerSirahCredoLaser:
         self.instruments.append(self.__sirah)
         self.instruments.append(self.__ps)
         self.instruments.append(self.__pwmeter[0])
-        self.instruments.append(self.__pwmeter[1])
         self.instruments.append(self.__ard)
 
         self.inputs = [self.s]
@@ -57,7 +55,7 @@ class ServerSirahCredoLaser:
         self.message_queues = {}
 
         if not self.__sirah.successful or not self.__ps.successful or not self.__pwmeter[0].successful\
-                or not self.__pwmeter[1].successful or not self.__ard.successful:
+                or not self.__ard.successful:
             self.s.close()  # quits the server is not successful
             print('***SERVER***: Server not successfully created. Check instrument message.')
         else:
@@ -89,7 +87,7 @@ class ServerSirahCredoLaser:
                     clientsocket.setblocking(False)
                     self.inputs.append(clientsocket)
                     self.who[data.decode()] = clientsocket
-                    print(f"***SERVER***: Connection from {address} has been established.")
+                    print(f"***SERVER***: Connection from {address} has been established. Instrument is {data}.")
                 else:
                     try:
                         data = s.recv(512)

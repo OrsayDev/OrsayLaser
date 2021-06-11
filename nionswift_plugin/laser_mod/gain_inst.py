@@ -31,8 +31,6 @@ with open(abs_path) as savfile:
 CAMERA = settings["CAMERA"]["WHICH"]
 SCAN = settings["SCAN"]["WHICH"]
 MAX_CURRENT = settings["PS"]["MAX_CURRENT"]
-CLIENT_HOST = settings["SOCKET_CLIENT"]["HOST"]
-CLIENT_PORT = settings["SOCKET_CLIENT"]["PORT"]
 
 from . import control_routine as ctrlRout
 
@@ -41,9 +39,9 @@ def SENDMYMESSAGEFUNC(sendmessagefunc):
 
 class LaserServerHandler():
 
-    def __init__(self, callback, CLIENT_HOST = CLIENT_HOST, CLIENT_PORT = CLIENT_PORT, which = 'None'):
+    def __init__(self, callback, CHOST, CPORT, which = 'None'):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((CLIENT_HOST, CLIENT_PORT))
+        self.s.connect((CHOST, CPORT))
         self.s.settimeout(None)
         self.callback = callback
         self.name = which.encode()
@@ -403,8 +401,8 @@ class gainDevice(Observable.Observable):
         self.__servo_step = 2
         self.__nper_pic = 0
         self.__dye = 0
-        self.__host = CLIENT_HOST
-        self.__port = CLIENT_PORT
+        self.__host = "127.0.0.1"
+        self.__port = 65432
 
         self.__camera = None
         self.__data = None
@@ -489,13 +487,8 @@ class gainDevice(Observable.Observable):
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
                 logger.info('***SERVER***: Connecting to VG Lumiere.')
-                self.__DEBUG = False
             elif self.__host == '129.175.81.128':
                 logger.info('***SERVER***: Connecting to Raspberry Pi.')
-                self.__DEBUG = False
-            else:
-                logger.info('***SERVER***: Connecting to another server. Debug is OFF.')
-                self.__DEBUG = False
 
 
             logger.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
@@ -524,9 +517,9 @@ class gainDevice(Observable.Observable):
                     self.run_status_f = False
                     self.servo_f = 165 #minimum transmission
                     self.powermeter_avg_f = self.__powermeter_avg
-                    self.property_changed_event.fire("cur_wav_f") #what is laser wavelength
 
-                    ##POWER SUPPLY CHECK###
+                    ## LASER WAVELENGTH AND POWER SUPPLY CHECK ##
+                    self.property_changed_event.fire("cur_wav_f")
                     self.property_changed_event.fire('q_f')
                     self.property_changed_event.fire('d_f')
                     self.property_changed_event.fire('cur_d1_f')
@@ -592,7 +585,6 @@ class gainDevice(Observable.Observable):
         if not self.__abort_force:
             self.__abort_force = True
             self.__serverLaser.abort_control()  # abort laser thread as well.
-            time.sleep(1)
         logger.info(f'Number of Threads current alive is {threading.active_count()}')
         self.run_status_f = False  # force free GUI
 

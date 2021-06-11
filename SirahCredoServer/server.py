@@ -4,24 +4,15 @@ import time
 import select
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
-#print(sys.path)
 
 from SirahCredoServer import laser_vi, laser, power_supply_vi, power_supply, \
     power, power_vi, ard, ard_vi
 
 __author__ = "Yves Auad"
 
-abs_path = os.path.abspath(os.path.join((__file__ + "/../../nionswift_plugin/laser_mod/"), "global_settings.json"))
-with open(abs_path) as savfile:
-    settings = json.load(savfile)
-
-SERVER_HOST = settings["SOCKET_SERVER"]["HOST"]
-SERVER_PORT = settings["SOCKET_SERVER"]["PORT"]
-
-
 class ServerSirahCredoLaser:
 
-    def __init__(self, SERVER_HOST=SERVER_HOST, SERVER_PORT=SERVER_PORT):
+    def __init__(self, SERVER_HOST, SERVER_PORT):
         self.__running = True
         print("***SERVER***: Initializing SirahCredoServer...")
         if SERVER_HOST == '129.175.82.159':

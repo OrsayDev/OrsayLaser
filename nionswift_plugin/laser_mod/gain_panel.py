@@ -223,9 +223,6 @@ class gainhandler:
         if current_index == 2:
             self.host_value.text = '129.175.81.128'
             self.port_value.text = '65432'
-        if current_index == 3:
-            self.host_value.text = '1.0.0.1'
-            self.port_value.text = '65432'
 
         self.instrument.host_f = self.host_value.text
         self.instrument.port_f = int(self.port_value.text)
@@ -963,7 +960,7 @@ class gainView:
         self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)')
         self.server_label = ui.create_label(text='Server: ')
         self.server_value = ui.create_label(name='server_value', text='OFF')
-        self.server_choice = ui.create_combo_box(items=['Local Host', 'VG Lumiere', 'Raspberry Pi', 'User-Defined'], on_current_index_changed='server_choice_pick')
+        self.server_choice = ui.create_combo_box(items=['Local Host', 'VG Lumiere', 'Raspberry Pi'], on_current_index_changed='server_choice_pick')
         self.server_shutdown = ui.create_push_button(name='server_shutdown', text='Shutdown', on_clicked='server_shutdown_push')
         self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
                                       self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), self.server_shutdown, spacing=12)

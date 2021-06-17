@@ -11,31 +11,29 @@ class HVDeflector():
         try:
             self.s.connect((ip, port))
             self.successful = True
+        except socket.timeout:
+            logging.info(f"***HV Deflector***: Timeout. Could not connect socket at {(ip, port)}.")
         except:
-            logging.info(f"***HV Deflector***: Could not connect socket at {(ip, port)}.")
+            logging.info(f"***HV Deflector***: Could not connect socket at {(ip, port)}. Check for issues.")
 
     def set_voltage(self, v):
         try:
             veff = int(v/10)
-            plus = ('HV+ ' + str(veff)).encode()
-            less = ('HV+ ' + str(veff)).encode()
-            self.s.sendall(plus)
-            self.s.sendall(less)
+            msg = ('HV+ ' + str(veff)+'\n'+'HV- ' + str(veff)).encode()
+            self.s.sendall(msg)
             return 200
         except:
+            logging.info(f"***HV Deflector***: Problem setting voltage.")
             return 0
 
     def get_voltage(self):
         try:
-            self.s.sendall(b"HV:MON?")
-            data = sock.recv(512)
-            index1 = data.find(b'+')
-            index2 = data.find(b'%', index1)
-
-            index3 = data.find(b'-')
-            index4 = data.find(b'%', index3)
-            return (int(data[index1+1:index2]), int(data[index3+1:index4]))
+            self.s.sendall(b"HV:MON?"); data = sock.recv(512)
+            i1 = data.find(b'+'); i2 = data.find(b'%', i1)
+            i3 = data.find(b'-'); i4 = data.find(b'%', i3)
+            return (int(data[i1+1:i2]), int(data[i3+1:i4]))
         except:
+            logging.info(f"***HV Deflector***: Could not query voltage.")
             return (-1, -1)
 
 

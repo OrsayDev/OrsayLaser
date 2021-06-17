@@ -5,9 +5,9 @@ sock.settimeout(1)
 #sock.connect(("192.168.1.37", 80))
 sock.connect(("129.175.82.70", 80))
 
-v = 100
+v = 10
 veff = int(v/10)
-plus = ('HV+ ' + str(veff)).encode()
+plus = ('HV+ ' + str(veff)+'\n').encode()
 less = ('HV- ' + str(veff)).encode()
 
 #sock.sendall(b'CMD:BOX')
@@ -38,8 +38,8 @@ index4 = data.find(b'%', index3)
 print(data)
 print(int(data[index1+1:index2]), int(data[index3+1:index4]))
 
-sock.sendall(plus)
-sock.sendall(less)
+sock.sendall(plus+less)
+#sock.sendall(less)
 
 #data = sock.recv(512)
 #print(data)

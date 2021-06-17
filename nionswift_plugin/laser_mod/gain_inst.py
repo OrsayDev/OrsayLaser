@@ -10,6 +10,7 @@ import numpy
 import socket
 
 from SirahCredoServer import power
+from SirahCredoServer import hv
 
 log_level = logging.DEBUG
 
@@ -397,6 +398,7 @@ class gainDevice(Observable.Observable):
         self.__dye = 0
         self.__host = "127.0.0.1"
         self.__port = 65432
+        self.__hv = 0
 
         self.__camera = None
         self.__data = None
@@ -501,7 +503,8 @@ class gainDevice(Observable.Observable):
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
             time.sleep(0.01)
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
-
+            time.sleep(0.01)
+            self.__serverHV = hv.HVDeflector()
 
             if self.__serverLaser.server_ping():
                 # Ask where is Laser
@@ -1309,3 +1312,14 @@ class gainDevice(Observable.Observable):
         except TypeError:
             self.__port = 65432
             logger.warning('***LASER***: Port must be an integer. Using 65432.')
+
+    @property
+    def hv_f(self):
+        return self.__hv
+
+    @hv_f.setter
+    def hv_f(self, value):
+        self.__hv = value
+        self.__serverHV.set_voltage(value)
+        self.property_changed_event.fire('hv_f')
+        self.free_event.fire('all')

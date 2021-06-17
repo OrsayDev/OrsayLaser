@@ -4,17 +4,25 @@ import logging
 __author__ = "Yves Auad"
 
 class HVDeflector():
-    def __init__(self, ip="129.175.82.70", port = 80):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.settimeout(1)
+    def __init__(self):
+
         self.successful = False
         try:
-            self.s.connect((ip, port))
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.settimeout(0.1)
+            self.s.connect(("192.168.1.37", 80))
             self.successful = True
+            logging.info(f"***HV Deflector***: Connected in ChromaTEM.")
         except socket.timeout:
-            logging.info(f"***HV Deflector***: Timeout. Could not connect socket at {(ip, port)}.")
-        except:
-            logging.info(f"***HV Deflector***: Could not connect socket at {(ip, port)}. Check for issues.")
+            try:
+                self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.s.settimeout(0.1)
+                self.s.connect(("129.175.82.70", 80))
+                self.successful = True
+                logging.info(f"***HV Deflector***: Connected in VG Lumiere.")
+            except:
+                self.successful = False
+                logging.info(f"***HV Deflector***: Fast blanker HV was not found. Check for hardware.")
 
     def set_voltage(self, v):
         try:
@@ -27,13 +35,12 @@ class HVDeflector():
             return 0
 
     def get_voltage(self):
-        try:
-            self.s.sendall(b"HV:MON?"); data = sock.recv(512)
-            i1 = data.find(b'+'); i2 = data.find(b'%', i1)
-            i3 = data.find(b'-'); i4 = data.find(b'%', i3)
-            return (int(data[i1+1:i2]), int(data[i3+1:i4]))
-        except:
-            logging.info(f"***HV Deflector***: Could not query voltage.")
-            return (-1, -1)
+        self.s.sendall(b"HV:MON?\n"); data = self.s.recv(512)
+        i1 = data.find(b'+'); i2 = data.find(b'%', i1)
+        i3 = data.find(b'-'); i4 = data.find(b'%', i3)
+        return (int(data[i1+1:i2]), int(data[i3+1:i4]))
+        #except:
+        #    logging.info(f"***HV Deflector***: Could not query voltage.")
+        #    return (-1, -1)
 
 

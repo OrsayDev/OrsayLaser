@@ -1,9 +1,18 @@
 import socket
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.settimeout(1)
-#sock.connect(("192.168.1.37", 80))
-sock.connect(("129.175.82.70", 80))
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(0.1)
+    sock.connect(("192.168.1.37", 80))
+    print('chromaTEM')  
+except socket.timeout:
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.1)
+        print('vgLum')  
+        sock.connect(("129.175.82.70", 80))
+    except:
+        print("No HV was found.")
 
 v = 10
 veff = int(v/10)

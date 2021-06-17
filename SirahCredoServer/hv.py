@@ -35,12 +35,13 @@ class HVDeflector():
             return 0
 
     def get_voltage(self):
-        self.s.sendall(b"HV:MON?\n"); data = self.s.recv(512)
-        i1 = data.find(b'+'); i2 = data.find(b'%', i1)
-        i3 = data.find(b'-'); i4 = data.find(b'%', i3)
-        return (int(data[i1+1:i2]), int(data[i3+1:i4]))
-        #except:
-        #    logging.info(f"***HV Deflector***: Could not query voltage.")
-        #    return (-1, -1)
+        try:
+            self.s.sendall(b"HV:MON?\n"); data = self.s.recv(512)
+            i1 = data.find(b'+'); i2 = data.find(b'%', i1)
+            i3 = data.find(b'-'); i4 = data.find(b'%', i3)
+            return (int(data[i1+1:i2]), int(data[i3+1:i4]))
+        except:
+            logging.info(f"***HV Deflector***: Could not query voltage.")
+            return (-1, -1)
 
 

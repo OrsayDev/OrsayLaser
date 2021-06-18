@@ -1,3 +1,36 @@
+"""
+Available Requests
+
+*IDN? -> Name and version of the project
+IP? -> Return the IP
+IP:ALL? -> Return the IP and the gateway
+MAC? -> Return the MAC address
+ETH? -> Return the state of the Ethernet connection
+CMD? -> Return the state of the control (if manual or remote)
+HV:DAC? -> Return the % of the DAC control
+HV:BOX? -> Return the % of the manual control
+HV:REM? -> Return the % of the values read by the HV Supply
+HV:MON? -> Return the % of the values from the HV supply output
+
+Available Configurations
+
+CMD:BOX -> Put it in manual control
+CMD:COM -> Put it in remote control (default)
+HV+ X -> Configure the V+ in %. X must be an integer. 100% is approximately 1000V
+HV- X -> Configure the V- in %. X must be an integer. 100% is approximately 1000V
+ETH:OFF -> Deactivate the ethernet connection
+ETH:DHCP -> Configure the ethernet connection using DHCP
+ETH:IP ip:port mask gateway -> Configure the connection using a fix IP address. Default values are
+    192.168.1.25:80 255.255.255.0 192.168.1.0
+
+Notes
+
+i) Ethernet configurations are saved and will be loaded when HV box is powered on.
+ii) HV box on power on sets both HV outputs to zero.
+
+"""
+
+
 import socket
 import logging
 
@@ -43,5 +76,3 @@ class HVDeflector():
         except:
             logging.info(f"***HV Deflector***: Could not query voltage.")
             return (-1, -1)
-
-

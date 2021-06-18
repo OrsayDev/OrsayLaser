@@ -586,6 +586,7 @@ class gainDevice(Observable.Observable):
         if not self.__abort_force:
             self.__abort_force = True
             self.__serverLaser.abort_control()  # abort laser thread as well.
+        self.__thread.join()
         logger.info(f'Number of Threads current alive is {threading.active_count()}')
         self.run_status_f = False  # force free GUI
 

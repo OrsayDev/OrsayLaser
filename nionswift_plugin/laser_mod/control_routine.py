@@ -35,3 +35,4 @@ class controlRoutine:
 
     def pw_control_thread_off(self):
         self.control_thread.do_run=False
+        time.sleep(0.1)

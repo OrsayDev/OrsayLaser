@@ -421,13 +421,13 @@ class gainhandler:
 
             if self.cam_pixels != self.cam_array.shape[1]:
                 self.cam_array = numpy.zeros((self.pts * self.avg, self.cam_pixels))
-                logging.info('***ACQUISITION***: Corrected #PIXELS.')
+                logging.info('***PANEL***: Corrected #PIXELS.')
             try:
                 self.cam_di.set_cam_di_calibration(cam_calibration)
-                logging.info('***ACQUISITION***: Calibration OK.')
+                logging.info('***PANEL***: Calibration OK.')
             except:
                 logging.info(
-                    '***ACQUISITION***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
+                    '***PANEL***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
 
             self.__adjusted = True
 
@@ -491,7 +491,7 @@ class gainhandler:
                     self.align_zlp_max.enabled = self.plot_power_wav.enabled = True
                     self.align_zlp_fit.enabled = False  # fit not yet implemented
         else:
-            logging.info('***ACQUISTION***: Could not find referenced Data Item.')
+            logging.info('***PANEL***: Could not find referenced Data Item.')
 
     def power_wav(self, widget):
         temp_dict = self.__current_DI.description
@@ -510,7 +510,7 @@ class gainhandler:
 
         self.plot_power_wav.enabled = False
         self.event_loop.create_task(self.data_item_show(power_avg.data_item))
-        logging.info('***ACQUISITION***: Average Power Data Item Created.')
+        logging.info('***PANEL***: Average Power Data Item Created.')
 
     def align_zlp(self, widget):
         temp_dict = self.__current_DI.description
@@ -558,7 +558,7 @@ class gainhandler:
             # step, we need the data and FWHM
             self.smooth_zlp.enabled = True
             self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = False
-            logging.info('***ACQUISITION***: Data Item created.')
+            logging.info('***PANEL***: Data Item created.')
 
         if self.display_check_box.checked: self.event_loop.create_task(self.data_item_show(self.aligned_cam_di.data_item))
 
@@ -592,7 +592,7 @@ class gainhandler:
         except:
             window_size, poly_order, oversample = 41, 3, 10
             logging.info(
-                '***ACQUISTION***: Window, Poly Order and Oversample must be integers. Using standard (41, 3, '
+                '***PANEL***: Window, Poly Order and Oversample must be integers. Using standard (41, 3, '
                 '10) values.')
 
         temp_title_name += '_ws_' + str(window_size) + '_po_' + str(poly_order) + '_os_' + str(oversample) + '_' + \
@@ -617,7 +617,7 @@ class gainhandler:
                 self.process_power_pb.enabled = True
                 self.normalize_check_box.enabled = False
             self.smooth_zlp.enabled = False
-            logging.info('***ACQUISITION***: Smooth Successful. Data Item created.')
+            logging.info('***PANEL***: Smooth Successful. Data Item created.')
 
         if self.display_smooth_check_box.checked: self.event_loop.create_task(self.data_item_show(self.smooth_di.data_item))
 
@@ -634,7 +634,7 @@ class gainhandler:
         except:
             number_orders = 1
             logging.info(
-                '***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
+                '***PANEL***: Number of replicas must be an integer. Using single-order analysis instead.')
 
         gain_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
         loss_array = numpy.zeros((number_orders, temp_dict['pts'] - 1))
@@ -696,7 +696,7 @@ class gainhandler:
                     gain_array[k] = numpy.divide(gain_array[k], self.rpa_avg)
                     loss_array[k] = numpy.divide(loss_array[k], self.rpa_avg)
                     if not k: zlp_array = numpy.divide(zlp_array, self.rpa_avg)
-                    logging.info('***ACQUISITION***: Data Normalized by power.')
+                    logging.info('***PANEL***: Data Normalized by power.')
 
                 self.gain_di = DataItemLaserCreation('_' + str(k + 1) + '_' + temp_gain_title_name, gain_array[k],
                                                      "sEEGS/sEELS", temp_dict['start_wav'],
@@ -723,7 +723,7 @@ class gainhandler:
                 self.event_loop.create_task(self.data_item_show(self.gain_di.data_item))
                 self.event_loop.create_task(self.data_item_show(self.loss_di.data_item))
                 if not k: self.event_loop.create_task(self.data_item_show(self.zlp_di.data_item))
-            logging.info('***ACQUISITION***: sEEGS/sEELS Done.')
+            logging.info('***PANEL***: sEEGS/sEELS Done.')
 
         if widget == self.process_power_pb:
             for k in range(number_orders):
@@ -761,7 +761,7 @@ class gainhandler:
                                                      power_min=power_array_itp.min(), power_inc=power_inc)
                 self.event_loop.create_task(self.data_item_show(self.loss_di.data_item))
 
-                logging.info('***ACQUISTION***: Power Scan Done.')
+                logging.info('***PANEL***: Power Scan Done.')
 
         self.process_eegs_pb.enabled = False
         self.process_power_pb.enabled = False
@@ -791,12 +791,12 @@ class gainhandler:
                 number_orders = int(self.many_replicas.text)
                 if number_orders > 4:
                     number_orders = 4
-                    logging.info('***ACQUISITION***: Maximum number of orders is 4. Using 4 instead.')
+                    logging.info('***PANEL***: Maximum number of orders is 4. Using 4 instead.')
             except:
                 number_orders = 1
                 logging.info(
-                    '***ACQUISITION***: Number of replicas must be an integer. Using single-order analysis instead.')
-            logging.info('***ACQUISITION***: Attempting to fit data..')
+                    '***PANEL***: Number of replicas must be an integer. Using single-order analysis instead.')
+            logging.info('***PANEL***: Attempting to fit data..')
 
             # fit array is the fitting data from smooth, a_array is the intensity of the zlp, a1_array is the intensity
             # of the first replica, a2_array is the intensity of the second replica and sigma_array is the sigma
@@ -833,7 +833,7 @@ class gainhandler:
                     a2_array = numpy.divide(a2_array[:-1], self.rpa_avg)
                     a3_array = numpy.divide(a3_array[:-1], self.rpa_avg)
                     a4_array = numpy.divide(a4_array[:-1], self.rpa_avg)
-                    logging.info('***ACQUISITION***: Data Normalized by power.')
+                    logging.info('***PANEL***: Data Normalized by power.')
 
                 self.int_di = DataItemLaserCreation('_fit_int_' + temp_dict['title'], a_array[:-1],
                                                     "sEEGS/sEELS", temp_dict['start_wav'],
@@ -922,10 +922,10 @@ class gainhandler:
             if a3_array.any(): self.event_loop.create_task(self.data_item_show(self.int3_di.data_item))
             if a4_array.any(): self.event_loop.create_task(self.data_item_show(self.int4_di.data_item))
 
-            logging.info('***ACQUISITION***: Fit Done.')
+            logging.info('***PANEL***: Fit Done.')
 
         elif widget == self.cancel_pb:
-            logging.info('***ACQUISITION***: Not attempting to fit data.')
+            logging.info('***PANEL***: Not attempting to fit data.')
 
         for pbs in self.actions_list:
             pbs.enabled = False

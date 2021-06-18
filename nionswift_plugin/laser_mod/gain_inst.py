@@ -43,6 +43,7 @@ class LaserServerHandler():
         self.on = True
         self.s.sendall(which.encode())
         data = self.s.recv(512)
+        time.sleep(0.01)
 
     def server_ping(self):
         try:
@@ -489,34 +490,27 @@ class gainDevice(Observable.Observable):
             elif self.__host == '129.175.81.128':
                 logger.info('***LASER***: Connecting to Raspberry Pi.')
 
-
             logger.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
-            time.sleep(0.01)
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
                                power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             if not self.__serverPM[1].successful:
                 logging.info('***SERVER***: 2nd powermeter not found. Entering in debug mode.')
                 from SirahCredoServer.virtualInstruments import power_vi
                 self.__serverPM[1] = power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
-            time.sleep(0.01)
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
-            time.sleep(0.01)
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
-            time.sleep(0.01)
             self.__serverHV = hv.HVDeflector()
 
             if self.__serverLaser.server_ping():
-                # Ask where is Laser
                 logger.info('***LASER***: Connection with server successful.')
-                #if self.__OrsayScanInstrument and self.__camera:
                 if self.__camera and self.__OrsayScanInstrument:
                     if hasattr(self.__OrsayScanInstrument.scan_device, 'orsayscan'):
                         self.fast_blanker_status_f = False #fast blanker OFF
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
                     self.sht_f = False  # shutter off
                     self.run_status_f = False
-                    self.servo_f = 165 #minimum transmission
+                    self.servo_f = 165
                     self.powermeter_avg_f = self.__powermeter_avg
 
                     ## LASER WAVELENGTH AND POWER SUPPLY CHECK ##

@@ -394,6 +394,7 @@ class gainhandler:
         self.__adjusted = False
         self.cam_pixels = 1024
         self.avg = avg
+        self.pts = pts
 
         for data_items in self.document_controller.document_model._DocumentModel__data_items:
             if data_items.title == 'Gain Data ' + str(nacq):

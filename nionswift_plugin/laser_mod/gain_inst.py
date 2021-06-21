@@ -490,12 +490,12 @@ class gainDevice(Observable.Observable):
             elif self.__host == '129.175.81.128':
                 logger.info('***LASER***: Connecting to Raspberry Pi.')
 
-            logger.info(f'***SERVER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
+            logger.info(f'***LASER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
                                power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             if not self.__serverPM[1].successful:
-                logging.info('***SERVER***: 2nd powermeter not found. Entering in debug mode.')
+                logging.info('***LASER***: 2nd powermeter not found. Entering in debug mode.')
                 from SirahCredoServer.virtualInstruments import power_vi
                 self.__serverPM[1] = power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
@@ -757,7 +757,7 @@ class gainDevice(Observable.Observable):
             self.__acq_number += 1
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
                                 self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, self.__power_transmission)
-            self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
+            #self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
             pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero
             self.__camera.start_playing()
@@ -812,7 +812,7 @@ class gainDevice(Observable.Observable):
             # looped here indefinitely than fuck the hardware
             if self.__serverLaser.set_scan_thread_locked():  # releasing everything if locked
                 self.__serverLaser.set_scan_thread_release()
-        self.grab_det("end", self.__acq_number, 0, True)
+        #self.grab_det("end", self.__acq_number, 0, True)
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over

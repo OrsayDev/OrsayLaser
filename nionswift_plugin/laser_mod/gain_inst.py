@@ -53,7 +53,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() == 'Server Alive':
-                logger.info('***SERVER***: Server ON.')
+                logger.info('***NS CLIENT***: Server ON.')
                 return True
             else:
                 return False
@@ -83,7 +83,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 01.')
+                logger.error('***NS CLIENT***: Bad communication. Error 01.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -117,7 +117,7 @@ class LaserServerHandler():
             elif data[:-9] == b'message_02':
                 return 2
             else:
-                logger.error('***SERVER***: Bad communication. Error 03.')
+                logger.error('***NS CLIENT***: Bad communication. Error 03.')
                 return None
         except ConnectionResetError:
             self.connection_error_handler()
@@ -131,7 +131,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 04.')
+                logger.error('***NS CLIENT***: Bad communication. Error 04.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -147,7 +147,7 @@ class LaserServerHandler():
             elif data[:-9] == b'0':
                 return False
             else:
-                logger.error('***SERVER***: Bad communication. Error 05.')
+                logger.error('***NS CLIENT***: Bad communication. Error 05.')
                 return False
         except ConnectionResetError:
             self.connection_error_handler()
@@ -161,7 +161,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 06.')
+                logger.error('***NS CLIENT***: Bad communication. Error 06.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -177,7 +177,7 @@ class LaserServerHandler():
             elif data[:-9] == b'0':
                 return False
             else:
-                logger.error('***SERVER***: Bad communication. Error 07.')
+                logger.error('***NS CLIENT***: Bad communication. Error 07.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -192,12 +192,12 @@ class LaserServerHandler():
                 return 2
             elif data[:-9] == b'3':
                 logger.warning(
-                    "***SERVER***: Laser Motor is moving. You can not change wavelength while last one is still "
+                    "***NS CLIENT***: Laser Motor is moving. You can not change wavelength while last one is still "
                     "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
                     "hardware.")
                 return 3
             else:
-                logger.error('***SERVER***: Bad communication. Error 08.')
+                logger.error('***NS CLIENT***: Bad communication. Error 08.')
                 return None
         except ConnectionResetError:
             self.connection_error_handler()
@@ -217,7 +217,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 09.')
+                logger.error('***NS CLIENT***: Bad communication. Error 09.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -246,7 +246,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 12.') #must return None
+                logger.error('***NS CLIENT***: Bad communication. Error 12.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -273,7 +273,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 14.') #must return None
+                logger.error('***NS CLIENT***: Bad communication. Error 14.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -287,7 +287,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 15.') #must return None
+                logger.error('***NS CLIENT***: Bad communication. Error 15.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -315,7 +315,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 16.') #must return None
+                logger.error('***NS CLIENT***: Bad communication. Error 16.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -331,7 +331,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 17.') #must return None
+                logger.error('***NS CLIENT***: Bad communication. Error 17.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -343,7 +343,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***SERVER***: Bad communication. Error 18.') #must return None
+                logger.error('***NS CLIENT***: Bad communication. Error 18.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -438,7 +438,7 @@ class gainDevice(Observable.Observable):
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
             # find, use usim eels
             if hasattr(hards, 'hardware_source_id'):
-                if hards.hardware_source_id == CAMERA:
+                if hards.hardware_source_id == "orsay_camera_kuro":
                     self.__camera = hards
 
         if self.__camera == None:
@@ -446,6 +446,13 @@ class gainDevice(Observable.Observable):
                 # find, use usim eels
                 if hasattr(hards, 'hardware_source_id'):
                     if hards.hardware_source_id == 'orsay_camera_timepix3':
+                        self.__camera = hards
+
+        if self.__camera == None:
+            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+                # find, use usim eels
+                if hasattr(hards, 'hardware_source_id'):
+                    if hards.hardware_source_id == 'orsay_camera_eels':
                         self.__camera = hards
 
         if self.__camera == None:

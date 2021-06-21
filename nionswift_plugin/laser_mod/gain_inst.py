@@ -25,6 +25,7 @@ ch.setFormatter(formatter) # add formatter to ch
 logger.addHandler(ch) # add ch to logger
 
 CAMERA = "orsay_camera_eels"
+CAMERA = "orsay_camera_kuro"
 SCAN = "orsay_scan_device"
 
 from . import control_routine as ctrlRout

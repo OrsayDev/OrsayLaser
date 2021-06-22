@@ -12,22 +12,6 @@ import socket
 from SirahCredoServer import power
 from SirahCredoServer import hv
 
-log_level = logging.DEBUG
-
-logger = logging.getLogger(__name__)
-logger.setLevel(log_level)
-
-ch = logging.StreamHandler()
-ch.setLevel(log_level)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # create formatter
-ch.setFormatter(formatter) # add formatter to ch
-logger.addHandler(ch) # add ch to logger
-
-CAMERA = "orsay_camera_eels"
-CAMERA = "orsay_camera_kuro"
-SCAN = "orsay_scan_device"
-
 from . import control_routine as ctrlRout
 
 def SENDMYMESSAGEFUNC(sendmessagefunc):
@@ -53,7 +37,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() == 'Server Alive':
-                logger.info('***NS CLIENT***: Server ON.')
+                logging.info('***NS CLIENT***: Server ON.')
                 return True
             else:
                 return False
@@ -83,7 +67,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 01.')
+                logging.info('***NS CLIENT***: Bad communication. Error 01.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -117,7 +101,7 @@ class LaserServerHandler():
             elif data[:-9] == b'message_02':
                 return 2
             else:
-                logger.error('***NS CLIENT***: Bad communication. Error 03.')
+                logging.info('***NS CLIENT***: Bad communication. Error 03.')
                 return None
         except ConnectionResetError:
             self.connection_error_handler()
@@ -131,7 +115,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 04.')
+                logging.info('***NS CLIENT***: Bad communication. Error 04.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -147,7 +131,7 @@ class LaserServerHandler():
             elif data[:-9] == b'0':
                 return False
             else:
-                logger.error('***NS CLIENT***: Bad communication. Error 05.')
+                logging.info('***NS CLIENT***: Bad communication. Error 05.')
                 return False
         except ConnectionResetError:
             self.connection_error_handler()
@@ -161,7 +145,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 06.')
+                logging.info('***NS CLIENT***: Bad communication. Error 06.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -177,7 +161,7 @@ class LaserServerHandler():
             elif data[:-9] == b'0':
                 return False
             else:
-                logger.error('***NS CLIENT***: Bad communication. Error 07.')
+                logging.info('***NS CLIENT***: Bad communication. Error 07.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -191,13 +175,13 @@ class LaserServerHandler():
             if data[:-9] == b'2':
                 return 2
             elif data[:-9] == b'3':
-                logger.warning(
+                logging.info(
                     "***NS CLIENT***: Laser Motor is moving. You can not change wavelength while last one is still "
                     "moving. Please increase camera dwell time or # of averages in order to give time to our slow "
                     "hardware.")
                 return 3
             else:
-                logger.error('***NS CLIENT***: Bad communication. Error 08.')
+                logging.info('***NS CLIENT***: Bad communication. Error 08.')
                 return None
         except ConnectionResetError:
             self.connection_error_handler()
@@ -217,7 +201,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 09.')
+                logging.info('***NS CLIENT***: Bad communication. Error 09.')
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -246,7 +230,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 12.') #must return None
+                logging.info('***NS CLIENT***: Bad communication. Error 12.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -273,7 +257,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 14.') #must return None
+                logging.info('***NS CLIENT***: Bad communication. Error 14.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -287,7 +271,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 15.') #must return None
+                logging.info('***NS CLIENT***: Bad communication. Error 15.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -315,7 +299,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 16.') #must return None
+                logging.info('***NS CLIENT***: Bad communication. Error 16.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -331,7 +315,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 17.') #must return None
+                logging.info('***NS CLIENT***: Bad communication. Error 17.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -343,7 +327,7 @@ class LaserServerHandler():
             self.s.sendall(msg)
             data = self.s.recv(512)
             if data.decode() != 'None':
-                logger.error('***NS CLIENT***: Bad communication. Error 18.') #must return None
+                logging.info('***NS CLIENT***: Bad communication. Error 18.') #must return None
         except ConnectionResetError:
             self.connection_error_handler()
 
@@ -463,18 +447,18 @@ class gainDevice(Observable.Observable):
                         self.__camera = hards
 
         if not self.__camera:
-            logger.warning('***LASER***: No camera was found.')
+            logging.info('***LASER***: No camera was found.')
         else:
-            logger.debug(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
+            logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
         self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
-            SCAN)
+            "orsay_scan_device")
         if not self.__OrsayScanInstrument:
-            logger.warning('***LASER***: Could not find SCAN module. Check for issues.')
-            logger.info('***LASER***: If usim available, grabbing usim Scan Device.')
+            logging.info('***LASER***: Could not find SCAN module. Check for issues.')
+            logging.info('***LASER***: If usim available, grabbing usim Scan Device.')
             self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
                 "usim_scan_device")
-            if not self.__OrsayScanInstrument: logger.warning(
+            if not self.__OrsayScanInstrument: logging.info(
                 '***LASER***: Could not find USIM SCAN module. Check nionswift website for instructions.')
 
             # # CLARITY: # self.__OrsayScanInstrument is the same as the way I did with the camera. If i have put a
@@ -482,7 +466,7 @@ class gainDevice(Observable.Observable):
             # self.__OrsayScanInstrument) are identical
 
         else:
-            logger.info('***LASER***: SCAN module properly loaded.')
+            logging.info('***LASER***: SCAN module properly loaded.')
 
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
 
@@ -491,14 +475,14 @@ class gainDevice(Observable.Observable):
                 from SirahCredoServer.server import ServerSirahCredoLaser
                 ss = ServerSirahCredoLaser(self.__host, self.__port)
                 threading.Thread(target=ss.main, args=()).start()
-                logger.info('***LASER***: Connecting o local Host.')
+                logging.info('***LASER***: Connecting o local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
-                logger.info('***LASER***: Connecting to VG Lumiere.')
+                logging.info('***LASER***: Connecting to VG Lumiere.')
             elif self.__host == '129.175.81.128':
-                logger.info('***LASER***: Connecting to Raspberry Pi.')
+                logging.info('***LASER***: Connecting to Raspberry Pi.')
 
-            logger.info(f'***LASER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
+            logging.info(f'***LASER***: Trying to connect in Host {self.__host} using Port {self.__port}.')
             self.__serverLaser = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'laser')
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
                                power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
@@ -511,7 +495,7 @@ class gainDevice(Observable.Observable):
             self.__serverHV = hv.HVDeflector()
 
             if self.__serverLaser.server_ping():
-                logger.info('***LASER***: Connection with server successful.')
+                logging.info('***LASER***: Connection with server successful.')
                 if self.__camera and self.__OrsayScanInstrument:
                     if hasattr(self.__OrsayScanInstrument.scan_device, 'orsayscan'):
                         self.fast_blanker_status_f = False #fast blanker OFF
@@ -536,11 +520,11 @@ class gainDevice(Observable.Observable):
                 else:
                     return False
             else:
-                logger.warning(
+                logging.info(
                     '***LASER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
                 return False
         except ConnectionRefusedError:
-            logger.error('***LASER***: No server was found. Check if server is hanging and it is in the good host.')
+            logging.info('***LASER***: No server was found. Check if server is hanging and it is in the good host.')
             return False
 
     def sht(self):
@@ -571,7 +555,7 @@ class gainDevice(Observable.Observable):
             self.free_event.fire("all")
 
     def grab_det(self, mode, index, npic, show):
-        logger.info("***LASER***: Scanning Full Image.")
+        logging.info("***LASER***: Scanning Full Image.")
         # this gets frame parameters
         det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
         # this multiplies pixels(x) * pixels(y) * pixel_time
@@ -584,7 +568,7 @@ class gainDevice(Observable.Observable):
         self.det_acq.fire(det_di, mode, index, npic, show)
 
     def abt(self):
-        logger.warning('***LASER***: Abort Measurement.')
+        logging.info('***LASER***: Abort Measurement.')
         if not self.__abort_force:
             self.__abort_force = True
             self.__serverLaser.abort_control()  # abort laser thread as well.
@@ -593,7 +577,7 @@ class gainDevice(Observable.Observable):
         except AttributeError:
             pass
 
-        logger.info(f'Number of Threads current alive is {threading.active_count()}')
+        logging.info(f'***LASER***: Number of Threads current alive is {threading.active_count()}')
         self.run_status_f = False  # force free GUI
 
     def acq_mon(self):
@@ -668,7 +652,7 @@ class gainDevice(Observable.Observable):
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003) #this is mandatory as it measures power
         else:
-            logger.warning(
+            logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav")
             self.__abort_force = True
 
@@ -689,7 +673,7 @@ class gainDevice(Observable.Observable):
                     self.__serverLaser.set_scan_thread_hardware_status() == 2 and self.__serverLaser.set_scan_thread_locked()):
                 # check if laser changes have finished and thread step is over
                 self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
-                logger.debug("***ACQUISITION***: Moving to next wavelength...")
+                logging.info("***ACQUISITION***: Moving to next wavelength...")
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
         self.sht_f = False
@@ -735,7 +719,7 @@ class gainDevice(Observable.Observable):
                 self.grab_det("middle", self.__acq_number, i, True)
             i += 1
         self.sht_f = False
-        logger.info("***ACQUISITION***: Finishing laser/servo measurement. Acquiring conventional EELS for reference.")
+        logging.info("***ACQUISITION***: Finishing laser/servo measurement. Acquiring conventional EELS for reference.")
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
             self.combo_data_f = True
@@ -773,7 +757,7 @@ class gainDevice(Observable.Observable):
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*4.0)
         else:
-            logger.warning(
+            logging.info(
                 "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav || Not Focus mode.")
             self.run_status_f = False  # acquisition is over
             return
@@ -795,14 +779,14 @@ class gainDevice(Observable.Observable):
                     self.__serverLaser.set_scan_thread_hardware_status() == 2 and self.__serverLaser.set_scan_thread_locked()):
                 # check if laser changes have finished and thread step is over
                 self.__serverLaser.set_scan_thread_release()  # if yes, you can advance
-                logger.debug("***LASER***: Moving to next wavelength...")
+                logging.info("***LASER***: Moving to next wavelength...")
                 time.sleep(0.3 * self.__step_wav / (0.5))
                 self.combo_data_f = True  # check laser now
             else:
                 self.abt()  # execute our abort routine (laser and acq thread)
 
         self.sht_f = False
-        logger.info("***LASER***: Finishing laser measurement. Acquiring conventional EELS for reference.")
+        logging.info("***LASER***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
             self.append_data.fire(self.__power02, i, j, last_cam_acq, j==j_max-1)
@@ -842,10 +826,10 @@ class gainDevice(Observable.Observable):
                     self.cur_d_f = self.__diode
             elif message == 666:
                 self.__abort_force = True
-                logger.error('***LASER***: Lost connection with server. Please check if server is active.')
+                logging.info('***LASER***: Lost connection with server. Please check if server is active.')
                 self.server_shutdown.fire()
             else:
-                logger.warning(f'***LASER***: Message {message} is not recognizable')
+                logging.info(f'***LASER***: Message {message} is not recognizable')
         return sendMessage
 
     def Laser_stop_all(self):
@@ -887,11 +871,11 @@ class gainDevice(Observable.Observable):
             self.run_status_f = True
             response = self.__serverLaser.setWL(self.__start_wav, self.__cur_wav)
             if response == 1:
-                logger.debug("***LASER***: start WL is current WL")
+                logging.info("***LASER***: start WL is current WL")
                 self.run_status_f = False
                 self.combo_data_f = False #when false, GUI is fre-ed by status
             elif response == 2:
-                logger.debug("***LASER***: Current WL being updated...")
+                logging.info("***LASER***: Current WL being updated...")
                 self.run_status_f = True
                 self.combo_data_f = False #when false, GUI is fre-ed by status
                 threading.Timer(0.05, self.wavelength_ready, args=()).start()
@@ -1017,7 +1001,7 @@ class gainDevice(Observable.Observable):
             self.__serverPS.comm('C1:' + str(cvalue) + '\n')
             self.__serverPS.comm('C2:' + str(cvalue) + '\n')
         else:
-            logger.warning('***LASER***: Attempt to put a current outside allowed range. Check global_settings.')
+            logging.info('***LASER***: Attempt to put a current outside allowed range. Check global_settings.')
 
         if not self.__status:
             self.property_changed_event.fire("cur_d1_f")
@@ -1164,7 +1148,7 @@ class gainDevice(Observable.Observable):
             self.__servo_step = int(value)
         except:
             self.__servo_step = 1
-            logger.warning('***LASER***: Please enter an integer for servo step.')
+            logging.info('***LASER***: Please enter an integer for servo step.')
         if not self.__status:
             self.__servo_pts = int(self.__servo_pos / self.__servo_step)
             self.property_changed_event.fire("servo_pts_f")
@@ -1270,7 +1254,7 @@ class gainDevice(Observable.Observable):
             self.__serverPM[1].pw_set_avg(self.__powermeter_avg)
         except:
             self.__powermeter_avg = 10
-            logger.warning("***LASER***: Please enter an integer. Using 10.")
+            logging.info("***LASER***: Please enter an integer. Using 10.")
 
     @property
     def per_pic_f(self):
@@ -1290,7 +1274,7 @@ class gainDevice(Observable.Observable):
             self.__nper_pic = int(value)
         except:
             self.__nper_pic = 0
-            logger.warning('***LASER***: Please enter an integer for detectors grab.')
+            logging.info('***LASER***: Please enter an integer for detectors grab.')
 
     @property
     def dye_f(self):
@@ -1318,7 +1302,7 @@ class gainDevice(Observable.Observable):
             self.__port = int(value)
         except TypeError:
             self.__port = 65432
-            logger.warning('***LASER***: Port must be an integer. Using 65432.')
+            logging.info('***LASER***: Port must be an integer. Using 65432.')
 
     @property
     def hv_f(self):

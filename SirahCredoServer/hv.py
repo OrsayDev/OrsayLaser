@@ -57,10 +57,21 @@ class HVDeflector():
                 self.successful = False
                 logging.info(f"***HV Deflector***: Fast blanker HV was not found. Check for hardware.")
 
-    def set_voltage(self, v):
+    def set_voltage(self, v, which='b'):
+        """
+
+        :param v: Voltage, in V.
+        :param which: Polarization of the voltage. V+ is p. V- is n. Both is b.
+        :return:
+        """
         try:
             veff = int(v/10)
-            msg = ('HV+ ' + str(veff)+'\n'+'HV- ' + str(veff)).encode()
+            if which=='p':
+                msg = ('HV+ ' + str(veff) + '\n').encode()
+            elif which=='n':
+                msg = ('HV- ' + str(veff) + '\n').encode()
+            elif which=='b':
+                msg = ('HV+ ' + str(veff) + '\n' + 'HV- ' + str(veff)).encode()
             self.s.sendall(msg)
             return 200
         except:

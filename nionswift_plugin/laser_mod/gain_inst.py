@@ -384,7 +384,7 @@ class gainDevice(Observable.Observable):
         self.__dye = 0
         self.__host = "127.0.0.1"
         self.__port = 65432
-        self.__hv = 0
+        self.__hv = [0, 0]
 
         self.__camera = None
         self.__data = None
@@ -1306,11 +1306,22 @@ class gainDevice(Observable.Observable):
 
     @property
     def hv_f(self):
-        return self.__hv
+        return self.__hv[0]
 
     @hv_f.setter
     def hv_f(self, value):
-        self.__hv = value
-        self.__serverHV.set_voltage(value)
+        self.__hv[0] = value
+        self.__serverHV.set_voltage(value, 'p')
         self.property_changed_event.fire('hv_f')
+        self.free_event.fire('all')
+
+    @property
+    def hv_minus_f(self):
+        return self.__hv[1]
+
+    @hv_minus_f.setter
+    def hv_minus_f(self, value):
+        self.__hv[1] = value
+        self.__serverHV.set_voltage(value, 'n')
+        self.property_changed_event.fire('hv_minus_f')
         self.free_event.fire('all')

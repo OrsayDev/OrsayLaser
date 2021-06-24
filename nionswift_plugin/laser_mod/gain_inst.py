@@ -1312,7 +1312,11 @@ class gainDevice(Observable.Observable):
 
     @hv_f.setter
     def hv_f(self, value):
-        self.__hv = value
+        try:
+            self.__hv = int(value)
+        except ValueError:
+            self.__hv = 0
+            logging.info('***LASER***: Value must be an integer. Setting HV to 0.')
         hratio = abs(self.__hvRatio)/100.
         if self.__hvRatio == 0:
             self.__hvAbs = [self.__hv, self.__hv]
@@ -1332,5 +1336,11 @@ class gainDevice(Observable.Observable):
     @hv_ratio_f.setter
     def hv_ratio_f(self, value):
         self.__hvRatio = value
+        if self.__hvRatio == 0:
+            logging.info('***LASER***: Ratio is centered. HV is symmetrical.')
+        elif self.__hvRatio > 0:
+            logging.info(f'***LASER***: HV is reduced {value}% in HV-.')
+        else:
+            logging.info(f'***LASER***: HV is reduced {abs(value)}% in HV+.')
         self.property_changed_event.fire('hv_ratio_f')
         self.free_event.fire('all')

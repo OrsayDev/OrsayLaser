@@ -66,6 +66,9 @@ class HVDeflector():
         """
         try:
             veff = int(v/10)
+            if v>1000:
+                logging.info(f"***HV Deflector***: Voltage must be less than 1000V. No action taken.")
+                return
             if which=='p':
                 msg = ('HV+ ' + str(veff) + '\n').encode()
             elif which=='n':

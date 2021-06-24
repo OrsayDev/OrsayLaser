@@ -1125,24 +1125,21 @@ class gainView:
         self.counts_value = ui.create_label(text='@binding(instrument.laser_counts_f)')
 
         self.hv_label = ui.create_label(text='Voltage (V):')
-        self.hv_slider = ui.create_slider(name='hv_slider', minimum=0, maximum=1000, width=250,
-                                          value='@binding(instrument.hv_f)')
-        self.hv_value = ui.create_label(text='@binding(instrument.hv_f)')
+        self.hv_value = ui.create_line_edit(name='hv_slider', text='@binding(instrument.hv_f)', width=50)
 
 
         self.hv_label_ratio = ui.create_label(text='HV Ratio:')
-        self.hv_slider_ratio = ui.create_slider(name='hv_slider_ratio', minimum=-100, maximum=100, width=250,
+        self.hv_slider_ratio = ui.create_slider(name='hv_slider_ratio', minimum=-100, maximum=100, width=150,
                                           value='@binding(instrument.hv_ratio_f)')
-        self.hv_value_ratio = ui.create_label(text='@binding(instrument.hv_ratio_f)')
 
         self.final_row = ui.create_row(self.fast_blanker_checkbox,
                                        ui.create_spacing(25), self.counts_label, self.counts_value,
                                        ui.create_spacing(25), self.stop_pb, ui.create_stretch(),
-                                       self.hv_label, ui.create_spacing(10), self.hv_value, ui.create_spacing(10),
-                                       self.hv_slider)
+                                       self.hv_label, ui.create_spacing(10),
+                                       self.hv_value, ui.create_spacing(50))
 
         self.hv_ratio_row = ui.create_row(ui.create_stretch(), self.hv_label_ratio, ui.create_spacing(10),
-                                          self.hv_value_ratio, ui.create_spacing(10), self.hv_slider_ratio)
+                                          self.hv_slider_ratio, ui.create_spacing(25))
 
         self.blanker_group = ui.create_group(title='Fast Blanker / HV Control', content=ui.create_column(
             self.delay_row, self.width_row, self.final_row, self.hv_ratio_row)

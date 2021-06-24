@@ -384,7 +384,9 @@ class gainDevice(Observable.Observable):
         self.__dye = 0
         self.__host = "127.0.0.1"
         self.__port = 65432
-        self.__hv = [0, 0]
+        self.__hv = 0
+        self.__hvAbs = [0, 0]
+        self.__hvRatio = 0
 
         self.__camera = None
         self.__data = None
@@ -1306,22 +1308,29 @@ class gainDevice(Observable.Observable):
 
     @property
     def hv_f(self):
-        return self.__hv[0]
+        return self.__hv
 
     @hv_f.setter
     def hv_f(self, value):
-        self.__hv[0] = value
-        self.__serverHV.set_voltage(value, 'p')
+        self.__hv = value
+        hratio = abs(self.__hvRatio)/100.
+        if self.__hvRatio == 0:
+            self.__hvAbs = [self.__hv, self.__hv]
+        elif self.__hvRatio > 0:
+            self.__hvAbs = [self.__hv, (1-hratio)*self.__hv]
+        else:
+            self.__hvAbs = [(1-hratio)*self.__hv, self.__hv]
+        self.__serverHV.set_voltage(self.__hvAbs[0], 'p')
+        self.__serverHV.set_voltage(self.__hvAbs[1], 'n')
         self.property_changed_event.fire('hv_f')
         self.free_event.fire('all')
 
     @property
-    def hv_minus_f(self):
-        return self.__hv[1]
+    def hv_ratio_f(self):
+        return self.__hvRatio
 
-    @hv_minus_f.setter
-    def hv_minus_f(self, value):
-        self.__hv[1] = value
-        self.__serverHV.set_voltage(value, 'n')
-        self.property_changed_event.fire('hv_minus_f')
+    @hv_ratio_f.setter
+    def hv_ratio_f(self, value):
+        self.__hvRatio = value
+        self.property_changed_event.fire('hv_ratio_f')
         self.free_event.fire('all')

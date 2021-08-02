@@ -267,12 +267,15 @@ class gainhandler:
 
     def more_piezo_push(self, widget):
         if widget == self.more_m1_pb:
-            print('m1')
+            self.instrument.piezo_m1_f += self.instrument.piezo_step_f
         elif widget == self.more_m2_pb:
-            print('m2')
+            self.instrument.piezo_m2_f += self.instrument.piezo_step_f
 
     def less_piezo_push(self, widget):
-        pass
+        if widget == self.less_m1_pb:
+            self.instrument.piezo_m1_f -= self.instrument.piezo_step_f
+        elif widget == self.less_m2_pb:
+            self.instrument.piezo_m2_f -= self.instrument.piezo_step_f
 
     def more_servo_push(self, widget):
         self.instrument.servo_f += self.instrument.servo_step_f

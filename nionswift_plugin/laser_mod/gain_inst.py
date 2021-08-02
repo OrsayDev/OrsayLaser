@@ -12,6 +12,8 @@ import socket
 from SirahCredoServer import power
 from SirahCredoServer import hv
 
+from Modules import Kinesis_PMC
+
 from . import control_routine as ctrlRout
 
 def SENDMYMESSAGEFUNC(sendmessagefunc):
@@ -405,6 +407,11 @@ class gainDevice(Observable.Observable):
         self.__serverPM = [None, None]
         self.__serverPS = None
         self.__serverArd = None
+        self.__piezoMotor = Kinesis_PMC.TLKinesisPiezoMotorController('97101311', pollingTime=100, TIMEOUT=3.0)
+        if not self.__piezoMotor:
+            logging.info('***LASER***: Piezo motor was not detected.')
+        self.__mpos = self.__piezoMotor.GetCurrentPositionAll()
+        print(self.__mpos)
 
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
@@ -1354,7 +1361,7 @@ class gainDevice(Observable.Observable):
     @piezo_step_f.setter
     def piezo_step_f(self, value):
         try:
-            self.__piezoStep = value
+            self.__piezoStep = int(value)
         except TypeError:
             self.__piezoStep = 100
             logging.info('***LASER***: Piezo step must be an integer. Using default as 100.')
@@ -1366,6 +1373,9 @@ class gainDevice(Observable.Observable):
     @piezo_m1_f.setter
     def piezo_m1_f(self, value):
         self.__mpos[0] = value
+        self.__piezoMotor.MoveAbsolute(1, self.__mpos[0])
+        self.property_changed_event.fire('piezo_m1_f')
+        self.free_event.fire('all')
 
     @property
     def piezo_m2_f(self):
@@ -1374,3 +1384,6 @@ class gainDevice(Observable.Observable):
     @piezo_m2_f.setter
     def piezo_m2_f(self, value):
         self.__mpos[1] = value
+        self.__piezoMotor.MoveAbsolute(2, self.__mpos[1])
+        self.property_changed_event.fire('piezo_m2_f')
+        self.free_event.fire('all')

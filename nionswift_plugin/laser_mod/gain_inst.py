@@ -1367,6 +1367,7 @@ class gainDevice(Observable.Observable):
 
     @property
     def piezo_m1_f(self):
+        self.__mpos[0] = self.__piezoMotor.GetCurrentPosition(1)
         return self.__mpos[0]
 
     @piezo_m1_f.setter
@@ -1378,6 +1379,7 @@ class gainDevice(Observable.Observable):
 
     @property
     def piezo_m2_f(self):
+        self.__mpos[1] = self.__piezoMotor.GetCurrentPosition(2)
         return self.__mpos[1]
 
     @piezo_m2_f.setter

@@ -409,9 +409,8 @@ class gainDevice(Observable.Observable):
         self.__serverArd = None
         self.__piezoMotor = Kinesis_PMC.TLKinesisPiezoMotorController('97101311', pollingTime=100, TIMEOUT=3.0)
         if not self.__piezoMotor:
-            logging.info('***LASER***: Piezo motor was not detected.')
+            logging.info('***LASER***: Piezo motor was not detected. Using the simulation piezo.')
         self.__mpos = self.__piezoMotor.GetCurrentPositionAll()
-        print(self.__mpos)
 
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)

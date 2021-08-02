@@ -371,8 +371,8 @@ class gainDevice(Observable.Observable):
         self.__servo_pts = 0
         self.__servo_wobbler = False
         self.__ctrl_type = 0
-        self.__delay = 0 #905 * 1e-9
-        self.__width = 0 # 50 * 1e-9
+        self.__delay = 1850 * 1e-9
+        self.__width = 50 * 1e-9
         self.__fb_status = False
         self.__counts = 0
         self.__frequency = 10000
@@ -387,6 +387,8 @@ class gainDevice(Observable.Observable):
         self.__hv = 0
         self.__hvAbs = [0, 0]
         self.__hvRatio = 0
+        self.__piezoStep = 100
+        self.__mpos = [0, 0, 0, 0]
 
         self.__camera = None
         self.__data = None
@@ -1344,3 +1346,31 @@ class gainDevice(Observable.Observable):
             logging.info(f'***LASER***: HV is reduced {abs(value)}% in HV+.')
         self.property_changed_event.fire('hv_ratio_f')
         self.free_event.fire('all')
+
+    @property
+    def piezo_step_f(self):
+        return self.__piezoStep
+
+    @piezo_step_f.setter
+    def piezo_step_f(self, value):
+        try:
+            self.__piezoStep = value
+        except TypeError:
+            self.__piezoStep = 100
+            logging.info('***LASER***: Piezo step must be an integer. Using default as 100.')
+
+    @property
+    def piezo_m1_f(self):
+        return self.__mpos[0]
+
+    @piezo_m1_f.setter
+    def piezo_m1_f(self, value):
+        self.__mpos[0] = value
+
+    @property
+    def piezo_m2_f(self):
+        return self.__mpos[1]
+
+    @piezo_m2_f.setter
+    def piezo_m2_f(self, value):
+        self.__mpos[1] = value

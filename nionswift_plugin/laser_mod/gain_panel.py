@@ -167,7 +167,8 @@ class gainhandler:
     def init_handler(self):
         self.event_loop.create_task(self.do_enable(True, ['']))
         self.event_loop.create_task(self.do_enable(False, ['init_pb', 'server_ping_push', 'host_value', 'port_value',
-                                                           'server_value', 'server_choice']))  # not working as something is calling this guy
+                                                           'server_value', 'server_choice', 'more_m1_pb', 'more_m2_pb',
+                                                           'less_m1_pb', 'less_m2_pb']))  # not working as something is calling this guy
         self.normalize_check_box.checked = False  # in process_data
         self.normalize_current_check_box.checked = True
         self.display_check_box.checked = True
@@ -263,6 +264,15 @@ class gainhandler:
 
     def less_push(self, widget):
         self.instrument.cur_d_f -= 5
+
+    def more_piezo_push(self, widget):
+        if widget == self.more_m1_pb:
+            print('m1')
+        elif widget == self.more_m2_pb:
+            print('m2')
+
+    def less_piezo_push(self, widget):
+        pass
 
     def more_servo_push(self, widget):
         self.instrument.servo_f += self.instrument.servo_step_f
@@ -1174,6 +1184,54 @@ class gainView:
             self.init_row, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
             self.buttons_group))
 
+        ## BEGINA ALIGNMENT TAB ##
+
+        # Piezo Step
+        self.step_label = ui.create_label(text='Piezo Step: ')
+        self.step_value = ui.create_line_edit(text='@binding(instrument.piezo_step_f)', width=100)
+        self.piezo_step_row = ui.create_row(self.step_label, self.step_value, ui.create_stretch())
+
+        #Individual Motors
+            #Motor 1
+        self.m1_label = ui.create_label(text='Motor 1: ')
+        self.less_m1_pb = ui.create_push_button(text="<<", name='less_m1_pb', on_clicked="less_piezo_push",
+                                                   width=50)
+        self.more_m1_pb = ui.create_push_button(text=">>", name='more_m1_pb', on_clicked="more_piezo_push",
+                                                   width=50)
+        self.m1_pos_label = ui.create_label(text='Current Position: ')
+        self.m1_value = ui.create_label(text='@binding(instrument.piezo_m1_f)')
+
+        self.m1_row = ui.create_row(self.m1_label, self.less_m1_pb, self.more_m1_pb,
+                                    self.m1_pos_label,
+                                    self.m1_value, ui.create_stretch(),
+                                       spacing=12)
+            # Motor 2
+        self.m2_label = ui.create_label(text='Motor 2: ')
+        self.less_m2_pb = ui.create_push_button(text="<<", name='less_m2_pb', on_clicked="less_piezo_push",
+                                                width=50)
+        self.more_m2_pb = ui.create_push_button(text=">>", name='more_m2_pb', on_clicked="more_piezo_push",
+                                                width=50)
+        self.m2_pos_label = ui.create_label(text='Current Position: ')
+        self.m2_value = ui.create_label(text='@binding(instrument.piezo_m2_f)')
+
+        self.m2_row = ui.create_row(self.m2_label, self.less_m2_pb, self.more_m2_pb,
+                                    self.m2_pos_label,
+                                    self.m2_value, ui.create_stretch(),
+                                    spacing=12)
+
+        self.alignment_group = ui.create_group(title='Fiber Head Alignment',
+                                               content=ui.create_column(
+                                                   self.piezo_step_row,
+                                                   self.m1_row,
+                                                   self.m2_row,
+                                               ))
+
+        self.alignment_tab = ui.create_tab(label='Piezo Alignment', content=ui.create_column(
+            self.alignment_group, ui.create_stretch()))
+
+        ## END MY ALIGNMENT TAB
+
+
         ### BEGIN MY SECOND TAB ##
 
         self.grab_pb = ui.create_push_button(text='Grab', name='grab_pb', on_clicked='grab_data_item')
@@ -1285,7 +1343,7 @@ class gainView:
                                      )
         ## END ANALYSYS TAB
 
-        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab)
+        self.tabs = ui.create_tabs(self.main_tab, self.alignment_tab, self.ana_tab)
         self.ui_view = ui.create_column(self.tabs)
 
 def create_spectro_panel(document_controller, panel_id, properties):

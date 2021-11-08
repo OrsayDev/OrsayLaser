@@ -12,7 +12,7 @@ import socket
 from SirahCredoServer import power
 from SirahCredoServer import hv
 
-from Modules import Kinesis_PMC
+#from Modules import Kinesis_PMC
 
 from . import control_routine as ctrlRout
 
@@ -407,10 +407,11 @@ class gainDevice(Observable.Observable):
         self.__serverPM = [None, None]
         self.__serverPS = None
         self.__serverArd = None
-        self.__piezoMotor = Kinesis_PMC.TLKinesisPiezoMotorController('97101311', pollingTime=100, TIMEOUT=3.0)
-        if not self.__piezoMotor:
-            logging.info('***LASER***: Piezo motor was not detected. Using the simulation piezo.')
-        self.__mpos = self.__piezoMotor.GetCurrentPositionAll()
+
+        #self.__piezoMotor = Kinesis_PMC.TLKinesisPiezoMotorController('97101311', pollingTime=100, TIMEOUT=3.0)
+        #if not self.__piezoMotor:
+        #    logging.info('***LASER***: Piezo motor was not detected. Using the simulation piezo.')
+        #self.__mpos = self.__piezoMotor.GetCurrentPositionAll()
 
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
@@ -497,9 +498,12 @@ class gainDevice(Observable.Observable):
             self.__serverPM = [LaserServerHandler(self.__laser_message, self.__host, self.__port, 'pm01'),
                                power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')]
             if not self.__serverPM[1].successful:
-                logging.info('***LASER***: 2nd powermeter not found. Entering in debug mode.')
-                from SirahCredoServer.virtualInstruments import power_vi
-                self.__serverPM[1] = power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
+                logging.info('***LASER***: 2nd powermeter not found. Trying second powermeter.')
+                self.__serverPM[1] = power.TLPowerMeter('USB0::0x1313::0x8072::1912791 ::INSTR')
+                if not self.__serverPM[1].successful:
+                    logging.info('***LASER***: 2nd powermeter not found (again). Entering in debug mode.')
+                    from SirahCredoServer.virtualInstruments import power_vi
+                    self.__serverPM[1] = power_vi.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
             self.__serverPS = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ps')
             self.__serverArd = LaserServerHandler(self.__laser_message, self.__host, self.__port, 'ard')
             self.__serverHV = hv.HVDeflector()
@@ -1367,24 +1371,24 @@ class gainDevice(Observable.Observable):
 
     @property
     def piezo_m1_f(self):
-        self.__mpos[0] = self.__piezoMotor.GetCurrentPosition(1)
+        #self.__mpos[0] = self.__piezoMotor.GetCurrentPosition(1)
         return self.__mpos[0]
 
     @piezo_m1_f.setter
     def piezo_m1_f(self, value):
         self.__mpos[0] = value
-        self.__piezoMotor.MoveAbsolute(1, self.__mpos[0])
+        #self.__piezoMotor.MoveAbsolute(1, self.__mpos[0])
         self.property_changed_event.fire('piezo_m1_f')
         self.free_event.fire('all')
 
     @property
     def piezo_m2_f(self):
-        self.__mpos[1] = self.__piezoMotor.GetCurrentPosition(2)
+        #self.__mpos[1] = self.__piezoMotor.GetCurrentPosition(2)
         return self.__mpos[1]
 
     @piezo_m2_f.setter
     def piezo_m2_f(self, value):
         self.__mpos[1] = value
-        self.__piezoMotor.MoveAbsolute(2, self.__mpos[1])
+        #self.__piezoMotor.MoveAbsolute(2, self.__mpos[1])
         self.property_changed_event.fire('piezo_m2_f')
         self.free_event.fire('all')

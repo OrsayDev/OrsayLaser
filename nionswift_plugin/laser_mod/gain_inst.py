@@ -367,6 +367,7 @@ class gainDevice(Observable.Observable):
         self.__power_ref = 0.
         self.__cubeRT = 10
         self.__autoLock = True
+        self.__tdc_status = False
         self.__diode = 0.10
         self.__servo_pos = 0
         self.__servo_pos_initial = self.__servo_pos
@@ -1109,6 +1110,16 @@ class gainDevice(Observable.Observable):
             self.__serverPS.comm('G:0\n')
         self.property_changed_event.fire('q_f')
         self.free_event.fire("all")
+
+    @property
+    def tdc_f(self):
+        return self.__tdc_status
+
+    @tdc_f.setter
+    def tdc_f(self, value: bool):
+        self.__tdc_status = value
+        if value:
+            self.__OrsayScanInstrument.scan_device.orsayscan.SetTdcLine(1, 2, 13) #Copy Line 05
 
     @property
     def ascii_f(self):

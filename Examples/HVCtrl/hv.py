@@ -14,7 +14,7 @@ except socket.timeout:
     except:
         print("No HV was found.")
 
-v = 10
+v = 50
 veff = int(v/10)
 plus = ('HV+ ' + str(veff)+'\n').encode()
 less = ('HV- ' + str(veff)).encode()

@@ -1062,9 +1062,10 @@ class gainView:
         self.diode_cur_line = ui.create_line_edit(text='@binding(instrument.cur_d_edit_f)', name='cur_line', width=100)
         self.less_pb = ui.create_push_button(text="<<", name="less_pb", on_clicked="less_push", width=25)
         self.more_pb = ui.create_push_button(text=">>", name="more_pb", on_clicked="more_push", width=25)
+        self.tdc_send = ui.create_check_box(text='Line5 to TDC1', name="tdc_send", checked='@binding(instrument.tdc_f)')
         self.ui_view10 = ui.create_row(self.diode_cur_label, self.diode_cur_slider, self.text_label,
                                        ui.create_spacing(12), self.less_pb, ui.create_spacing(5),
-                                       self.more_pb, ui.create_stretch())
+                                       self.more_pb, ui.create_stretch(), self.tdc_send)
 
         self.diode1_temp_label = ui.create_label(text='T1 (°C): ')
         self.diode1_temp_value = ui.create_label(text='@binding(instrument.t_d1_f)')
@@ -1188,6 +1189,7 @@ class gainView:
             self.buttons_group))
 
         ## BEGINA ALIGNMENT TAB ##
+        """
 
         # Piezo Step
         self.step_label = ui.create_label(text='Piezo Step: ')
@@ -1232,10 +1234,11 @@ class gainView:
         self.alignment_tab = ui.create_tab(label='Piezo Alignment', content=ui.create_column(
             self.alignment_group, ui.create_stretch()))
 
+        """
         ## END MY ALIGNMENT TAB
 
 
-        ### BEGIN MY SECOND TAB ##
+        ### BEGIN ANALYSIS TAB ##
 
         self.grab_pb = ui.create_push_button(text='Grab', name='grab_pb', on_clicked='grab_data_item')
         self.plot_power_wav = ui.create_push_button(text='Plot Pw-Wl', name='plot_power_wav', on_clicked='power_wav')
@@ -1346,7 +1349,7 @@ class gainView:
                                      )
         ## END ANALYSYS TAB
 
-        self.tabs = ui.create_tabs(self.main_tab, self.alignment_tab, self.ana_tab)
+        self.tabs = ui.create_tabs(self.main_tab, self.ana_tab)
         self.ui_view = ui.create_column(self.tabs)
 
 def create_spectro_panel(document_controller, panel_id, properties):

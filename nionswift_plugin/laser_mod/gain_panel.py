@@ -1117,7 +1117,7 @@ class gainView:
         self.delay_label = ui.create_label(text='Delay (ns): ')
         self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)', width=100)
         self.delay_slider = ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)',
-                                             minimum=1740, maximum=1850)
+                                             minimum=600, maximum=1200)
         self.save_delay_pb= ui.create_push_button(name='save_delay_pb', text='Save Delay', on_clicked='save_delay')
         self.delay_row = ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider,
                                        ui.create_stretch(), self.save_delay_pb)

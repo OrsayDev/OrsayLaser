@@ -606,13 +606,12 @@ class gainDevice(Observable.Observable):
         if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acq_transThread)
             self.__thread.start()
+    """
 
     def acq_pr(self):
-        self.__acq_number += 1
         if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acq_prThread)
             self.__thread.start()
-    """
 
     def acq(self):
         if self.__serverLaser.server_ping():
@@ -707,48 +706,61 @@ class gainDevice(Observable.Observable):
         #self.start_wav_f = self.__start_wav
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over
+    """
 
     def acq_prThread(self):
-        self.run_status_f = self.__power_ramp = self.sht_f = True
+        self.run_status_f = self.__power_ramp = True
         self.__abort_force = False
         self.__servo_pos_initial = self.__servo_pos
-        i_max = int(self.__servo_pos / self.__servo_step)
-        j_max = self.__avg
-        pics_array = numpy.linspace(0, i_max, min(self.__nper_pic + 2, i_max + 1), dtype=int)
-        pics_array = pics_array[1:]  # exclude zero
-        self.call_data.fire(self.__acq_number, i_max + 1, j_max, self.__start_wav, self.__start_wav, 0.0, 1,
-                            self.__delay, self.__width, self.__diode)
-        self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
-        self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*1.1)
+
+        # Laser power resolved thread begins
+        p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
+        q = self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
+        if (self.__serverLaser.set_scan_thread_check() and abs(
+                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
+            self.__acq_number += 1
+            self.call_data.fire(self.__acq_number, int(self.__servo_pos / self.__servo_step) + 1, self.__avg, self.__start_wav, self.__start_wav, 0.0, 1,
+                                self.__delay, self.__width, self.__diode, self.__power_transmission)
+            self.__camera.start_playing()
+            self.sht_f = True
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
+        else:
+            logging.info(
+                "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav || Not Focus mode.")
+            self.run_status_f = False
+            return
+
         i = 0
+        i_max = int(self.__servo_pos / self.__servo_step)
         j = 0
+        j_max = self.__avg
+
         while i < i_max and not self.__abort_force:
             while j < j_max and not self.__abort_force:
                 last_cam_acq = self.__camera.grab_next_to_finish()[0]
                 self.combo_data_f = True
-                self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+                self.append_data.fire(self.__power02, i, j, last_cam_acq, j==j_max-1 and i%2==0)
                 j += 1
             self.servo_f = self.servo_f - self.__servo_step
             j = 0
-            if i in pics_array and self.__per_pic:
-                self.grab_det("middle", self.__acq_number, i, True)
+            # Grabbing pics at the middle is currently disabled.
+            #if i in pics_array and self.__per_pic:
+            #    self.grab_det("middle", self.__acq_number, i, True)
             i += 1
         self.sht_f = False
         logging.info("***ACQUISITION***: Finishing laser/servo measurement. Acquiring conventional EELS for reference.")
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
-            self.combo_data_f = True
-            self.append_data.fire(self.combo_data_f, i, j, last_cam_acq)
+            self.append_data.fire(self.__power02, i, j, last_cam_acq, j==j_max-1)
             j += 1
+        self.combo_data_f = True
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()  # turns off our periodic thread.
         self.servo_f = self.__servo_pos_initial  # putting back at the initial position
-        self.combo_data_f = True
         self.__power_ramp = False
-        self.grab_det("end", self.__acq_number, 0, True)
+        #self.grab_det("end", self.__acq_number, 0, True)
         self.end_data.fire()
         self.run_status_f = False
-    """
 
     def acqThread(self):
         self.run_status_f = True
@@ -836,7 +848,7 @@ class gainDevice(Observable.Observable):
                     self.servo_f = self.servo_f + 1 if self.__power02 < self.__power_ref else self.servo_f - 1
                     if self.__servo_pos > 180: self.__servo_pos = 180
                     if self.__servo_pos < 0: self.__servo_pos = 0
-                if self.__ctrl_type == 2:
+                if self.__ctrl_type == 2 and not self.__power_ramp:
                     self.__diode = self.__diode + 0.02 if self.__power02 < self.__power_ref else self.__diode - 0.02
                     self.cur_d_f = self.__diode
             elif message == 666:

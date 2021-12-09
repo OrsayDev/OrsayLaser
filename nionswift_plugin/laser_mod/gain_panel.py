@@ -80,6 +80,12 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].offset = start
             self.dimensional_calibrations[0].scale = (step) / avg
             self.dimensional_calibrations[1].units = 'eV'
+        if which == "POWER_CAM_DATA":
+            self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
+            self.dimensional_calibrations[0].units = 'μW'
+            self.dimensional_calibrations[0].offset = 0
+            self.dimensional_calibrations[0].scale = 1
+            self.dimensional_calibrations[1].units = 'eV'
         if which == 'ALIGNED_CAM_DATA':
             self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
             self.dimensional_calibrations[0].units = 'nm'
@@ -419,7 +425,11 @@ class gainhandler:
 
         # CAMERA CALL
         self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
-        self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
+        if start == end and step == 0.0:
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "POWER_CAM_DATA", start, end, pts,
+                                                avg, step, delay, width, diode_cur, ctrl, trans)
+        else:
+            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
                                             avg, step, delay, width, diode_cur, ctrl, trans)
         self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 

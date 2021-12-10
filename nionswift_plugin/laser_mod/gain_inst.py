@@ -30,7 +30,7 @@ class LaserServerHandler():
         self.on = True
         self.s.sendall(which.encode())
         data = self.s.recv(512)
-        time.sleep(0.05)
+        #time.sleep(0.05)
 
     def server_ping(self):
         try:

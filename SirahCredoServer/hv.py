@@ -56,6 +56,9 @@ class HVDeflector():
             except:
                 self.successful = False
                 logging.info(f"***HV Deflector***: Fast blanker HV was not found. Check for hardware.")
+        except:
+            logging.info(f"***HV Deflector***: Unknown error. Please check for hardware.")
+
 
     def set_voltage(self, v, which='b'):
         """

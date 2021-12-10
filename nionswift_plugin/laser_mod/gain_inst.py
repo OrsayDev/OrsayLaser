@@ -30,7 +30,7 @@ class LaserServerHandler():
         self.on = True
         self.s.sendall(which.encode())
         data = self.s.recv(512)
-        time.sleep(0.01)
+        time.sleep(0.05)
 
     def server_ping(self):
         try:
@@ -487,7 +487,7 @@ class gainDevice(Observable.Observable):
                 from SirahCredoServer.server import ServerSirahCredoLaser
                 ss = ServerSirahCredoLaser(self.__host, self.__port)
                 threading.Thread(target=ss.main, args=()).start()
-                logging.info('***LASER***: Connecting o local Host.')
+                logging.info('***LASER***: Connecting to local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
                 logging.info('***LASER***: Connecting to VG Lumiere.')

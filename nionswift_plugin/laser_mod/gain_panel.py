@@ -249,9 +249,7 @@ class gainhandler:
         #self.instrument.acq_trans()
 
     def acq_pr_push(self, widget):
-        logging.info("***PANEL***: Power resolved (PR) is disabled. This probably"
-                     " happened because we have a broken function.")
-        #self.instrument.acq_pr()
+        self.instrument.acq_pr()
 
     def abt_push(self, widget):
         self.instrument.abt()

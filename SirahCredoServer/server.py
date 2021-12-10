@@ -79,6 +79,7 @@ class ServerSirahCredoLaser:
             for s in readable:
                 if s is self.s:
                     clientsocket, address = self.s.accept()
+                    clientsocket.settimeout(1.0)
                     data = clientsocket.recv(512)
                     if data==b'snitch':
                         clientsocket.sendall(str((self.__ps.__dict__)).encode())

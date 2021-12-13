@@ -490,8 +490,10 @@ class gainDevice(Observable.Observable):
                 logging.info('***LASER***: Connecting to local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
+                self.__DEBUG = False
                 logging.info('***LASER***: Connecting to VG Lumiere.')
             elif self.__host == '129.175.81.128':
+                self.__DEBUG = False
                 logging.info('***LASER***: Connecting to Raspberry Pi.')
 
             logging.info(f'***LASER***: Trying to connect in Host {self.__host} using Port {self.__port}.')

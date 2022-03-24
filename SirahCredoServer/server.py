@@ -28,7 +28,7 @@ class ServerSirahCredoLaser:
             self.__pwmeter = [power_vi.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR')]
             self.__ard = ard_vi.Arduino()
             print('***SERVER***: Server Running in Local Host. Laser is a virtual instrument in this case.')
-        else
+        else:
             self.__sirah = laser.SirahCredoLaser('/dev/ttyUSB0')
             self.__ps = power_supply.SpectraPhysics('/dev/ttyUSB1')
             self.__pwmeter = [power.TLPowerMeter('USB0::4883::32882::1907040::0::INSTR')]

@@ -492,7 +492,7 @@ class gainDevice(Observable.Observable):
             elif self.__host == '129.175.82.159':
                 self.__DEBUG = False
                 logging.info('***LASER***: Connecting to VG Lumiere.')
-            elif self.__host == '192.168.199.9':
+            elif self.__host == '192.168.1.65':
                 self.__DEBUG = False
                 logging.info('***LASER***: Connecting to Raspberry Pi.')
 

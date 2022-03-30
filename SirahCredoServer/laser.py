@@ -27,9 +27,13 @@ class SirahCredoLaser:
             if not self.ser.is_open:
                 self.ser.open()
             self.successful = True
+            data = self.ser.read(512)
+            print('***LASER***: First data length: ', len(data))
+            self.auto_prompt_disable()
         except:
             print("***LASER***: Could not open serial port.")
             self.successful = False
+        
 
     def bytes_to_pos(self, s):
         dec_val = 0
@@ -58,6 +62,13 @@ class SirahCredoLaser:
         pos = -1.13903735e-9 * wl**5 + 2.49169408e-6 * wl**4 - 2.08761563e-3 * wl**3 - 2.78629338e-1 * wl**2 - 9.62421214e2 * wl + 2.14359461e6 #0.9 nm shift
         return round(pos)
 
+    def auto_prompt_disable(self):
+        mes = [60, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76, 62]
+        bs = bytearray(mes)
+        self.ser.write(bs)
+        data = self.ser.read(14)
+        print('***LASER***: Auto-prompt is off', data)
+
     def set_hardware_wl(self, wl):
         pos = self.wl_to_pos(wl)
         byt = self.pos_to_bytes(pos)
@@ -73,7 +84,7 @@ class SirahCredoLaser:
             except:
                 print("***LASER***: Could not write in laser serial port. Check port.")
 
-    def get_hardware_wl(self):
+    def get_hardware_wl_backup(self):
         mes = [60, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 62]
         bs = bytearray(mes)
         try:
@@ -95,6 +106,24 @@ class SirahCredoLaser:
             self.ser.open()
             print("***LASER***: Could not write/read in laser serial port. Check port.")
             return (580., None)
+
+
+    def get_hardware_wl(self):
+        mes = [60, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 62]
+        bs = bytearray(mes)
+        self.ser.write(bs)
+        data = self.ser.read(14)
+        assert data[0]==91
+        error = data[1:2]
+        status=data[3:4]
+        abs1 = data[4:8]
+        pos = self.bytes_to_pos(abs1)
+        cur_wl = self.pos_to_wl(pos)
+        if (error == bytes(1)):
+            return (cur_wl, status[0])
+        else:
+            print(f'***LASER***: Laser error message n. {error}.')
+            return (cur_wl, None)
 
     def set_startWL(self, wl: float, cur: float):
         self.set_hardware_wl(wl)

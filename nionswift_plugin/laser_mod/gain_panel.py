@@ -197,7 +197,7 @@ class gainhandler:
                 self.server_value.text = 'LH'
             elif self.host_value.text == '129.175.82.159':
                 self.server_value.text = 'VGLum'
-            elif self.host_value.text == '129.175.81.128':
+            elif self.host_value.text == '192.168.199.9':
                 self.server_value.text = 'Raspberry π'
             else:
                 self.server_value.text = 'User-Defined'
@@ -221,7 +221,7 @@ class gainhandler:
             self.host_value.text = '129.175.82.159'
             self.port_value.text = '65432'
         if current_index == 2:
-            self.host_value.text = '129.175.81.128'
+            self.host_value.text = '192.168.199.9'
             self.port_value.text = '65432'
 
         self.instrument.host_f = self.host_value.text

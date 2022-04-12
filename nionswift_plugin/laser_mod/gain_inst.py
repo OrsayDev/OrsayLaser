@@ -374,11 +374,11 @@ class gainDevice(Observable.Observable):
         self.__servo_pts = 0
         self.__servo_wobbler = False
         self.__ctrl_type = 1
-        self.__delay = 1000 * 1e-9
+        self.__delay = 700 * 1e-9
         self.__width = 250 * 1e-9
         self.__fb_status = False
         self.__counts = 0
-        self.__frequency = 5000
+        self.__frequency = 10000
         self.__acq_number = 0  # this is a strange variable. This measures how many gain acquire you did in order to
         # create new displays every new acquisition
         self.__powermeter_avg = 10

@@ -2,6 +2,7 @@ import numpy
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
+import hyperspy.api as hs
 import logging
 
 __author__ = "Yves Auad"
@@ -99,6 +100,10 @@ class gainData:
             fit_array[i] = _gaussian_fit(x, *coeff)
             if ene: print(f'***ACQUISITION***: Fitting Data: ' + format(i/fit_array.shape[0]*100, '.0f') + '%. Current Wavelength is: ' + format(1239.8/ene, '.2f') + ' nm')
         return fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array, ene_array
+
+    def hyperspy_align_zlp(self):
+        pass
+
 
     def align_zlp(self, raw_array, pts, avg, pixels, disp, mode='max'):
 

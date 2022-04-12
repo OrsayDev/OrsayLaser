@@ -23,7 +23,8 @@ import datetime
 _ = gettext.gettext
 
 class DataItemCreation():
-    def __init__(self, title, array, signal_dim, offset: list, scale: list, units: list, **kwargs):
+    def __init__(self, name, array, signal_dim, offset: list, scale: list, units: list, **kwargs):
+        self.metadata = kwargs
         self.timezone = Utility.get_local_timezone()
         self.timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
 
@@ -35,14 +36,23 @@ class DataItemCreation():
             self.dimensional_calibrations[index].offset, self.dimensional_calibrations[index].scale, self.dimensional_calibrations[index].units = x[0], x[1], x[2]
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
-                                                           metadata=kwargs,
+                                                           metadata=self.metadata,
                                                            timezone=self.timezone, timezone_offset=self.timezone_offset)
 
         self.data_item = DataItem.DataItem()
         self.data_item.set_xdata(self.xdata)
-        self.data_item.title = title
+        self.data_item.title = name
         self.data_item.description = kwargs
         self.data_item.caption = kwargs
+
+    def fast_update_data_only(self, array: numpy.array):
+        self.data_item.set_data(array)
+
+    def update_data_only(self, array: numpy.array):
+        self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
+                                                           metadata=self.metadata,
+                                                           timezone=self.timezone, timezone_offset=self.timezone_offset)
+        self.data_item.set_xdata(self.xdata)
 
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
@@ -212,10 +222,7 @@ class gainhandler:
             else:
                 self.server_value.text = 'User-Defined'
             self.event_loop.create_task(
-                self.do_enable(True, ['init_pb', 'plot_power_wav', 'align_zlp_max', 'align_zlp_fit', 'smooth_zlp',
-                                  'process_eegs_pb',
-                                  'process_power_pb', 'fit_pb',
-                                  'cancel_pb']))  # not working as something is
+                self.do_enable(True, ['init_pb']))  # not working as something is
         # calling this guy
 
 
@@ -332,52 +339,6 @@ class gainhandler:
                                   'cancel_pb'
                                   ]))
 
-    def save_delay(self, widget):
-        width_value = int(self.width_value.text); width_value = 5 * round(width_value/5)
-        delay_value = int(self.delay_value.text); delay_value = 10 * round(delay_value/10)
-        diode_value = float(self.diode_cur_value_label.text); diode_value = 0.05 * round(diode_value/0.05)
-        abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files/dif_delays"), str(width_value)+'.txt'))
-        file = open(abs_path, 'a')
-        file.write(str(format(diode_value, '.2f') + ',' + str(delay_value) + ',' + str(datetime.datetime.now()))+'\n')
-        file.close()
-
-    def show_delay(self, widget):
-        width_value = int(self.width_value.text);
-        width_value = 5 * round(width_value / 5)
-        try:
-            abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files/dif_delays"), str(width_value) + '.txt'))
-            file = open(abs_path, 'r')
-            content = file.readlines()
-            vals = dict()
-            for line in content:
-                current_line = line.split(',')
-                cur = current_line[0]; delay = current_line[1]
-                vals[str(cur)] = delay
-            file.close()
-            vals = ({key: value for key, value in sorted(vals.items(), key=lambda item: item[0])})
-            print('my dict is')
-            print(vals)
-        except FileNotFoundError:
-            logging.info('***PANEL***: Delay not yet catalogued.')
-
-    def show_dye(self, widget):
-        if self.dye_value.current_index == 0:
-            abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.json"))
-            with open(abs_path) as savfile:
-                pyr_597 = json.load(savfile)
-
-            spatial_calibs = pyr_597["spatial_calibrations"][0]
-
-            abs_path = os.path.abspath(os.path.join((__file__ + "/../aux_files"), "Pyrromethene_597.npy"))
-            array_597 = numpy.load(abs_path)
-            di_597 = DataItemLaserCreation('Pyrromethene 597', array_597, "power_as_wav",
-                                           spatial_calibs["offset"], None, None,
-                                           None, spatial_calibs["scale"], None,
-                                           None, None,
-                                           None, is_live=False)
-
-            self.event_loop.create_task(self.data_item_show(di_597.data_item))
-
     def show_det(self, xdatas, mode, nacq, npic, show):
 
         for data_items in self.document_controller.document_model._DocumentModel__data_items:
@@ -403,7 +364,7 @@ class gainhandler:
 
     def call_monitor(self):
         self.pow02_mon_array = numpy.zeros(200)
-        self.pow02_mon_di = DataItemLaserCreation("Power Fiber", self.pow02_mon_array, "POW")
+        self.pow02_mon_di = DataItemCreation("Power Fiber", self.pow02_mon_array, 1, [0], [1], ['time (arb. units)'])
         self.event_loop.create_task(self.data_item_show(self.pow02_mon_di.data_item))
 
     def append_monitor_data(self, value, index):
@@ -413,9 +374,16 @@ class gainhandler:
         self.pow02_mon_array[index] = power02
         self.pow02_mon_di.fast_update_data_only(self.pow02_mon_array)
 
-    def call_data(self, nacq, pts, avg, start, end, step, ctrl, delay, width, diode_cur, trans):
-        self.__adjusted = False
-        self.cam_pixels = 1024
+    def call_data(self, nacq, pts, avg, start, end, step, cam_acq, **kwargs):
+
+        if len(cam_acq.data.shape) > 1:
+            cam_pixels = cam_acq.data.shape[1]
+            cam_calibration = cam_acq.get_dimensional_calibration(1)
+        else:
+            cam_pixels = cam_acq.data.shape[0]
+            cam_calibration = cam_acq.get_dimensional_calibration(0)
+
+        self.cam_array = numpy.zeros((pts * avg, cam_pixels))
         self.avg = avg
         self.pts = pts
 
@@ -425,39 +393,25 @@ class gainhandler:
 
         # Power Meter call
         self.pow02_array = numpy.zeros(pts * avg)
-        self.pow02_di = DataItemLaserCreation("Power 02 " + str(nacq), self.pow02_array, "POW")
+        self.pow02_di = DataItemCreation("Power 02 " + str(nacq), self.pow02_array, 1, [0], [1], ['uW'])
 
         # CAMERA CALL
-        self.cam_array = numpy.zeros((pts * avg, self.cam_pixels))
-        if start == end and step == 0.0:
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "POWER_CAM_DATA", start, end, pts,
-                                                avg, step, delay, width, diode_cur, ctrl, trans)
-        else:
-            self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "CAM_DATA", start, end, pts,
-                                            avg, step, delay, width, diode_cur, ctrl, trans)
+        self.cam_di = DataItemCreation('Gain Data ' + str(nacq), self.cam_array, 2,
+                                       [start, cam_calibration.offset], [step / avg, cam_calibration.scale],
+                                       ['nm', 'eV'], title='Gain Data ' + str(nacq), start_wav=start, end_wav=end,
+                                       pts=pts, averages=avg, **kwargs)
         self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
+        # if start == end and step == 0.0:
+        #     self.cam_di = DataItemLaserCreation('Gain Data ' + str(nacq), self.cam_array, "POWER_CAM_DATA", start, end, pts,
+        #                                         avg, step, delay, width, diode_cur, ctrl, trans)
+        # else:
+        #     self.cam_di = DataItemCreation('nGain Data ' + str(nacq), self.cam_array, 2,
+        #                                    [start, cam_calibration.offset], [step/avg, cam_calibration.scale],
+        #                                    ['nm', 'eV'], **kwargs, start=start, end=end, pts=pts, avg=avg)
+        # self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
+
     def append_data(self, value, index1, index2, camera_data, update=True):
-
-        if not self.__adjusted and camera_data:
-            if len(camera_data.data.shape)>1:
-                self.cam_pixels = camera_data.data.shape[1]
-                cam_calibration = camera_data.get_dimensional_calibration(1)
-            else:
-                self.cam_pixels = camera_data.data.shape[0]
-                cam_calibration = camera_data.get_dimensional_calibration(0)
-
-            if self.cam_pixels != self.cam_array.shape[1]:
-                self.cam_array = numpy.zeros((self.pts * self.avg, self.cam_pixels))
-                logging.info('***PANEL***: Corrected #PIXELS.')
-            try:
-                self.cam_di.set_cam_di_calibration(cam_calibration)
-                logging.info('***PANEL***: Calibration OK.')
-            except:
-                logging.info(
-                    '***PANEL***: Calibration could not be done. Check if camera has get_dimensional_calibration.')
-
-            self.__adjusted = True
 
         if len(camera_data.data.shape)>1:
             cam_hor = numpy.sum(camera_data.data, axis=0)
@@ -490,37 +444,12 @@ class gainhandler:
         if self.__current_DI:
             self.gd = gain_data.HspyGain(self.__current_DI)
             self.gd.rebin_and_align()
-            new_di = DataItemLaserCreation('New'+self.gd.di.description['title'], self.gd.get_data(), "ALIGNED_CAM_DATA",
-                                           start=self.gd.di.description['start_wav'], avg=self.gd.di.description['averages'],
-                                           step=self.gd.di.description['step_wav'], cam_offset=self.gd.get_axes_offset(1),
-                                           cam_dispersion=self.gd.get_axes_scale(1))
-            new_di.set_cam_di_calibratrion_from_di(self.__current_DI)
+
+            new_di = DataItemCreation('Aligned_and_summed_'+self.gd.get_attr('title'), self.gd.get_data(), 2, self.gd.get_axes_offset_all(), self.gd.get_axes_scale_all(), self.gd.get_axes_units_all())
             self.event_loop.create_task(self.data_item_show(new_di.data_item))
-
-            test_di = DataItemCreation('test', self.gd.get_data(), 2, self.gd.get_axes_offset_all(), self.gd.get_axes_scale_all(), self.gd.get_axes_units_all())
-            self.event_loop.create_task(self.data_item_show(test_di.data_item))
-
         else:
             logging.info('***PANEL***: Could not find referenced Data Item.')
 
-    def power_wav(self, widget):
-        temp_dict = self.__current_DI.description
-        pwav = numpy.reshape(self.__current_DI_POW.data,
-                             (temp_dict['pts'], temp_dict['averages']))  # reshaped power array
-        pwav_avg = numpy.zeros(temp_dict['pts'] - 1)  # reshaped power array averaged
-
-        for i in range(temp_dict['pts'] - 1):
-            pwav_avg[i] = numpy.average(pwav[i]) - numpy.average(pwav[-1])
-
-        power_avg = DataItemLaserCreation('Avg_Power_' + temp_dict['title'], pwav_avg, "power_as_wav",
-                                          temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
-                                          temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
-                                          temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                          temp_dict['control'], temp_dict['initial_trans'], is_live=False)
-
-        self.plot_power_wav.enabled = False
-        self.event_loop.create_task(self.data_item_show(power_avg.data_item))
-        logging.info('***PANEL***: Average Power Data Item Created.')
 
 class gainView:
 
@@ -672,33 +601,24 @@ class gainView:
         self.servo_step_row = ui.create_row(self.servo_step_label, self.servo_step_value, self.servo_p_points_label,
                                             self.servo_p_points_value, ui.create_stretch(), spacing=12)
 
-        self.dye_label = ui.create_label(text='Select Dye: ')
-        self.dye_value = ui.create_combo_box(items=['Pyrromethene 597', 'Pyrromethene 580'],
-                                             current_index='@binding(instrument.dye_f)', name='dye_value')
-        self.dye_show_button = ui.create_push_button(name='dye_show_button', text='Show Dye', on_clicked='show_dye')
-        self.dye_row = ui.create_row(self.dye_label, self.dye_value, self.dye_show_button, ui.create_stretch(),
-                                     spacing=12)
-
         self.servo_group = ui.create_group(title='Servo Motor', content=ui.create_column(
-            self.servo_row, self.servo_step_row, self.dye_row))
+            self.servo_row, self.servo_step_row))
 
         # Fast Blanker
         self.delay_label = ui.create_label(text='Delay (ns): ')
         self.delay_value = ui.create_line_edit(name='delay_value', text='@binding(instrument.laser_delay_f)', width=100)
         self.delay_slider = ui.create_slider(name='delay_slider', value='@binding(instrument.laser_delay_f)',
                                              minimum=600, maximum=1200)
-        self.save_delay_pb= ui.create_push_button(name='save_delay_pb', text='Save Delay', on_clicked='save_delay')
         self.delay_row = ui.create_row(self.delay_label, self.delay_value, self.text_label, self.delay_slider,
-                                       ui.create_stretch(), self.save_delay_pb)
+                                       ui.create_stretch())
 
         self.width_label = ui.create_label(text='Width (ns): ')
         self.width_value = ui.create_line_edit(name='width_value', text='@binding(instrument.laser_width_f)', width=100)
         self.frequency_label = ui.create_label(text='Frequency (Hz): ')
         self.frequency_value = ui.create_line_edit(name='frequency_value',
                                                    text='@binding(instrument.laser_frequency_f)', width=100)
-        self.show_delay_pb = ui.create_push_button(name='show_delay_pb', text='Show Delay', on_clicked='show_delay')
         self.width_row = ui.create_row(self.width_label, self.width_value, ui.create_spacing(12),
-                                       self.frequency_label, self.frequency_value, ui.create_stretch(), self.show_delay_pb)
+                                       self.frequency_label, self.frequency_value, ui.create_stretch())
 
         self.stop_pb = ui.create_push_button(name='stop_pb', text='Stop All', on_clicked='stop_function')
         self.fast_blanker_checkbox = ui.create_check_box(name='fast_blanker_checkbox',

@@ -776,12 +776,17 @@ class gainDevice(Observable.Observable):
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
 
             self.__acq_number += 1
+            self.__camera.start_playing()
+            last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
+
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
-                                self.__step_wav, self.__ctrl_type, self.__delay, self.__width, self.__diode, self.__power_transmission)
+                                self.__step_wav, last_cam_acq, ctrl=self.__ctrl_type,
+                                delay=self.__delay, width=self.__width, diode=self.__diode,
+                                transmission=self.__power_transmission,
+                                acq_time_ms=self.__camera.get_current_frame_parameters()['exposure_ms'])
             #self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
             pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero
-            self.__camera.start_playing()
             self.__serverLaser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*4.0)

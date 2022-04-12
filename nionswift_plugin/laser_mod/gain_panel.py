@@ -109,9 +109,10 @@ class DataItemLaserCreation():
 
         self.data_item = DataItem.DataItem()
         self.data_item.set_xdata(self.xdata)
-        self.data_item.define_property("title", title)
-        self.data_item.define_property("description", self.acq_parameters)
-        self.data_item.define_property("caption", self.acq_parameters)
+        #self.data_item.define_property("title", title)
+        self.data_item.title = title
+        self.data_item.description = self.acq_parameters
+        self.data_item.caption = self.acq_parameters
 
         if is_live: self.data_item._enter_live_state()
 
@@ -487,6 +488,7 @@ class gainhandler:
         except:
             pass
         if self.__current_DI:
+            self.gd = gain_data.HspyGain(self.__current_DI)
             temp_acq = int(self.file_name_value.text[-2:])  # Works from 0-99.
             self.file_UUID_value.text = str(self.__current_DI.uuid)
             self.file_dim_value.text = str(self.__current_DI.data.ndim)
@@ -535,54 +537,56 @@ class gainhandler:
         logging.info('***PANEL***: Average Power Data Item Created.')
 
     def align_zlp(self, widget):
-        temp_dict = self.__current_DI.description
-
-        temp_data = self.__current_DI.data
-        cam_pixels = len(self.__current_DI.data[0])
-        eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
-        temp_title_name = 'Aligned_'  # keep adding stuff as far as you doing (or not doing) stuff with your data.
-
-        if self.normalize_current_check_box.checked:
-            for i in range(len(self.__current_DI.data)):
-                temp_data[i] = numpy.divide(temp_data[i], numpy.sum(temp_data[i]))
-        else:
-            temp_title_name += 'No_cur_'
-
-        # ## HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT
-        # FOR CALIBRATION ***
-        if widget == self.align_zlp_max:
-            self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
-                                                                                       temp_dict['averages'],
-                                                                                       cam_pixels,
-                                                                                       eels_dispersion, 'max')
-            # temp_title_name += 'max_' #we have only way to align by now
-
-        elif widget == self.align_zlp_fit:
-            pass  # not yet implemented
-
-        # here is the window of the fitting of the ZLP with no laser ON
-        #self.energy_window_value.text = format(energy_window, '.3f') + ' eV'
-
-        #self.zlp_fwhm = zlp_fwhm
-        #self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[
-        #    1].units  # displaying
-        temp_title_name += temp_dict['title']  # Final name of Data_Item
-
-        self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA",
-                                                    temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
-                                                    temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
-                                                    temp_dict['time_width'], temp_dict['start_ps_cur'],
-                                                    temp_dict['control'], is_live=False,
-                                                    eels_dispersion=eels_dispersion, hor_pixels=cam_pixels)
-
-        #if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
-        if self.aligned_cam_di:
-            # step, we need the data and FWHM
-            self.smooth_zlp.enabled = True
-            self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = False
-            logging.info('***PANEL***: Data Item created.')
-
-        if self.display_check_box.checked: self.event_loop.create_task(self.data_item_show(self.aligned_cam_di.data_item))
+        pass
+        #self.data_proc.hyperspy_align_zlp(self.__current_DI)
+        # temp_dict = self.__current_DI.description
+        #
+        # temp_data = self.__current_DI.data
+        # cam_pixels = len(self.__current_DI.data[0])
+        # eels_dispersion = self.__current_DI.dimensional_calibrations[1].scale
+        # temp_title_name = 'Aligned_'  # keep adding stuff as far as you doing (or not doing) stuff with your data.
+        #
+        # if self.normalize_current_check_box.checked:
+        #     for i in range(len(self.__current_DI.data)):
+        #         temp_data[i] = numpy.divide(temp_data[i], numpy.sum(temp_data[i]))
+        # else:
+        #     temp_title_name += 'No_cur_'
+        #
+        # # ## HERE IS THE DATA PROCESSING. PTS AND AVERAGES ARE VERY IMPORTANT. OTHER ATRIBUTES ARE MOSTLY IMPORTANT
+        # # FOR CALIBRATION ***
+        # if widget == self.align_zlp_max:
+        #     self.aligned_cam_array = self.data_proc.align_zlp(temp_data, temp_dict['pts'],
+        #                                                                                temp_dict['averages'],
+        #                                                                                cam_pixels,
+        #                                                                                eels_dispersion, 'max')
+        #     # temp_title_name += 'max_' #we have only way to align by now
+        #
+        # elif widget == self.align_zlp_fit:
+        #     pass  # not yet implemented
+        #
+        # # here is the window of the fitting of the ZLP with no laser ON
+        # #self.energy_window_value.text = format(energy_window, '.3f') + ' eV'
+        #
+        # #self.zlp_fwhm = zlp_fwhm
+        # #self.zlp_value.text = format(zlp_fwhm, '.3f') + ' ' + self.__current_DI.dimensional_calibrations[
+        # #    1].units  # displaying
+        # temp_title_name += temp_dict['title']  # Final name of Data_Item
+        #
+        # self.aligned_cam_di = DataItemLaserCreation(temp_title_name, self.aligned_cam_array, "ALIGNED_CAM_DATA",
+        #                                             temp_dict['start_wav'], temp_dict['final_wav'], temp_dict['pts'],
+        #                                             temp_dict['averages'], temp_dict['step_wav'], temp_dict['delay'],
+        #                                             temp_dict['time_width'], temp_dict['start_ps_cur'],
+        #                                             temp_dict['control'], is_live=False,
+        #                                             eels_dispersion=eels_dispersion, hor_pixels=cam_pixels)
+        #
+        # #if self.aligned_cam_di and self.zlp_fwhm:  # you free next step if the precedent one works. For the next
+        # if self.aligned_cam_di:
+        #     # step, we need the data and FWHM
+        #     self.smooth_zlp.enabled = True
+        #     self.align_zlp_max.enabled = self.align_zlp_fit.enabled = self.plot_power_wav.enabled = False
+        #     logging.info('***PANEL***: Data Item created.')
+        #
+        # if self.display_check_box.checked: self.event_loop.create_task(self.data_item_show(self.aligned_cam_di.data_item))
 
     def smooth_data(self, widget):
         temp_data = self.aligned_cam_di.data_item.data

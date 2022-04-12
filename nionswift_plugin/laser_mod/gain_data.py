@@ -2,10 +2,36 @@ import numpy
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
-import hyperspy.api as hs
+
 import logging
 
 __author__ = "Yves Auad"
+
+class HspyGain:
+
+    def __init__(self, di):
+        import hyperspy.api as hs
+
+        self.di = di
+        self.hspy_gd = hs.signals.Signal1D(di.data)
+        self.hspy_gd.set_signal_type("EELS")
+        self.hspy_gd.axes_manager[0].offset = di.dimensional_calibrations[0].offset
+        self.hspy_gd.axes_manager[0].scale = di.dimensional_calibrations[0].scale
+        self.hspy_gd.axes_manager[0].units = di.dimensional_calibrations[0].units
+
+        self.hspy_gd.axes_manager[1].offset = di.dimensional_calibrations[1].offset
+        self.hspy_gd.axes_manager[1].scale = di.dimensional_calibrations[1].scale
+        self.hspy_gd.axes_manager[1].units = di.dimensional_calibrations[1].units
+
+        self.align_zlp()
+        self.test()
+
+    def align_zlp(self):
+        self.hspy_gd.align_zero_loss_peak(show_progressbar=False)
+
+    def test(self):
+        print(self.hspy_gd.isig[-2.4: 1.8].sum(axis=1))
+
 
 class gainData:
 
@@ -100,9 +126,6 @@ class gainData:
             fit_array[i] = _gaussian_fit(x, *coeff)
             if ene: print(f'***ACQUISITION***: Fitting Data: ' + format(i/fit_array.shape[0]*100, '.0f') + '%. Current Wavelength is: ' + format(1239.8/ene, '.2f') + ' nm')
         return fit_array, a_array, a1_array, a2_array, a3_array, a4_array, sigma_array, ene_array
-
-    def hyperspy_align_zlp(self):
-        pass
 
 
     def align_zlp(self, raw_array, pts, avg, pixels, disp, mode='max'):

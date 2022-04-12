@@ -437,19 +437,19 @@ class gainDevice(Observable.Observable):
                 if hards.hardware_source_id == "orsay_camera_kuro":
                     self.__camera = hards
 
-        if self.__camera == None:
-            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
-                # find, use usim eels
-                if hasattr(hards, 'hardware_source_id'):
-                    if hards.hardware_source_id == 'orsay_camera_timepix3':
-                        self.__camera = hards
-
-        if self.__camera == None:
-            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
-                # find, use usim eels
-                if hasattr(hards, 'hardware_source_id'):
-                    if hards.hardware_source_id == 'orsay_camera_eels':
-                        self.__camera = hards
+        # if self.__camera == None:
+        #     for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+        #         # find, use usim eels
+        #         if hasattr(hards, 'hardware_source_id'):
+        #             if hards.hardware_source_id == 'orsay_camera_timepix3':
+        #                 self.__camera = hards
+        #
+        # if self.__camera == None:
+        #     for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+        #         # find, use usim eels
+        #         if hasattr(hards, 'hardware_source_id'):
+        #             if hards.hardware_source_id == 'orsay_camera_eels':
+        #                 self.__camera = hards
 
         if self.__camera == None:
             for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
@@ -770,8 +770,9 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
-        p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
-        q =  self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
+        #p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
+        #q =  self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
+        q = True
         if (self.__serverLaser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
 

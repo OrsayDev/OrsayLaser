@@ -721,9 +721,13 @@ class gainDevice(Observable.Observable):
         if (self.__serverLaser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
             self.__acq_number += 1
-            self.call_data.fire(self.__acq_number, int(self.__servo_pos / self.__servo_step) + 1, self.__avg, self.__start_wav, self.__start_wav, 0.0, 1,
-                                self.__delay, self.__width, self.__diode, self.__power_transmission)
             self.__camera.start_playing()
+            last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
+            self.call_data.fire(self.__acq_number, int(self.__servo_pos / self.__servo_step) + 1, self.avg_f, self.__start_wav, self.__start_wav,
+                                0.0, last_cam_acq, ctrl=self.__ctrl_type,
+                                delay=self.__delay, width=self.__width, diode=self.__diode,
+                                transmission=self.__power_transmission,
+                                acq_time_ms=self.__camera.get_current_frame_parameters()['exposure_ms'])
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
         else:

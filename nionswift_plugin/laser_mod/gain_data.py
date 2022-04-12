@@ -2,6 +2,7 @@ import numpy
 from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
+from nion.data import Calibration
 
 import logging
 
@@ -15,13 +16,11 @@ class HspyGain:
         self.di = di
         self.hspy_gd = hs.signals.Signal1D(di.data)
         self.hspy_gd.set_signal_type("EELS")
-        self.hspy_gd.axes_manager[0].offset = di.dimensional_calibrations[0].offset
-        self.hspy_gd.axes_manager[0].scale = di.dimensional_calibrations[0].scale
-        self.hspy_gd.axes_manager[0].units = di.dimensional_calibrations[0].units
 
-        self.hspy_gd.axes_manager[1].offset = di.dimensional_calibrations[1].offset
-        self.hspy_gd.axes_manager[1].scale = di.dimensional_calibrations[1].scale
-        self.hspy_gd.axes_manager[1].units = di.dimensional_calibrations[1].units
+        for index in range(len(di.dimensional_calibrations)):
+            self.hspy_gd.axes_manager[index].offset = di.dimensional_calibrations[index].offset
+            self.hspy_gd.axes_manager[index].scale = di.dimensional_calibrations[index].scale
+            self.hspy_gd.axes_manager[index].units = di.dimensional_calibrations[index].units
 
     def _rebin(self):
         initial = self.hspy_gd.axes_manager[0].offset

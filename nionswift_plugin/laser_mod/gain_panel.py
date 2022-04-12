@@ -396,10 +396,16 @@ class gainhandler:
         self.pow02_di = DataItemCreation("Power 02 " + str(nacq), self.pow02_array, 1, [0], [1], ['uW'])
 
         # CAMERA CALL
-        self.cam_di = DataItemCreation('Gain Data ' + str(nacq), self.cam_array, 2,
-                                       [start, cam_calibration.offset], [step / avg, cam_calibration.scale],
-                                       ['nm', 'eV'], title='Gain Data ' + str(nacq), start_wav=start, end_wav=end,
-                                       pts=pts, averages=avg, **kwargs)
+        if start == end and step == 0.0:
+            self.cam_di = DataItemCreation('Gain Data ' + str(nacq), self.cam_array, 2,
+                                           [0, cam_calibration.offset], [1 / avg, cam_calibration.scale],
+                                           ['nm', 'eV'], title='Gain Data ' + str(nacq), start_wav=start, end_wav=end,
+                                           pts=pts, averages=avg, **kwargs)
+        else:
+            self.cam_di = DataItemCreation('Gain Data ' + str(nacq), self.cam_array, 2,
+                                           [start, cam_calibration.offset], [step / avg, cam_calibration.scale],
+                                           ['nm', 'eV'], title='Gain Data ' + str(nacq), start_wav=start, end_wav=end,
+                                           pts=pts, averages=avg, **kwargs)
         self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
         # if start == end and step == 0.0:

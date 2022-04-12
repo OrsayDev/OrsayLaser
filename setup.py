@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="OrsayLaser",
-    version="6.3.5",
+    version="6.3.6",
     author="Yves Auad",
     description="Laser Control",
     url="https://github.com/yvesauad/yvorsay-instrument",

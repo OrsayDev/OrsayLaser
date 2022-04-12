@@ -3,13 +3,15 @@ from scipy.signal import savgol_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from nion.data import Calibration
+from nion.swift.model import DataItem
+from nion.swift.model import Utility
+from nion.data import DataAndMetadata
 
 import logging
 
 __author__ = "Yves Auad"
 
-class HspyGain:
-
+class Hspy:
     def __init__(self, di):
         import hyperspy.api as hs
 
@@ -22,20 +24,13 @@ class HspyGain:
             self.hspy_gd.axes_manager[index].scale = di.dimensional_calibrations[index].scale
             self.hspy_gd.axes_manager[index].units = di.dimensional_calibrations[index].units
 
-    def _rebin(self):
-        initial = self.hspy_gd.axes_manager[0].offset
-        self.hspy_gd = self.hspy_gd.rebin(scale=[self.get_attr('averages'), 1])
-        self.hspy_gd.axes_manager[0].offset = initial
+        logging.info(f'***HSPY***: The axes of the collected data is {self.hspy_gd.axes_manager}.')
 
-    def _align_zlp(self):
+    def rebin(self, scale):
+        self.hspy_gd = self.hspy_gd.rebin(scale=scale)
+
+    def align_zlp(self):
         self.hspy_gd.align_zero_loss_peak(show_progressbar=False)
-
-    def rebin_and_align(self):
-        self._rebin()
-        self._align_zlp()
-
-    def get_profile(self):
-        return self.hspy_gd.isig[-2.4: 1.8].sum(axis=1).data
 
     def get_data(self):
         return self.hspy_gd.data
@@ -57,6 +52,57 @@ class HspyGain:
 
     def get_axes_units_all(self):
         return [self.hspy_gd.axes_manager[index].units for index in range(len(self.hspy_gd.data.shape))]
+
+    def _get_data(self, temp_data):
+        timezone = Utility.get_local_timezone()
+        timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
+        calibration = Calibration.Calibration()
+        dimensional_calibrations = [Calibration.Calibration() for _ in range(len(temp_data.data.shape))]
+        for index in range(len(temp_data.data.shape)):
+            dimensional_calibrations[index].offset = temp_data.axes_manager[index].offset
+            dimensional_calibrations[index].scale = temp_data.axes_manager[index].scale
+            dimensional_calibrations[index].units = temp_data.axes_manager[index].units
+
+        xdata = DataAndMetadata.new_data_and_metadata(temp_data.data, calibration, dimensional_calibrations,
+                                                      metadata=self.di.metadata,
+                                                      timezone=timezone, timezone_offset=timezone_offset)
+        data_item = DataItem.DataItem()
+        data_item.set_xdata(xdata)
+        data_item.title = 'oi_' + self.di.title
+        data_item.description = self.di.description
+        data_item.caption = self.di.caption
+
+        logging.info(f'***HSPY***: The axes of the returned data is {temp_data.axes_manager}.')
+
+        return data_item
+
+    def get_11_di(self, inav=None, isig=None, sum_inav=None, sum_isig=None):
+        temp_data = self.hspy_gd
+        if inav is not None:
+            temp_data = temp_data.inav[inav[0]: inav[1]]
+        if isig is not None:
+            temp_data = temp_data.isig[isig[0]: isig[1]]
+        if sum_inav:
+            temp_data = temp_data.sum(axis=0)
+        if sum_isig:
+            temp_data = temp_data.sum(axis=1)
+
+        return self._get_data(temp_data)
+
+
+class HspyGain(Hspy):
+    def rebin(self):
+        initial = self.hspy_gd.axes_manager[0].offset
+        self.hspy_gd = self.hspy_gd.rebin(scale=[self.get_attr('averages'), 1])
+        self.hspy_gd.axes_manager[0].offset = initial
+
+    def rebin_and_align(self):
+        self.rebin()
+        self.align_zlp()
+
+    def get_gain_profile(self):
+        return self.get_11_di(isig=[-2.4, -1.8], sum_isig=True)
+        #return self.hspy_gd.isig[-2.4: -1.8].sum(axis=1).data
 
 
 class gainData:

@@ -23,14 +23,33 @@ class HspyGain:
         self.hspy_gd.axes_manager[1].scale = di.dimensional_calibrations[1].scale
         self.hspy_gd.axes_manager[1].units = di.dimensional_calibrations[1].units
 
-        self.align_zlp()
-        self.test()
+    def _rebin(self):
+        self.hspy_gd = self.hspy_gd.rebin(scale=[self.get_attr('averages'), 1])
 
-    def align_zlp(self):
+    def _align_zlp(self):
         self.hspy_gd.align_zero_loss_peak(show_progressbar=False)
 
+    def rebin_and_align(self):
+        self._rebin()
+        self._align_zlp()
+
+    def get_profile(self):
+        return self.hspy_gd.isig[-2.4: 1.8].sum(axis=1).data
+
+    def get_data(self):
+        return self.hspy_gd.data
+
     def test(self):
-        print(self.hspy_gd.isig[-2.4: 1.8].sum(axis=1))
+        print(self.di.description)
+
+    def get_attr(self, which):
+        return self.di.description[which]
+
+    def get_axes_offset(self, index):
+        return self.hspy_gd.axes_manager[index].offset
+
+    def get_axes_scale(self, index):
+        return self.hspy_gd.axes_manager[index].scale
 
 
 class gainData:

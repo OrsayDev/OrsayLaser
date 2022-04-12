@@ -24,8 +24,8 @@ _ = gettext.gettext
 
 class DataItemLaserCreation():
     def __init__(self, title, array, which, start=None, final=None, pts=None, avg=None, step=None, delay=None,
-                 time_width=None, start_ps_cur=None, ctrl=None, trans=None, is_live=True, eels_dispersion=1.0, hor_pixels=1600,
-                 oversample=1, power_min=0, power_inc=1, power_array_itp=None):
+                 time_width=None, start_ps_cur=None, ctrl=None, trans=None, is_live=True, cam_dispersion=1.0, cam_offset=0,
+                 power_min=0, power_inc=1):
         self.acq_parameters = {
             "title": title,
             "which": which,
@@ -92,16 +92,8 @@ class DataItemLaserCreation():
             self.dimensional_calibrations[0].offset = start
             self.dimensional_calibrations[0].scale = step
             self.dimensional_calibrations[1].units = 'eV'
-            self.dimensional_calibrations[1].scale = eels_dispersion
-            self.dimensional_calibrations[1].offset = -hor_pixels / 2. * eels_dispersion
-        if which == 'SMOOTHED_DATA':
-            self.dimensional_calibrations = [Calibration.Calibration(), Calibration.Calibration()]
-            self.dimensional_calibrations[0].units = 'nm'
-            self.dimensional_calibrations[0].offset = start
-            self.dimensional_calibrations[0].scale = step
-            self.dimensional_calibrations[1].units = 'eV'
-            self.dimensional_calibrations[1].scale = eels_dispersion / oversample
-            self.dimensional_calibrations[1].offset = -hor_pixels / 2. * eels_dispersion
+            self.dimensional_calibrations[1].scale = cam_dispersion
+            self.dimensional_calibrations[1].offset = cam_offset
 
         self.xdata = DataAndMetadata.new_data_and_metadata(array, self.calibration, self.dimensional_calibrations,
                                                            metadata=self.acq_parameters,
@@ -127,6 +119,9 @@ class DataItemLaserCreation():
 
     def set_cam_di_calibration(self, calib: Calibration.Calibration()):
         self.dimensional_calibrations[1] = calib
+
+    def set_cam_di_calibratrion_from_di(self, di: DataItem):
+        pass
 
     def set_dim_calibration(self):
         self.data_item.dimensional_calibrations = self.dimensional_calibrations
@@ -489,31 +484,40 @@ class gainhandler:
             pass
         if self.__current_DI:
             self.gd = gain_data.HspyGain(self.__current_DI)
-            temp_acq = int(self.file_name_value.text[-2:])  # Works from 0-99.
-            self.file_UUID_value.text = str(self.__current_DI.uuid)
-            self.file_dim_value.text = str(self.__current_DI.data.ndim)
-            self.file_x_disp_value.text = str(self.__current_DI.dimensional_calibrations[1].scale) + ' ' + \
-                                          self.__current_DI.dimensional_calibrations[1].units
-            self.zlp_value.text = ''
-            self.energy_window_value.text = ''
-
-            self.file_type_value.text = str(self.__current_DI.description['which'])
-            self.pts_detected_value.text = str(self.__current_DI.description['pts'])
-            self.avg_detected_value.text = str(self.__current_DI.description['averages'])
-            self.start_detected_value.text = format(self.__current_DI.description['start_wav'], '.3f')
-            self.final_detected_value.text = format(self.__current_DI.description['final_wav'], '.3f')
-            self.step_detected_value.text = format(self.__current_DI.description['step_wav'], '.3f')
-
-            if "Gain" in self.file_name_value.text:
-                for data_items in self.document_controller.document_model._DocumentModel__data_items:
-                    if data_items.title == "Power 02 " + str(temp_acq):
-                        self.__current_DI_POW = data_items
-
-                self.power_file_detected_value.text = str(bool(self.__current_DI_POW))
-
-                if self.__current_DI_POW:
-                    self.align_zlp_max.enabled = self.plot_power_wav.enabled = True
-                    self.align_zlp_fit.enabled = False  # fit not yet implemented
+            self.gd.rebin_and_align()
+            self.gd.test()
+            new_di = DataItemLaserCreation('New'+self.gd.di.description['title'], self.gd.get_data(), "ALIGNED_CAM_DATA",
+                                           start=self.gd.di.description['start_wav'], avg=self.gd.di.description['averages'],
+                                           step=self.gd.di.description['step_wav'], cam_offset=self.gd.get_axes_offset(1),
+                                           cam_dispersion=self.gd.get_axes_scale(1))
+            new_di.set_cam_di_calibratrion_from_di(self.__current_DI)
+            self.event_loop.create_task(self.data_item_show(new_di.data_item))
+            #print(self.gd.get_profile())
+            # temp_acq = int(self.file_name_value.text[-2:])  # Works from 0-99.
+            # self.file_UUID_value.text = str(self.__current_DI.uuid)
+            # self.file_dim_value.text = str(self.__current_DI.data.ndim)
+            # self.file_x_disp_value.text = str(self.__current_DI.dimensional_calibrations[1].scale) + ' ' + \
+            #                               self.__current_DI.dimensional_calibrations[1].units
+            # self.zlp_value.text = ''
+            # self.energy_window_value.text = ''
+            #
+            # self.file_type_value.text = str(self.__current_DI.description['which'])
+            # self.pts_detected_value.text = str(self.__current_DI.description['pts'])
+            # self.avg_detected_value.text = str(self.__current_DI.description['averages'])
+            # self.start_detected_value.text = format(self.__current_DI.description['start_wav'], '.3f')
+            # self.final_detected_value.text = format(self.__current_DI.description['final_wav'], '.3f')
+            # self.step_detected_value.text = format(self.__current_DI.description['step_wav'], '.3f')
+            #
+            # if "Gain" in self.file_name_value.text:
+            #     for data_items in self.document_controller.document_model._DocumentModel__data_items:
+            #         if data_items.title == "Power 02 " + str(temp_acq):
+            #             self.__current_DI_POW = data_items
+            #
+            #     self.power_file_detected_value.text = str(bool(self.__current_DI_POW))
+            #
+            #     if self.__current_DI_POW:
+            #         self.align_zlp_max.enabled = self.plot_power_wav.enabled = True
+            #         self.align_zlp_fit.enabled = False  # fit not yet implemented
         else:
             logging.info('***PANEL***: Could not find referenced Data Item.')
 

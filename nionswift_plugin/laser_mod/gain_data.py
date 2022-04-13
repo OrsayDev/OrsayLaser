@@ -11,7 +11,7 @@ import logging
 
 __author__ = "Yves Auad"
 
-class Hspy:
+class HspySignal1D:
     def __init__(self, di):
         import hyperspy.api as hs
 
@@ -90,7 +90,7 @@ class Hspy:
         return self._get_data(temp_data)
 
 
-class HspyGain(Hspy):
+class HspyGain(HspySignal1D):
     def rebin(self):
         initial = self.hspy_gd.axes_manager[0].offset
         self.hspy_gd = self.hspy_gd.rebin(scale=[self.get_attr('averages'), 1])

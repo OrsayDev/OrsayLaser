@@ -6,6 +6,7 @@ from nion.data import Calibration
 from nion.swift.model import DataItem
 from nion.swift.model import Utility
 from nion.data import DataAndMetadata
+import hyperspy.api as hs
 
 import logging
 
@@ -13,11 +14,12 @@ __author__ = "Yves Auad"
 
 class HspySignal1D:
     def __init__(self, di):
-        import hyperspy.api as hs
-
         self.di = di
         self.hspy_gd = hs.signals.Signal1D(di.data)
         self.hspy_gd.set_signal_type("EELS")
+
+        self.signal_calib = di.dimensional_calibrations[len(di.dimensional_calibrations)-1]
+        self.signal_size = di.data.shape[-1]
 
         for index in range(len(di.dimensional_calibrations)):
             self.hspy_gd.axes_manager[index].offset = di.dimensional_calibrations[index].offset
@@ -53,7 +55,7 @@ class HspySignal1D:
     def get_axes_units_all(self):
         return [self.hspy_gd.axes_manager[index].units for index in range(len(self.hspy_gd.data.shape))]
 
-    def _get_data(self, temp_data):
+    def _get_data(self, temp_data, prefix):
         timezone = Utility.get_local_timezone()
         timezone_offset = Utility.TimezoneMinutesToStringConverter().convert(Utility.local_utcoffset_minutes())
         calibration = Calibration.Calibration()
@@ -68,13 +70,14 @@ class HspySignal1D:
                                                       timezone=timezone, timezone_offset=timezone_offset)
         data_item = DataItem.DataItem()
         data_item.set_xdata(xdata)
-        data_item.title = 'oi_' + self.di.title
+        data_item.title = prefix + self.di.title
         data_item.description = self.di.description
         data_item.caption = self.di.caption
 
         logging.info(f'***HSPY***: The axes of the returned data is {temp_data.axes_manager}.')
 
         return data_item
+
 
     def get_11_di(self, inav=None, isig=None, sum_inav=None, sum_isig=None):
         temp_data = self.hspy_gd
@@ -87,10 +90,26 @@ class HspySignal1D:
         if sum_isig:
             temp_data = temp_data.sum(axis=1)
 
-        return self._get_data(temp_data)
+        return self._get_data(temp_data, 'new_')
 
+    def plot_gaussian(self, range):
+        m = self.hspy_gd.create_model()
+        m.set_signal_range(self._rel_to_abs(range[0]), self._rel_to_abs(range[1]))
+        gaussian = hs.model.components1D.Gaussian()
+        gaussian.centre.value = (self._rel_to_abs(range[0]) + self._rel_to_abs(range[1]))/2
+        m.append(gaussian)
+        m.fit(bounded=True)
+        m.print_current_values()
+
+        return self._get_data(m.as_signal(), 'fit_')
+
+    def _rel_to_abs(self, val):
+        return self.signal_calib.offset + val*self.signal_calib.scale*self.signal_size
 
 class HspyGain(HspySignal1D):
+    def __init__(self, di):
+        super().__init__(di)
+
     def rebin(self):
         initial = self.hspy_gd.axes_manager[0].offset
         self.hspy_gd = self.hspy_gd.rebin(scale=[self.get_attr('averages'), 1])
@@ -102,7 +121,6 @@ class HspyGain(HspySignal1D):
 
     def get_gain_profile(self):
         return self.get_11_di(isig=[-2.4, -1.8], sum_isig=True)
-        #return self.hspy_gd.isig[-2.4: -1.8].sum(axis=1).data
 
 
 class gainData:

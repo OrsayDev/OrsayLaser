@@ -437,23 +437,25 @@ class gainhandler:
 
     def grab_data_item(self, widget):
         self.__current_DI = None
-        print(dir(self.document_controller.document_model))
-        print(dir(self.document_controller))
 
         for data_items in self.document_controller.document_model._DocumentModel__data_items:
             if data_items.title == self.file_name_value.text:
                 self.__current_DI = data_items
         if self.__current_DI:
-
+            self.gd = gain_data.HspyGain(self.__current_DI)
             api_data_item = Facade.DataItem(self.__current_DI)
             for graphic in api_data_item.graphics:
-                print(graphic.graphic_type)
-                print(graphic.region)
+                if graphic.graphic_type == 'interval-graphic':
+                    new_di = self.gd.plot_gaussian(graphic.interval)
+                    self.event_loop.create_task(self.data_item_show(new_di))
 
-            #self.gd = gain_data.HspyGain(self.__current_DI)
+
+
+
+            #new_di = self.gd.plot_gaussian([575.0, 580.0])
             #self.gd.rebin_and_align()
             #new_di = DataItemCreation('Aligned_and_summed_'+self.gd.get_attr('title'), self.gd.get_data(), 2, self.gd.get_axes_offset_all(), self.gd.get_axes_scale_all(), self.gd.get_axes_units_all())
-            #self.event_loop.create_task(self.data_item_show(new_di.data_item))
+            #self.event_loop.create_task(self.data_item_show(new_di))
             #self.event_loop.create_task(self.data_item_show(self.gd.get_gain_profile()))
         else:
             logging.info('***PANEL***: Could not find referenced Data Item.')

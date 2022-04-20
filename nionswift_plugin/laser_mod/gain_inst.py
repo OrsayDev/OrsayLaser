@@ -437,19 +437,19 @@ class gainDevice(Observable.Observable):
                 if hards.hardware_source_id == "orsay_camera_kuro":
                     self.__camera = hards
 
-        # if self.__camera == None:
-        #     for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
-        #         # find, use usim eels
-        #         if hasattr(hards, 'hardware_source_id'):
-        #             if hards.hardware_source_id == 'orsay_camera_timepix3':
-        #                 self.__camera = hards
-        #
-        # if self.__camera == None:
-        #     for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
-        #         # find, use usim eels
-        #         if hasattr(hards, 'hardware_source_id'):
-        #             if hards.hardware_source_id == 'orsay_camera_eels':
-        #                 self.__camera = hards
+        if self.__camera == None:
+            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+                # find, use usim eels
+                if hasattr(hards, 'hardware_source_id'):
+                    if hards.hardware_source_id == 'orsay_camera_timepix3':
+                        self.__camera = hards
+
+        if self.__camera == None:
+            for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
+                # find, use usim eels
+                if hasattr(hards, 'hardware_source_id'):
+                    if hards.hardware_source_id == 'orsay_camera_eels':
+                        self.__camera = hards
 
         if self.__camera == None:
             for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you dont
@@ -513,7 +513,10 @@ class gainDevice(Observable.Observable):
 
             if self.__serverLaser.server_ping():
                 logging.info('***LASER***: Connection with server successful.')
-                if self.__camera and self.__OrsayScanInstrument:
+                if not self.__camera:
+                    logging.info('***LASER***: No camera was found.')
+                    return False
+                if self.__OrsayScanInstrument:
                     if hasattr(self.__OrsayScanInstrument.scan_device, 'orsayscan'):
                         self.fast_blanker_status_f = False #fast blanker OFF
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
@@ -723,11 +726,11 @@ class gainDevice(Observable.Observable):
             self.__acq_number += 1
             self.__camera.start_playing()
             last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
-            self.call_data.fire(self.__acq_number, int(self.__servo_pos / self.__servo_step) + 1, self.avg_f, self.__start_wav, self.__start_wav,
-                                0.0, last_cam_acq, ctrl=self.__ctrl_type,
+            self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
+                                self.__step_wav, last_cam_acq, ctrl=self.__ctrl_type,
                                 delay=self.__delay, width=self.__width, diode=self.__diode,
                                 transmission=self.__power_transmission,
-                                acq_time_ms=self.__camera.get_current_frame_parameters()['exposure_ms'])
+                                camera=last_cam_acq.metadata)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
         else:
@@ -787,7 +790,7 @@ class gainDevice(Observable.Observable):
                                 self.__step_wav, last_cam_acq, ctrl=self.__ctrl_type,
                                 delay=self.__delay, width=self.__width, diode=self.__diode,
                                 transmission=self.__power_transmission,
-                                acq_time_ms=self.__camera.get_current_frame_parameters()['exposure_ms'])
+                                camera=last_cam_acq.metadata)
             #self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
             pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero

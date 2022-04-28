@@ -392,12 +392,12 @@ class gainhandler:
             self.cam_di = DataItemCreation('Gain Data ' + str(nacq), self.cam_array, 2,
                                            [0, cam_calibration.offset], [1 / avg, cam_calibration.scale],
                                            ['nm', 'eV'], title='Gain Data ' + str(nacq), start_wav=start, end_wav=end,
-                                           pts=pts, averages=avg, **kwargs)
+                                           pts=pts, averages=avg, step_wav=step, **kwargs)
         else:
             self.cam_di = DataItemCreation('Gain Data ' + str(nacq), self.cam_array, 2,
                                            [start, cam_calibration.offset], [step / avg, cam_calibration.scale],
                                            ['nm', 'eV'], title='Gain Data ' + str(nacq), start_wav=start, end_wav=end,
-                                           pts=pts, averages=avg, **kwargs)
+                                           pts=pts, averages=avg, step_wav=step, **kwargs)
         self.event_loop.create_task(self.data_item_show(self.cam_di.data_item))
 
     def append_data(self, value, index1, index2, camera_data, update=True):

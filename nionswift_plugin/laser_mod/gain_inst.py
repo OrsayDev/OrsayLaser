@@ -484,9 +484,9 @@ class gainDevice(Observable.Observable):
 
         try:
             if self.__host == '127.0.0.1':
-                from SirahCredoServer.server import ServerSirahCredoLaser
-                ss = ServerSirahCredoLaser(self.__host, self.__port)
-                threading.Thread(target=ss.main, args=()).start()
+                #from SirahCredoServer.server import ServerSirahCredoLaser
+                #ss = ServerSirahCredoLaser(self.__host, self.__port)
+                #threading.Thread(target=ss.main, args=()).start()
                 logging.info('***LASER***: Connecting to local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
@@ -1058,7 +1058,9 @@ class gainDevice(Observable.Observable):
     @property
     def cur_d1_f(self):
         try:
-            return self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
+            val = self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
+            self.__diode = float(val)
+            return val
         except:
             return 'None'
 

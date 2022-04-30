@@ -68,11 +68,10 @@ class ServerSirahCredoLaser:
                 inst.ser.close()
             elif hasattr(inst, 'tl'):
                 inst.tl.close()
-        # if hasattr(self.s, 'close'):
-        #     print('***SERVER***: Closing Server.')
-        #     self.s.close()
-        # self.__running = False
-
+        if hasattr(self.s, 'close'):
+            print('***SERVER***: Closing Server.')
+            self.s.close()
+        self.__running = False
 
     def main(self):
         while self.__running:
@@ -94,10 +93,8 @@ class ServerSirahCredoLaser:
                         data = s.recv(512)
                         if not data:
                             self.inputs.remove(s)
-                            print(f'***SERVER***: No data received. Disconnecting {s}.')
                             s.close()
-                            if len(self.inputs)==1:
-                                self.handle_error()
+                            print(f'***SERVER***: No data received. Disconnecting {s}.')
                         else:
                             start_time = time.time()
                             if b"server_ping" in data:
@@ -246,9 +243,9 @@ class ServerSirahCredoLaser:
                                 print('***WARNING***: Server action took ' +format((end-start_time)*1000, '.1f')+ 'ms.')
                                 print(f'Sent data was {data}')
                     except ConnectionResetError:
-                        self.handle_error()
+                        self.inputs.remove(s)
+                        s.close()
                         print('***SERVER***: Nionswift closed. Waiting new connection.')
-                        break
 
 if __name__ == '__main__':
     try:

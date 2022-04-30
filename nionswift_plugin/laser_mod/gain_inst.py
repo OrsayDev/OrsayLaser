@@ -522,7 +522,6 @@ class gainDevice(Observable.Observable):
                         self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
                     self.sht_f = False  # shutter off
                     self.run_status_f = False
-                    self.servo_f = 165
                     self.powermeter_avg_f = self.__powermeter_avg
 
                     ## LASER WAVELENGTH AND POWER SUPPLY CHECK ##
@@ -536,6 +535,7 @@ class gainDevice(Observable.Observable):
                     self.property_changed_event.fire("cur_d_edit_f")
                     self.property_changed_event.fire('t_d1_f')
                     self.property_changed_event.fire('t_d2_f')
+                    self.property_changed_event.fire('servo_f')
                     return True
                 else:
                     return False
@@ -570,6 +570,7 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire('t_d2_f')
         self.property_changed_event.fire('cur_d1_f')
         self.property_changed_event.fire('cur_d2_f')
+        self.property_changed_event.fire('servo_f')
 
         if not self.__status:
             self.free_event.fire("all")
@@ -1171,6 +1172,10 @@ class gainDevice(Observable.Observable):
 
     @property
     def servo_f(self):
+        try:
+            self.__servo_pos = self.__serverArd.get_pos()
+        except AttributeError:
+            pass
         return self.__servo_pos
 
     @servo_f.setter

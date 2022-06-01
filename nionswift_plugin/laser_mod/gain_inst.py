@@ -1060,7 +1060,6 @@ class gainDevice(Observable.Observable):
     def cur_d1_f(self):
         try:
             val = self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
-            self.__diode = float(val)
             return val
         except:
             return 'None'

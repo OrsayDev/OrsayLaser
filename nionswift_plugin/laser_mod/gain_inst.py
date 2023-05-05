@@ -30,14 +30,21 @@ class LaserServerHandler():
         self.on = True
         self.s.sendall(which.encode())
         data = self.s.recv(512)
+        self.lock = threading.Lock()
         time.sleep(0.05)
+
+    def get_data(self, msg):
+        self.lock.acquire()
+        self.s.sendall(msg)
+        data = self.s.recv(512)
+        self.lock.release()
+        return data
 
     def server_ping(self):
         try:
             header = b'server_ping'
             msg = header
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() == 'Server Alive':
                 logging.info('***NS CLIENT***: Server ON.')
                 return True
@@ -66,8 +73,7 @@ class LaserServerHandler():
             msg = msg + format(wl, '.8f').rjust(16, '0').encode()
             msg = msg + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 01.')
         except ConnectionResetError:
@@ -78,8 +84,7 @@ class LaserServerHandler():
             header = b'get_hardware_wl'
             msg = header + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             data=data[:-9]
             return (float(data.decode()), 0)
         except ConnectionResetError:
@@ -96,8 +101,7 @@ class LaserServerHandler():
             msg = msg + format(cur_wl, '.8f').rjust(16, '0').encode()
             msg = msg + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data[:-9] == b'message_01':
                 return 1
             elif data[:-9] == b'message_02':
@@ -114,8 +118,7 @@ class LaserServerHandler():
             header = b'abort_control'
             msg = header + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 04.')
         except ConnectionResetError:
@@ -126,8 +129,7 @@ class LaserServerHandler():
             header = b'set_scan_thread_locked'
             msg = header + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data[:-9] == b'1':
                 return True
             elif data[:-9] == b'0':
@@ -144,8 +146,7 @@ class LaserServerHandler():
             header = b'set_scan_thread_release'
             msg = header + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 06.')
         except ConnectionResetError:
@@ -156,8 +157,7 @@ class LaserServerHandler():
             header = b'set_scan_thread_check'
             msg = header + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data[:-9] == b'1':
                 return True
             elif data[:-9] == b'0':
@@ -172,8 +172,7 @@ class LaserServerHandler():
             header = b'set_scan_thread_hardware_status'
             msg = header + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data[:-9] == b'2':
                 return 2
             elif data[:-9] == b'3':
@@ -200,8 +199,7 @@ class LaserServerHandler():
             msg = msg + format(pts, '.0f').rjust(8, '0').encode()  # int is 8 bytes here
             msg = msg + bytes(4)
             msg = msg + b'LASER'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 09.')
         except ConnectionResetError:
@@ -216,8 +214,7 @@ class LaserServerHandler():
             msg = msg + my_message.encode()
             msg = msg + bytes(3)
             msg = msg + b'POWER_SUPPLY'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             return data[:-15]
         except ConnectionResetError:
             self.connection_error_handler()
@@ -229,8 +226,7 @@ class LaserServerHandler():
             msg = msg + my_message.encode()
             msg = msg + bytes(3)
             msg = msg + b'POWER_SUPPLY'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 12.') #must return None
         except ConnectionResetError:
@@ -245,8 +241,7 @@ class LaserServerHandler():
             msg = msg + format(wl, '.8f').rjust(16, '0').encode()
             msg = msg + bytes(5)
             msg = msg + b'POWERMETER'+which.encode()
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             return float(data[:-16].decode())
         except ConnectionResetError:
             self.connection_error_handler()
@@ -256,8 +251,7 @@ class LaserServerHandler():
             header = b'pw_reset'+which.encode()
             msg = header + bytes(5) #power supply sends 00-00-00-00-00
             msg = msg + b'POWERMETER'+which.encode()
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 14.') #must return None
         except ConnectionResetError:
@@ -270,8 +264,7 @@ class LaserServerHandler():
             msg = msg + format(avg, '.0f').rjust(8, '0').encode() # 8 bytes for int
             msg = msg + bytes(5)
             msg = msg + b'POWERMETER'+which.encode()
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 15.') #must return None
         except ConnectionResetError:
@@ -282,8 +275,7 @@ class LaserServerHandler():
             header = b'get_pos'
             msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
             msg = msg + b'ARDUINO'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode():
                 return int(data[:-13].decode())
             else:
@@ -298,8 +290,7 @@ class LaserServerHandler():
             msg = msg + format(pos, '.0f').rjust(8, '0').encode() # 8 bytes for int
             msg = msg + bytes(6)
             msg = msg + b'ARDUINO'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 16.') #must return None
         except ConnectionResetError:
@@ -314,8 +305,7 @@ class LaserServerHandler():
             msg = msg + format(step, '.0f').rjust(8, '0').encode() # 8 bytes for int
             msg = msg + bytes(6)
             msg = msg + b'ARDUINO'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 17.') #must return None
         except ConnectionResetError:
@@ -326,8 +316,7 @@ class LaserServerHandler():
             header = b'wobbler_off'
             msg = header + bytes(6) #power supply sends 00-00-00-00-00-00
             msg = msg + b'ARDUINO'
-            self.s.sendall(msg)
-            data = self.s.recv(512)
+            data = self.get_data(msg)
             if data.decode() != 'None':
                 logging.info('***NS CLIENT***: Bad communication. Error 18.') #must return None
         except ConnectionResetError:
@@ -368,13 +357,13 @@ class gainDevice(Observable.Observable):
         self.__cubeRT = 10
         self.__autoLock = True
         self.__tdc_status = False
-        self.__diode = 0.10
+        self.__diode = None
         self.__servo_pos = 0
         self.__servo_pos_initial = self.__servo_pos
         self.__servo_pts = 0
         self.__servo_wobbler = False
         self.__ctrl_type = 1
-        self.__delay = 700 * 1e-9
+        self.__delay = 800 * 1e-9
         self.__width = 250 * 1e-9
         self.__fb_status = False
         self.__counts = 0
@@ -530,9 +519,8 @@ class gainDevice(Observable.Observable):
                     self.property_changed_event.fire('d_f')
                     self.property_changed_event.fire('cur_d1_f')
                     self.property_changed_event.fire('cur_d2_f')
-                    self.property_changed_event.fire('sht_f')
                     self.property_changed_event.fire("cur_d_f")
-                    self.property_changed_event.fire("cur_d_edit_f")
+                    self.property_changed_event.fire('sht_f')
                     self.property_changed_event.fire('t_d1_f')
                     self.property_changed_event.fire('t_d2_f')
                     self.property_changed_event.fire('servo_f')
@@ -720,8 +708,8 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser power resolved thread begins
-        p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
-        q = self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
+        p = "acquistion_mode" in self.__camera.get_current_frame_parameters().as_dict()
+        q = self.__camera.get_current_frame_parameters().as_dict()['acquisition_mode'] == 'Focus' if p else True
         if (self.__serverLaser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
             self.__acq_number += 1
@@ -778,8 +766,8 @@ class gainDevice(Observable.Observable):
         self.__servo_pos_initial = self.__servo_pos
 
         # Laser thread begins
-        p = "acquistion_mode" in self.__camera.get_current_frame_parameters()
-        q =  self.__camera.get_current_frame_parameters()['acquisition_mode'] == 'Focus' if p else True
+        p = "acquistion_mode" in self.__camera.get_current_frame_parameters().as_dict()
+        q =  self.__camera.get_current_frame_parameters().as_dict()['acquisition_mode'] == 'Focus' if p else True
         if (self.__serverLaser.set_scan_thread_check() and abs(
                 self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
 
@@ -1032,7 +1020,7 @@ class gainDevice(Observable.Observable):
     def cur_d_f(self) -> int:
         try:
             return int(self.__diode*100)
-        except AttributeError:
+        except TypeError:
             return 0
 
     @cur_d_f.setter
@@ -1049,7 +1037,6 @@ class gainDevice(Observable.Observable):
             self.property_changed_event.fire("cur_d1_f")
             self.property_changed_event.fire("cur_d2_f")
             self.property_changed_event.fire("cur_d_f")
-            self.property_changed_event.fire("cur_d_edit_f")
             # Power measurement helps us to see where we are
             self.property_changed_event.fire("power_f")
             self.property_changed_event.fire("power02_f")
@@ -1060,6 +1047,8 @@ class gainDevice(Observable.Observable):
     def cur_d1_f(self):
         try:
             val = self.__serverPS.query('?C1\n').decode('UTF-8').replace('\n', '')
+            if self.__diode is None:
+                self.__diode = float(val)
             return val
         except:
             return 'None'

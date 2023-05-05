@@ -715,7 +715,7 @@ class gainDevice(Observable.Observable):
             self.__acq_number += 1
             self.__camera.start_playing()
             last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
-            self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
+            self.call_data.fire(self.__acq_number, self.servo_pts_f + 1, self.avg_f, self.__start_wav, self.__finish_wav,
                                 self.__step_wav, last_cam_acq, ctrl=self.__ctrl_type,
                                 delay=self.__delay, width=self.__width, diode=self.__diode,
                                 transmission=self.__power_transmission,

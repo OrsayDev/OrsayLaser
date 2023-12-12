@@ -39,6 +39,7 @@ class DataItemCreation():
         self.data_item.title = name
         self.data_item.description = kwargs
         self.data_item.caption = kwargs
+        self.data_item._enter_live_state()
 
     def fast_update_data_only(self, array: numpy.array):
         self.data_item.set_data(array)
@@ -355,15 +356,21 @@ class gainhandler:
             if show: self.event_loop.create_task(self.data_item_show(data_item))
 
     def call_monitor(self):
+        self.pow_mon_array = numpy.zeros(200)
         self.pow02_mon_array = numpy.zeros(200)
-        self.pow02_mon_di = DataItemCreation("Power Fiber", self.pow02_mon_array, 1, [0], [1], ['time (arb. units)'])
+        self.pow_mon_di = DataItemCreation("Power Fiber", self.pow_mon_array, 1, [0], [1], ['time (arb. units)'])
+        self.pow02_mon_di = DataItemCreation("Power Transmission", self.pow02_mon_array, 1, [0], [1], ['time (arb. units)'])
+        self.event_loop.create_task(self.data_item_show(self.pow_mon_di.data_item))
         self.event_loop.create_task(self.data_item_show(self.pow02_mon_di.data_item))
 
     def append_monitor_data(self, value, index):
-        power02 = value
+        power, power02 = value
         if index==0:
+            self.pow_mon_array = numpy.zeros(200)
             self.pow02_mon_array = numpy.zeros(200)
+        self.pow_mon_array[index] = power
         self.pow02_mon_array[index] = power02
+        self.pow_mon_di.fast_update_data_only(self.pow_mon_array)
         self.pow02_mon_di.fast_update_data_only(self.pow02_mon_array)
 
     def call_data(self, nacq, pts, avg, start, end, step, cam_acq, **kwargs):

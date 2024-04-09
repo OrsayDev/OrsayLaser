@@ -358,8 +358,8 @@ class gainhandler:
     def call_monitor(self):
         self.pow_mon_array = numpy.zeros(200)
         self.pow02_mon_array = numpy.zeros(200)
-        self.pow_mon_di = DataItemCreation("Power Fiber", self.pow_mon_array, 1, [0], [1], ['time (arb. units)'])
-        self.pow02_mon_di = DataItemCreation("Power Transmission", self.pow02_mon_array, 1, [0], [1], ['time (arb. units)'])
+        self.pow_mon_di = DataItemCreation("Power", self.pow_mon_array, 1, [0], [1], ['time (arb. units)'])
+        self.pow02_mon_di = DataItemCreation("Power 02", self.pow02_mon_array, 1, [0], [1], ['time (arb. units)'])
         self.event_loop.create_task(self.data_item_show(self.pow_mon_di.data_item))
         self.event_loop.create_task(self.data_item_show(self.pow02_mon_di.data_item))
 

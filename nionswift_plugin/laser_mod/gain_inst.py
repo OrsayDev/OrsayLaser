@@ -12,8 +12,6 @@ import socket
 from SirahCredoServer import power
 from SirahCredoServer import hv
 
-#from Modules import Kinesis_PMC
-
 from . import control_routine as ctrlRout
 
 def SENDMYMESSAGEFUNC(sendmessagefunc):
@@ -322,6 +320,65 @@ class LaserServerHandler():
         except ConnectionResetError:
             self.connection_error_handler()
 
+class ExperimentController:
+    def __init__(self):
+        self.exists = False
+        self.is_open_scan = True
+        self.scan_instrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
+            "open_scan_device")
+        if self.scan_instrument: self.exists = True
+        if not self.scan_instrument:
+            self.scan_instrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
+                "orsay_scan_device")
+            self.is_open_scan = False
+            if self.scan_instrument: self.exists = True
+
+
+    def check_existence(self):
+        return self.exists
+    def set_top_blanking(self, value: bool, width: int, delay: int, frequency: int):
+        if not self.is_open_scan:
+            if value:
+                self.scan_instrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=width, delay=delay)
+                self.scan_instrument.scan_device.orsayscan.SetLaser(frequency, 0, False, -1)
+                self.scan_instrument.scan_device.orsayscan.StartLaser(7)
+            else:
+                self.scan_instrument.scan_device.orsayscan.CancelLaser()
+                self.scan_instrument.scan_device.orsayscan.SetTopBlanking(0, -1, width, True, 0, delay)
+        else:
+            if value:
+                self.scan_instrument.scan_device.scan_engine.output1_mux_freq = frequency
+                self.scan_instrument.scan_device.scan_engine.output1_mux_type = 7
+                self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 0
+                self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
+                self.scan_instrument.scan_device.scan_engine.output1_mux_pol = True
+
+                self.scan_instrument.scan_device.scan_engine.output4_mux_freq = frequency
+                self.scan_instrument.scan_device.scan_engine.output4_mux_type = 7
+                self.scan_instrument.scan_device.scan_engine.output4_mux_delay = width * 1e9 / 10.0
+                self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
+                self.scan_instrument.scan_device.scan_engine.output4_mux_pol = True
+
+    def set_width_and_delay(self, width: int, delay: int):
+        if not self.is_open_scan:
+            self.scan_instrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=width, delay=delay)
+        else:
+            self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
+            self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 0
+
+            self.scan_instrument.scan_device.scan_engine.output4_mux_delay = width * 1e9 / 10.0
+            self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
+
+
+    def set_line_for_inspection(self, value: bool):
+        if not self.is_open_scan:
+            if value:
+                self.__OrsayScanInstrument.scan_device.orsayscan.SetTdcLine(1, 2, 13)  # Copy Line 05
+        else:
+            pass
+
+
+
 
 class gainDevice(Observable.Observable):
 
@@ -406,7 +463,7 @@ class gainDevice(Observable.Observable):
         self.__control_sendmessage = ctrlRout.SENDMYMESSAGEFUNC(self.sendMessageFactory())
         self.__controlRout = ctrlRout.controlRoutine(self.__control_sendmessage)
 
-        self.__OrsayScanInstrument = None
+        #self.__OrsayScanInstrument = None
         self.__camera = None
 
         self.__DEBUG = False
@@ -452,30 +509,23 @@ class gainDevice(Observable.Observable):
         else:
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
-        self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
-            "orsay_scan_device")
-        if not self.__OrsayScanInstrument:
+        #self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
+        #    "orsay_scan_device")
+        #self.__OpenScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
+        #    "open_scan_device")
+        self.experiment_controller = ExperimentController()
+
+        if not self.experiment_controller.exists:
             logging.info('***LASER***: Could not find SCAN module. Check for issues.')
-            logging.info('***LASER***: If usim available, grabbing usim Scan Device.')
-            self.__OrsayScanInstrument = HardwareSource.HardwareSourceManager().get_hardware_source_for_hardware_source_id(
-                "usim_scan_device")
-            if not self.__OrsayScanInstrument: logging.info(
-                '***LASER***: Could not find USIM SCAN module. Check nionswift website for instructions.')
-
-            # # CLARITY: # self.__OrsayScanInstrument is the same as the way I did with the camera. If i have put a
-            # if hards.hardware_source_id == "usim_scan_device": self.__scan = hards, the dir(self.__scan) and dir(
-            # self.__OrsayScanInstrument) are identical
-
+            return False
         else:
+            self.experiment_controller.set_top_blanking(False, self.__width, self.__delay, self.__frequency)
             logging.info('***LASER***: SCAN module properly loaded.')
 
         self.__laser_message = SENDMYMESSAGEFUNC(self.sendMessageFactory())
 
         try:
             if self.__host == '127.0.0.1':
-                #from SirahCredoServer.server import ServerSirahCredoLaser
-                #ss = ServerSirahCredoLaser(self.__host, self.__port)
-                #threading.Thread(target=ss.main, args=()).start()
                 logging.info('***LASER***: Connecting to local Host.')
                 self.__DEBUG = True
             elif self.__host == '129.175.82.159':
@@ -505,28 +555,21 @@ class gainDevice(Observable.Observable):
                 if not self.__camera:
                     logging.info('***LASER***: No camera was found.')
                     return False
-                if self.__OrsayScanInstrument:
-                    if hasattr(self.__OrsayScanInstrument.scan_device, 'orsayscan'):
-                        self.fast_blanker_status_f = False #fast blanker OFF
-                        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
-                    self.sht_f = False  # shutter off
-                    self.run_status_f = False
-                    self.powermeter_avg_f = self.__powermeter_avg
+                self.sht_f = False  # shutter off
+                self.run_status_f = False
+                self.powermeter_avg_f = self.__powermeter_avg
 
-                    ## LASER WAVELENGTH AND POWER SUPPLY CHECK ##
-                    self.property_changed_event.fire("cur_wav_f")
-                    self.property_changed_event.fire('q_f')
-                    self.property_changed_event.fire('d_f')
-                    self.property_changed_event.fire('cur_d1_f')
-                    self.property_changed_event.fire('cur_d2_f')
-                    self.property_changed_event.fire("cur_d_f")
-                    self.property_changed_event.fire('sht_f')
-                    self.property_changed_event.fire('t_d1_f')
-                    self.property_changed_event.fire('t_d2_f')
-                    self.property_changed_event.fire('servo_f')
-                    return True
-                else:
-                    return False
+                ## LASER WAVELENGTH AND POWER SUPPLY CHECK ##
+                self.property_changed_event.fire("cur_wav_f")
+                self.property_changed_event.fire('q_f')
+                self.property_changed_event.fire('d_f')
+                self.property_changed_event.fire('cur_d1_f')
+                self.property_changed_event.fire('cur_d2_f')
+                self.property_changed_event.fire("cur_d_f")
+                self.property_changed_event.fire('sht_f')
+                self.property_changed_event.fire('t_d1_f')
+                self.property_changed_event.fire('t_d2_f')
+                self.property_changed_event.fire('servo_f')
             else:
                 logging.info(
                     '***LASER***: Server seens to exist but it is not accepting connections. Please put it to Hang or disconnect other users.')
@@ -534,6 +577,8 @@ class gainDevice(Observable.Observable):
         except ConnectionRefusedError:
             logging.info('***LASER***: No server was found. Check if server is hanging and it is in the good host.')
             return False
+
+        return True
 
     def sht(self):
         if self.sht_f == 'CLOSED':
@@ -563,18 +608,18 @@ class gainDevice(Observable.Observable):
         if not self.__status:
             self.free_event.fire("all")
 
-    def grab_det(self, mode, index, npic, show):
-        logging.info("***LASER***: Scanning Full Image.")
-        # this gets frame parameters
-        det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
-        # this multiplies pixels(x) * pixels(y) * pixel_time
-        frame_time = self.__OrsayScanInstrument.calculate_frame_time(det_frame_parameters)
-        self.__OrsayScanInstrument.start_playing()
-        time.sleep(frame_time * 1.2)  # 20% more of the time for a single frame
-        det_di = self.__OrsayScanInstrument.grab_next_to_start()
-
-        self.__OrsayScanInstrument.abort_playing()
-        self.det_acq.fire(det_di, mode, index, npic, show)
+    # def grab_det(self, mode, index, npic, show):
+    #     logging.info("***LASER***: Scanning Full Image.")
+    #     # this gets frame parameters
+    #     det_frame_parameters = self.__OrsayScanInstrument.get_current_frame_parameters()
+    #     # this multiplies pixels(x) * pixels(y) * pixel_time
+    #     frame_time = self.__OrsayScanInstrument.calculate_frame_time(det_frame_parameters)
+    #     self.__OrsayScanInstrument.start_playing()
+    #     time.sleep(frame_time * 1.2)  # 20% more of the time for a single frame
+    #     det_di = self.__OrsayScanInstrument.grab_next_to_start()
+    #
+    #     self.__OrsayScanInstrument.abort_playing()
+    #     self.det_acq.fire(det_di, mode, index, npic, show)
 
     def abt(self):
         logging.info('***LASER***: Abort Measurement.')
@@ -875,12 +920,12 @@ class gainDevice(Observable.Observable):
             self.power_wav_f = self.__cur_wav
             self.run_status_f = False  # this already frees GUI
 
-    def prepare_spim_TP3(self):
-        self.sht_f = False
-        self.laser_frequency_f = 12000
-        self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
-        self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(3, 5)
-        logging.info('***LASER***: Please open shutter.')
+    # def prepare_spim_TP3(self):
+    #     self.sht_f = False
+    #     self.laser_frequency_f = 12000
+    #     self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
+    #     self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(3, 5)
+    #     logging.info('***LASER***: Please open shutter.')
 
     def over_spim_TP3(self):
         self.sht_f = False
@@ -1135,8 +1180,7 @@ class gainDevice(Observable.Observable):
     @tdc_f.setter
     def tdc_f(self, value: bool):
         self.__tdc_status = value
-        if value:
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetTdcLine(1, 2, 13) #Copy Line 05
+        self.experiment_controller.set_line_for_inspection(value)
 
     @property
     def ascii_f(self):
@@ -1219,14 +1263,15 @@ class gainDevice(Observable.Observable):
     @fast_blanker_status_f.setter
     def fast_blanker_status_f(self, value):
         self.__fb_status = value
-        if value:
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
-                                                                            delay=self.__delay)
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
-            self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
-        else:
-            self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()
-            self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
+        self.experiment_controller.set_top_blanking(value, self.__width, self.__delay, self.__frequency)
+        # if value:
+        #     self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        #                                                                     delay=self.__delay)
+        #     self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
+        #     self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
+        # else:
+        #     self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()
+        #     self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
         self.property_changed_event.fire('fast_blanker_status_f')
         if not self.__status: self.free_event.fire('all')
 
@@ -1237,8 +1282,9 @@ class gainDevice(Observable.Observable):
     @laser_delay_f.setter
     def laser_delay_f(self, value):
         self.__delay = float(value) / 1e9
-        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
-                                                                                      delay=self.__delay)
+        self.experiment_controller.set_width_and_delay(self.__width, self.__delay)
+        # self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        #                                                                               delay=self.__delay)
         self.property_changed_event.fire('laser_delay_f')
         self.free_event.fire('all')
 
@@ -1249,8 +1295,9 @@ class gainDevice(Observable.Observable):
     @laser_width_f.setter
     def laser_width_f(self, value):
         self.__width = float(value) / 1e9
-        self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
-                                                                                      delay=self.__delay)
+        self.experiment_controller.set_width_and_delay(self.__width, self.__delay)
+        # self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
+        #                                                                               delay=self.__delay)
         self.property_changed_event.fire('laser_width_f')
         self.free_event.fire('all')
 

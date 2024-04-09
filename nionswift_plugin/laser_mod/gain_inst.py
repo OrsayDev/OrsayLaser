@@ -347,27 +347,46 @@ class ExperimentController:
                 self.scan_instrument.scan_device.orsayscan.SetTopBlanking(0, -1, width, True, 0, delay)
         else:
             if value:
+                # V+
                 self.scan_instrument.scan_device.scan_engine.output1_mux_freq = frequency
                 self.scan_instrument.scan_device.scan_engine.output1_mux_type = 7
-                self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 0
+                self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 100 + delay * 1e9 / 10.0
                 self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
                 self.scan_instrument.scan_device.scan_engine.output1_mux_pol = True
 
+                # Laser
+                self.scan_instrument.scan_device.scan_engine.output2_mux_freq = frequency
+                self.scan_instrument.scan_device.scan_engine.output2_mux_type = 7
+                self.scan_instrument.scan_device.scan_engine.output2_mux_delay = 0
+                self.scan_instrument.scan_device.scan_engine.output2_mux_freq_duty = 1.
+                self.scan_instrument.scan_device.scan_engine.output2_mux_pol = False
+
+                # V-
                 self.scan_instrument.scan_device.scan_engine.output4_mux_freq = frequency
                 self.scan_instrument.scan_device.scan_engine.output4_mux_type = 7
-                self.scan_instrument.scan_device.scan_engine.output4_mux_delay = width * 1e9 / 10.0
+                self.scan_instrument.scan_device.scan_engine.output4_mux_delay = 100 + (delay + width) * 1e9 / 10.0
                 self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
                 self.scan_instrument.scan_device.scan_engine.output4_mux_pol = True
+            else:
+                self.scan_instrument.scan_device.scan_engine.output1_mux_type = 9
+                self.scan_instrument.scan_device.scan_engine.output2_mux_type = 9
+                self.scan_instrument.scan_device.scan_engine.output4_mux_type = 9
+                self.scan_instrument.scan_device.scan_engine.output1_mux_pol = False
+                self.scan_instrument.scan_device.scan_engine.output4_mux_pol = True
+
 
     def set_width_and_delay(self, width: int, delay: int):
         if not self.is_open_scan:
             self.scan_instrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=width, delay=delay)
         else:
             self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
-            self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 0
+            self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 100 + delay * 1e9 / 10.0
 
-            self.scan_instrument.scan_device.scan_engine.output4_mux_delay = width * 1e9 / 10.0
+            self.scan_instrument.scan_device.scan_engine.output2_mux_freq_duty = 1.
+            self.scan_instrument.scan_device.scan_engine.output2_mux_delay = 0
+
             self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
+            self.scan_instrument.scan_device.scan_engine.output4_mux_delay = 100 + (delay + width) * 1e9 / 10.0
 
 
     def set_line_for_inspection(self, value: bool):
@@ -431,7 +450,7 @@ class gainDevice(Observable.Observable):
         self.__servo_step = 2
         self.__nper_pic = 0
         self.__dye = 0
-        self.__host = "127.0.0.1"
+        self.__host = '192.168.1.65'
         self.__port = 65432
         self.__hv = 0
         self.__hvAbs = [0, 0]

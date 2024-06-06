@@ -392,7 +392,7 @@ class ExperimentController:
     def set_line_for_inspection(self, value: bool):
         if not self.is_open_scan:
             if value:
-                self.__OrsayScanInstrument.scan_device.orsayscan.SetTdcLine(1, 2, 13)  # Copy Line 05
+                self.__OrsayScanInstrument.scan_device.orsayscan.SetTdcLine(0, 2, 13)  # Copy Line 05
         else:
             pass
 

@@ -490,6 +490,12 @@ class gainDevice(Observable.Observable):
 
         self.__DEBUG = False
 
+        #Initial status of the Microscope
+        main_controller = Registry.get_component("stem_controller")
+        ok, value = main_controller.TryGetVal("C10")
+        if ok:
+            self.__defocus = value
+
     def server_instrument_ping(self):
         self.__serverLaser.server_ping()
 
@@ -1340,9 +1346,11 @@ class gainDevice(Observable.Observable):
     @defocus_check_f.setter
     def defocus_check_f(self, value):
         self.__defocus_check = value
+        main_controller = Registry.get_component("stem_controller")
         if value:
-            main_controller = Registry.get_component("stem_controller")
             main_controller.SetVal("C10", self.__defocus)
+        else:
+            main_controller.SetVal("C10", 0)
         self.property_changed_event.fire('defocus_check_f')
         self.free_event.fire('all')
 

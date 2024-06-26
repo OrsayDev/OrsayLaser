@@ -1,6 +1,7 @@
 # standard libraries
 from nion.utils import Event
 from nion.utils import Observable
+from nion.utils import Registry
 from nion.swift.model import HardwareSource
 
 import logging
@@ -441,6 +442,8 @@ class gainDevice(Observable.Observable):
         self.__ctrl_type = 1
         self.__delay = 800 * 1e-9
         self.__width = 250 * 1e-9
+        self.__defocus = 0
+        self.__defocus_check = False
         self.__fb_status = False
         self.__counts = 0
         self.__frequency = 10000
@@ -1319,6 +1322,30 @@ class gainDevice(Observable.Observable):
         #                                                                               delay=self.__delay)
         self.property_changed_event.fire('laser_width_f')
         self.free_event.fire('all')
+
+    @property
+    def defocus_value_f(self):
+        return int(self.__defocus * 1e9)
+
+    @defocus_value_f.setter
+    def defocus_value_f(self, value):
+        self.__defocus = int(value) / 1e9
+        self.property_changed_event.fire('defocus_f')
+        self.free_event.fire('all')
+
+    @property
+    def defocus_check_f(self):
+        return self.__defocus_check
+
+    @defocus_check_f.setter
+    def defocus_check_f(self, value):
+        self.__defocus_check = value
+        if value:
+            main_controller = Registry.get_component("stem_controller")
+            main_controller.SetVal("C10", self.__defocus)
+        self.property_changed_event.fire('defocus_check_f')
+        self.free_event.fire('all')
+
 
     @property
     def laser_counts_f(self):

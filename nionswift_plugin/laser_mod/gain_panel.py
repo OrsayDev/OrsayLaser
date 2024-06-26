@@ -631,6 +631,16 @@ class gainView:
             self.delay_row, self.width_row, self.final_row, self.hv_ratio_row)
                                              )
 
+        # Fast toggling buttons
+        self.defocus_label = ui.create_label(text='Defocus (nm): ')
+        self.defocus_value = ui.create_line_edit(name='defocus_value', text='@binding(instrument.defocus_value_f)', width=100)
+        self.defocus_checkbox = ui.create_check_box(name='defocus_checkbox',
+                                                          checked='@binding(instrument.defocus_check_f)',
+                                                          text='Toggle?')
+
+        self.defocus_group = ui.create_group(title='Focus toggling', content=ui.create_column(
+            ui.create_row(self.defocus_label, self.defocus_value, self.defocus_checkbox, ui.create_stretch())))
+
         ## ACQUISTION BUTTONS
 
         self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
@@ -658,7 +668,7 @@ class gainView:
 
         self.ui_view = ui.create_column(
             self.init_row, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
-            self.buttons_group)
+            self.defocus_group, self.buttons_group)
 
 def create_spectro_panel(document_controller, panel_id, properties):
     instrument = properties["instrument"]

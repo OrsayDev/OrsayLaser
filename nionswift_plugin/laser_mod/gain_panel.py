@@ -254,6 +254,9 @@ class gainhandler:
                      " happened because we have a broken function.")
         #self.instrument.acq_trans()
 
+    def raster_push(self, widget):
+        self.instrument.acq_raster()
+
     def acq_pr_push(self, widget):
         self.instrument.acq_pr()
 
@@ -439,19 +442,21 @@ class gainView:
     def __init__(self, instrument: gain_inst.gainDevice):
         ui = Declarative.DeclarativeUI()
 
+        self.host_label = ui.create_label(text='Host: ')
+        self.host_value = ui.create_line_edit(name='host_value', text='@binding(instrument.host_f)', width=100)
+        self.port_label = ui.create_label(text = 'Port: ')
+        self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)', width=75)
+        self.host_port_row = ui.create_row(self.host_label, self.host_value, self.port_label, self.port_value, ui.create_stretch())
+
         self.server_ping_pb = ui.create_push_button(text="Server Ping", name="server_ping_pb",
                                                     on_clicked="server_ping_push")
         self.init_pb = ui.create_push_button(text="Init All", name="init_pb", on_clicked="init_push")
-        self.host_label = ui.create_label(text='Host: ')
-        self.host_value = ui.create_line_edit(name='host_value', text='@binding(instrument.host_f)')
-        self.port_label = ui.create_label(text = 'Port: ')
-        self.port_value = ui.create_line_edit(name='port_value', text='@binding(instrument.port_f)')
+
         self.server_label = ui.create_label(text='Server: ')
         self.server_value = ui.create_label(name='server_value', text='OFF')
         self.server_choice = ui.create_combo_box(items=['Raspberry Pi', 'VG Lumiere', 'Local Host'], on_current_index_changed='server_choice_pick')
         self.server_shutdown = ui.create_push_button(name='server_shutdown', text='Shutdown', on_clicked='server_shutdown_push')
-        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.host_label, self.host_value,
-                                      self.port_label, self.port_value, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), self.server_shutdown, spacing=12)
+        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, self.server_label, self.server_value, self.server_choice, ui.create_stretch(), self.server_shutdown, spacing=12)
 
         self.start_label = ui.create_label(text='Start Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line", width=100)
@@ -643,15 +648,19 @@ class gainView:
 
         ## ACQUISTION BUTTONS
 
-        self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=150)
-        self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push", width=150)
-        self.mon_pb = ui.create_push_button(text='Monitor Power', name="mon_pb", on_clicked="mon_push", width=150)
-        self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push", width=150)
+        self.upt_pb = ui.create_push_button(text="Update", name="upt_pb", on_clicked="upt_push", width=125)
+        self.acq_pb = ui.create_push_button(text="Acquire", name="acq_pb", on_clicked="acq_push", width=125)
+        self.mon_pb = ui.create_push_button(text='Monitor Power', name="mon_pb", on_clicked="mon_push", width=125)
+        self.abt_pb = ui.create_push_button(text="Abort", name="abt_pb", on_clicked="abt_push", width=125)
 
         self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.mon_pb, self.abt_pb, ui.create_stretch(), spacing=12)
 
-        self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=150)
-        self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=150)
+        self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=125)
+        self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=125)
+        self.acq_raster_pb = ui.create_push_button(text="Raster wavelength", name="acq_raster_pb",
+                                                  on_clicked="raster_push", width=125)
+        """"
+        This is currently disabled. It acquires images images in-between measurements
         self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox',
                                                           checked='@binding(instrument.per_pic_f)',
                                                           on_check_state_changed='change_periodic_pic',
@@ -659,15 +668,16 @@ class gainView:
         self.periodic_pics_label = ui.create_label(text='How many (per acq.): ')
         self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value',
                                                        text='@binding(instrument.many_per_pic_f)', width=100)
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.acq_trans_pb, self.periodic_pics_checkbox, self.periodic_pics_label,
-                                           self.periodic_pics_value, ui.create_stretch(), spacing=12)
+        """
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.acq_trans_pb, self.acq_raster_pb,
+                                           ui.create_stretch(), spacing=12)
 
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(
             self.buttons_row00, self.buttons_row01))
         ## END FIRST TAB
 
         self.ui_view = ui.create_column(
-            self.init_row, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
+            self.init_row, self.host_port_row, self.laser_group, self.powermeter_group, self.ps_group, self.servo_group, self.blanker_group,
             self.defocus_group, self.buttons_group)
 
 def create_spectro_panel(document_controller, panel_id, properties):

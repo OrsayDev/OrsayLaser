@@ -65,19 +65,6 @@ class LaserServerHandler():
 
     ## Sirah Credo Laser Function
 
-    def set_hardware_wl(self, wl):
-        try:
-            header = b'set_hardware_wl'
-            msg = header + bytes(4)
-            msg = msg + format(wl, '.8f').rjust(16, '0').encode()
-            msg = msg + bytes(4)
-            msg = msg + b'LASER'
-            data = self.get_data(msg)
-            if data.decode() != 'None':
-                logging.info('***NS CLIENT***: Bad communication. Error 01.')
-        except ConnectionResetError:
-            self.connection_error_handler()
-
     def get_hardware_wl(self):
         try:
             header = b'get_hardware_wl'
@@ -675,6 +662,11 @@ class gainDevice(Observable.Observable):
             self.__thread.start()
     """
 
+    def acq_raster(self):
+        if self.__serverLaser.server_ping():
+            self.__thread = threading.Thread(target=self.acq_rasterThread)
+            self.__thread.start()
+
     def acq_pr(self):
         if self.__serverLaser.server_ping():
             self.__thread = threading.Thread(target=self.acq_prThread)
@@ -774,6 +766,49 @@ class gainDevice(Observable.Observable):
         self.end_data.fire()
         self.run_status_f = False  # acquisition is over
     """
+
+    def acq_rasterThread(self):
+        """"
+        Rastering thread. This loops the wavelength of the laser up and down until
+        abort is clicked.
+        """
+        self.run_status_f = True
+        self.__abort_force = False
+        self.__servo_pos_initial = self.__servo_pos
+
+        # Laser thread begins
+
+        if (self.__serverLaser.set_scan_thread_check() and abs(
+                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
+            self.sht_f = True
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
+        else:
+            logging.info(
+                "***LASER***: Last thread was not done || start and current wavelength differs || end wav < start wav || Not Focus mode.")
+            self.run_status_f = False  # acquisition is over
+            return
+            # self.__abort_force = True
+
+        def run_function():
+            if self.__abort_force: return True
+            _response = self.__serverLaser.setWL(self.__start_wav + i * step, self.__cur_wav)
+            self.combo_data_f = True
+            time.sleep(5.0)
+            return False
+
+        i = 0  # e-point counter
+        n = self.__pts #Number of points
+        step = self.__step_wav
+        while not self.__abort_force:
+            for i in range(n):
+                if run_function(): break
+            for i in range(n-2, -1, -1):
+                if run_function(): break
+
+        if self.__controlRout.pw_control_thread_check():
+            self.__controlRout.pw_control_thread_off()
+        self.run_status_f = False
+        self.combo_data_f = True
 
     def acq_prThread(self):
         self.run_status_f = self.__power_ramp = True

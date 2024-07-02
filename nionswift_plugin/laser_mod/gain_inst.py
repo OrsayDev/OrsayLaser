@@ -1383,7 +1383,8 @@ class gainDevice(Observable.Observable):
         self.__defocus_check = value
         main_controller = Registry.get_component("stem_controller")
         if value:
-            main_controller.SetVal("C10", self.__defocus)
+            if 0 < self.__defocus <= 0.0001:
+                main_controller.SetVal("C10", self.__defocus)
         else:
             main_controller.SetVal("C10", 0)
         self.property_changed_event.fire('defocus_check_f')

@@ -1382,11 +1382,14 @@ class gainDevice(Observable.Observable):
     def defocus_check_f(self, value):
         self.__defocus_check = value
         main_controller = Registry.get_component("stem_controller")
+        scan_controller = main_controller.scan_controller
         if value:
             if 0 < self.__defocus <= 0.0001:
                 main_controller.SetVal("C10", self.__defocus)
+                scan_controller.stop_playing()
         else:
             main_controller.SetVal("C10", 0)
+            scan_controller.start_playing()
         self.property_changed_event.fire('defocus_check_f')
         self.free_event.fire('all')
 

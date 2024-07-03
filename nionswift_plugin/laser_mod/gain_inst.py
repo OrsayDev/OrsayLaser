@@ -490,6 +490,12 @@ class gainDevice(Observable.Observable):
         for server in [self.__serverLaser, self.__serverPM[0], self.__serverPS, self.__serverArd]:
             server.shutdown()
 
+        self.__serverLaser = None
+        self.__serverPM = [None, None]
+        self.__serverPS = None
+        self.__serverArd = None
+
+
     def init(self):
         #Looking for orsay_camera_eels. If not, check orsay_camera_tp3. If not, grab usim
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
@@ -792,8 +798,10 @@ class gainDevice(Observable.Observable):
         def run_function():
             if self.__abort_force: return True
             _response = self.__serverLaser.setWL(self.__start_wav + i * step, self.__cur_wav)
-            self.combo_data_f = True
-            time.sleep(5.0)
+            for _ in range(10):
+                self.combo_data_f = True
+                time.sleep(1.0)
+                if self.__abort_force: return True
             return False
 
         i = 0  # e-point counter
@@ -1056,9 +1064,13 @@ class gainDevice(Observable.Observable):
         return self.__tpts
 
     @property
-    def pts_f(self) -> float:
+    def pts_f(self) -> int:
         self.__pts = int((float(self.__finish_wav) - float(self.__start_wav)) / float(self.__step_wav) + 1)
         return self.__pts
+
+    @property
+    def cur_point_lazy_f(self) -> int:
+        return int((float(self.__cur_wav) - float(self.__start_wav)) / float(self.__step_wav) + 1)
 
     @property  # we dont set cur_wav but rather start wav.
     def cur_wav_f(self) -> str:

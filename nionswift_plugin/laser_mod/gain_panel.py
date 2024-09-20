@@ -249,6 +249,9 @@ class gainhandler:
     def mon_push(self, widget):
         self.instrument.acq_mon()
 
+    def power_sustain_push(self, widget):
+        self.instrument.acq_pwsustain()
+
     def acq_trans_push(self, widget):
         logging.info("***PANEL***: Transmission is disabled. This probably"
                      " happened because we have a broken function.")
@@ -659,6 +662,9 @@ class gainView:
         self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=125)
         self.acq_raster_pb = ui.create_push_button(text="Raster wavelength", name="acq_raster_pb",
                                                   on_clicked="raster_push", width=125)
+        self.acq_powersustain_pb = ui.create_push_button(text="Power Sustain", name="acq_powersustain_pb",
+                                                   on_clicked="power_sustain_push", width=125)
+
         """"
         This is currently disabled. It acquires images images in-between measurements
         self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox',
@@ -669,7 +675,7 @@ class gainView:
         self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value',
                                                        text='@binding(instrument.many_per_pic_f)', width=100)
         """
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.acq_trans_pb, self.acq_raster_pb,
+        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.acq_trans_pb, self.acq_raster_pb, self.acq_powersustain_pb,
                                            ui.create_stretch(), spacing=12)
 
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(

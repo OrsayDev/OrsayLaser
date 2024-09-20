@@ -660,6 +660,11 @@ class gainDevice(Observable.Observable):
             self.__thread = threading.Thread(target=self.acq_monThread)
             self.__thread.start()
 
+    def acq_pwsustain(self):
+        if self.__serverLaser.server_ping():
+            self.__thread = threading.Thread(target=self.acq_pwsustainThread)
+            self.__thread.start()
+
     """
     def acq_trans(self):
         self.__acq_number += 1
@@ -702,7 +707,7 @@ class gainDevice(Observable.Observable):
         self.__abort_force = False
         loop_index = 0
         self.call_monitor.fire()
-        self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003)
+        self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
         while not self.__abort_force:
             self.append_monitor_data.fire((self.__power, self.__power02), loop_index)
             loop_index += 1
@@ -712,6 +717,23 @@ class gainDevice(Observable.Observable):
 
         self.end_data_monitor.fire()
         self.__bothPM = self.__power_ramp = False
+        self.run_status_f = False
+
+    def acq_pwsustainThread(self):
+        '''
+        Power sustain thread. This blocks GUI and is control the servo in order to lock the current power.
+
+        '''
+        self.run_status_f = self.__bothPM = True
+        self.__abort_force = False
+        loop_index = 0
+        self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
+        while not self.__abort_force:
+            self.combo_data_f = True  # check laser and servo now
+        if self.__controlRout.pw_control_thread_check():
+            self.__controlRout.pw_control_thread_off()
+
+        self.__bothPM = False
         self.run_status_f = False
 
     """

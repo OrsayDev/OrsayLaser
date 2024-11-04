@@ -8,10 +8,10 @@ import logging
 import threading
 import time
 import numpy
-import socket
 
-from SirahCredoServer import power
-from SirahCredoServer import hv
+from . import NKTModules
+
+
 
 from . import control_routine as ctrlRout
 
@@ -110,6 +110,14 @@ class gainDevice(Observable.Observable):
             logging.info('***LASER***: No camera was found.')
         else:
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
+
+        NKTModules.init_ethernet_connection()
+
+
+        fianium = NKTModules.SuperFianium('EthernetPort1')
+        fianium.emission = 0
+        fianium.power = 50
+        print(fianium.power)
 
         self.run_status_f = False
         return True

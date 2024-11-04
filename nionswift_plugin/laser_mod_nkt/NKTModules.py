@@ -88,10 +88,11 @@ print('Reading gateway version str:', g0, g1, g2, g3)
 print('Reading subnet version str:', sn0, sn1, sn2, sn3)
 '''
 
-def init_ethernet_connection(name: str = 'EthernetPort1'):
+def init_ethernet_connection(name: str = 'EthernetPort1',
+                             ip_host: str = '192.168.0.20', ip_laser: str = '192.168.0.21', port = 10001):
     # Create the Internet port
     addResult = pointToPointPortAdd(name,
-                                    pointToPointPortData('192.168.0.20', 10001, '192.168.0.21', 10001, 0, 100))
+                                    pointToPointPortData(ip_host, port, ip_laser, port, 0, 100))
     print('Creating ethernet port', P2PPortResultTypes(addResult))
 
     getResult, portdata = pointToPointPortGet('EthernetPort1')
@@ -184,6 +185,49 @@ class SuperFianium:
 class Varia():
     def __init__(self, connectionId):
         self.connectionId = connectionId
+
+    # Filter setpoint 1. The neutral density filter
+    @property
+    def filter_setpoint1(self):
+        result, value = registerReadU16(self.connectionId, 16, 0x32, 0)
+        if result != 0:
+            logging.info('***VARIA***: problem in reading setpoint 1.')
+        return int(value / 10)
+
+    @filter_setpoint1.setter
+    def filter_setpoint1(self, value: int):
+        rdResult = registerWriteU16(self.connectionId, 16, 0x32, int(value) * 10, 0)
+        if rdResult != 0:
+            logging.info('***VARIA***: problem in setting setpoint 1.')
+
+    # Filter setpoint 2. This is SWP (short-wave-pass filter)
+    @property
+    def filter_setpoint2(self):
+        result, value = registerReadU16(self.connectionId, 16, 0x33, 0)
+        if result != 0:
+            logging.info('***VARIA***: problem in reading setpoint 2.')
+        return int(value / 10)
+
+    @filter_setpoint2.setter
+    def filter_setpoint2(self, value: int):
+        rdResult = registerWriteU16(self.connectionId, 16, 0x33, int(value) * 10, 0)
+        if rdResult != 0:
+            logging.info('***VARIA***: problem in setting setpoint 2.')
+
+    # Filter setpoint 3. This is the LWP (long-wave-pass filter)
+    @property
+    def filter_setpoint3(self):
+        result, value = registerReadU16(self.connectionId, 16, 0x34, 0)
+        if result != 0:
+            logging.info('***VARIA***: problem in reading setpoint 3.')
+        return int(value / 10)
+
+    @filter_setpoint3.setter
+    def filter_setpoint3(self, value: int):
+        rdResult = registerWriteU16(self.connectionId, 16, 0x34, int(value) * 10, 0)
+        if rdResult != 0:
+            logging.info('***VARIA***: problem in setting setpoint 3.')
+
 
 
 # fianium = SuperFianium('EthernetPort1')

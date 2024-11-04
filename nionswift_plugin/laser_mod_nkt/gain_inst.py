@@ -11,6 +11,30 @@ import numpy
 
 from . import NKTModules
 
+class LaserWrapper:
+    def __init__(self):
+        #NKTModules.init_ethernet_connection()
+        self.__Laser = NKTModules.SuperFianium('COM5')
+        self.__Varia = NKTModules.Varia('COM5')
+        self.__bandwidth = 10.0
+
+    def check(self):
+        return True
+
+    def setWL(self, wl: int, cur_wl: int):
+        self.__Varia.filter_setpoint1 = 100
+        self.__Varia.filter_setpoint2 = wl + self.__bandwidth
+        self.__Varia.filter_setpoint3 = wl
+        return 1
+
+    def getWL(self):
+        return (self.__Varia.filter_setpoint2 + self.__Varia.filter_setpoint3) / 2
+
+    def abort_control(self):
+        pass
+
+
+
 
 
 from . import control_routine as ctrlRout
@@ -42,6 +66,7 @@ class gainDevice(Observable.Observable):
 
         self.__start_wav = 575.0
         self.__finish_wav = 595.0
+        self.__cur_wav = 575.0
         self.__step_wav = 1.0
         self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
         self.__avg = 10
@@ -71,14 +96,11 @@ class gainDevice(Observable.Observable):
             self.__defocus = value
 
     def server_instrument_ping(self):
-        self.__Laser.server_ping()
+        self.__Laser.check()
 
     def server_instrument_shutdown(self):
         for server in [self.__Laser, self.__PM]:
             server.shutdown()
-
-        self.__Laser = None
-        self.__PM = None
 
 
     def init(self):
@@ -111,14 +133,7 @@ class gainDevice(Observable.Observable):
         else:
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
-        NKTModules.init_ethernet_connection()
-
-
-        fianium = NKTModules.SuperFianium('EthernetPort1')
-        fianium.emission = 0
-        fianium.power = 50
-        print(fianium.power)
-
+        self.__Laser = LaserWrapper()
         self.run_status_f = False
         return True
 
@@ -176,35 +191,35 @@ class gainDevice(Observable.Observable):
         self.run_status_f = False  # force free GUI
 
     def acq_mon(self):
-        if self.__Laser.server_ping():
+        if self.__Laser.check():
             self.__thread = threading.Thread(target=self.acq_monThread)
             self.__thread.start()
 
     def acq_pwsustain(self):
-        if self.__Laser.server_ping():
+        if self.__Laser.check():
             self.__thread = threading.Thread(target=self.acq_pwsustainThread)
             self.__thread.start()
 
     """
     def acq_trans(self):
         self.__acq_number += 1
-        if self.__serverLaser.server_ping():
+        if self.__serverLaser.check():
             self.__thread = threading.Thread(target=self.acq_transThread)
             self.__thread.start()
     """
 
     def acq_raster(self):
-        if self.__Laser.server_ping():
+        if self.__Laser.check():
             self.__thread = threading.Thread(target=self.acq_rasterThread)
             self.__thread.start()
 
     def acq_pr(self):
-        if self.__Laser.server_ping():
+        if self.__Laser.check():
             self.__thread = threading.Thread(target=self.acq_prThread)
             self.__thread.start()
 
     def acq(self):
-        if self.__Laser.server_ping():
+        if self.__Laser.check():
             self.__thread = threading.Thread(target=self.acqThread)
             self.__thread.start()
 
@@ -515,7 +530,6 @@ class gainDevice(Observable.Observable):
     def start_wav_f(self, value: float) -> None:
         self.__start_wav = float(value)
         self.busy_event.fire("all")
-        print(self.__status)
         if not self.__status:
             self.property_changed_event.fire("pts_f")
             self.property_changed_event.fire("tpts_f")
@@ -523,12 +537,14 @@ class gainDevice(Observable.Observable):
             response = self.__Laser.setWL(self.__start_wav, self.__cur_wav)
             if response == 1:
                 logging.info("***LASER***: start WL is current WL")
+                self.property_changed_event.fire("cur_wav_f")
                 self.run_status_f = False
-                self.combo_data_f = False #when false, GUI is fre-ed by status
+                #self.combo_data_f = False #when false, GUI is fre-ed by status
             elif response == 2:
                 logging.info("***LASER***: Current WL being updated...")
+                self.property_changed_event.fire("cur_wav_f")
                 self.run_status_f = True
-                self.combo_data_f = False #when false, GUI is fre-ed by status
+                #self.combo_data_f = False #when false, GUI is fre-ed by status
                 threading.Timer(0.05, self.wavelength_ready, args=()).start()
 
     @property
@@ -582,7 +598,7 @@ class gainDevice(Observable.Observable):
         if not self.__Laser:
             return 'None'
         else:
-            self.__cur_wav = self.__Laser.get_hardware_wl()[0]
+            self.__cur_wav = self.__Laser.getWL()
             return format(self.__cur_wav, '.4f')
 
     @property
@@ -653,22 +669,6 @@ class gainDevice(Observable.Observable):
         self.__frequency = int(value)
         self.property_changed_event.fire('laser_frequency_f')
         self.free_event.fire('all')
-
-    @property
-    def combo_data_f(self):
-        if self.__ctrl_type == 1 or self.__power_ramp:
-            return [self.__cur_wav, self.__power, self.__servo_pos, self.__power02]
-        if self.__ctrl_type == 2:
-            return [self.__cur_wav, self.__power, self.__diode, self.__power02]
-        else:
-            return [self.__cur_wav, self.__power, self.__power02]
-
-    @combo_data_f.setter
-    def combo_data_f(self, value):
-        self.property_changed_event.fire("cur_wav_f")
-        if self.__ctrl_type == 1 or self.__power_ramp: self.property_changed_event.fire("servo_f")
-        if self.__ctrl_type == 2: self.property_changed_event.fire("cur_d_f")
-        if not value and not self.__status: self.free_event.fire('all')
 
     @property
     def powermeter_avg_f(self):

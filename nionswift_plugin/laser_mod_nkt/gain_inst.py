@@ -10,9 +10,10 @@ import time
 
 from . import control_routine as ctrlRout
 from SirahCredoServer import power
+from . import NKTModules
 
 class LaserWrapperDebug:
-    def __init__(self):
+    def __init__(self, connectionId: str = 'COM5'):
         self.__lowerWL = 580
         self.__upperWL = 600
         self.__intensity = 10
@@ -69,17 +70,18 @@ class LaserWrapperDebug:
 
 
 class LaserWrapper:
-    def __init__(self):
+    def __init__(self, connectionId: str = 'COM5'):
         #NKTModules.init_ethernet_connection()
-        self.__Laser = NKTModules.SuperFianium('COM5')
-        self.__Varia = NKTModules.Varia('COM5')
+        NKTModules.ConnectionHandler(connectionId)
+        self.__Laser = NKTModules.SuperFianium(connectionId)
+        self.__Varia = NKTModules.Varia(connectionId)
         self.__Varia.filter_setpoint1 = 100
 
     def check(self):
         return True
 
     def check_status(self):
-        return not self.__Varia.filter_moving
+        return not self.__Varia.filter_moving()
 
     def setWL(self, wl: float):
         bd = self.getBandwidth()
@@ -101,13 +103,10 @@ class LaserWrapper:
         return self.__Varia.filter_setpoint2 - self.__Varia.filter_setpoint3
 
     def setEmission(self, value: bool):
-        if value:
-            self.__Laser.emission = 3
-        else:
-            self.__Laser.emission = 0
+        self.__Laser.emission = 3 if value else 0
 
     def getEmission(self):
-        return (self.__Laser.emission == 3)
+        return self.__Laser.emission == 3
 
     def setDelay(self, value: int):
         self.__Laser.nim_delay = value
@@ -116,7 +115,7 @@ class LaserWrapper:
         return self.__Laser.nim_delay
 
     def getPower(self):
-        return self.__Laser.power()
+        return self.__Laser.power
 
     def setPower(self, value: int):
         self.__Laser.power = value
@@ -167,7 +166,7 @@ class gainDevice(Observable.Observable):
             self.__defocus = value
 
     def power_callback(self):
-        print("here")
+        pass
 
     def server_instrument_ping(self):
         self.__Laser.check()
@@ -207,12 +206,11 @@ class gainDevice(Observable.Observable):
         else:
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
-        try:
-            from . import NKTModules
-            self.__Laser = LaserWrapper()
-        except:
-            self.__Laser = LaserWrapperDebug()
-            logging.info("***NKT***: Error on launching the laser. Using the NKT debug instead.")
+        #try:
+        self.__Laser = LaserWrapper()
+        #except:
+        #    self.__Laser = LaserWrapperDebug()
+        #    logging.info("***NKT***: Error on launching the laser. Using the NKT debug instead.")
         self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
 
         self.upt()
@@ -240,7 +238,6 @@ class gainDevice(Observable.Observable):
             self.__abort_force = True
             self.__Laser.abort_control()  # abort laser thread as well.
         try:
-            print(self.__thread)
             self.__thread.join()
         except AttributeError:
             pass
@@ -299,7 +296,7 @@ class gainDevice(Observable.Observable):
         if self.__Laser.check() and self.__finish_wav > self.start_wav_f and q:
             self.__acq_number += 1
             self.__camera.start_playing()
-            self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
+            #self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
             last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
 
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.start_wav_f, self.__finish_wav,
@@ -333,8 +330,8 @@ class gainDevice(Observable.Observable):
 
         logging.info("***LASER***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         self.emission_f = False
-        if self.__controlRout.pw_control_thread_check():
-            self.__controlRout.pw_control_thread_off()
+        #if self.__controlRout.pw_control_thread_check():
+        #    self.__controlRout.pw_control_thread_off()
 
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
@@ -485,7 +482,10 @@ class gainDevice(Observable.Observable):
     @emission_f.setter
     def emission_f(self, value):
         self.__Laser.setEmission(value)
+        time.sleep(1.0) #Emission takes time to be accounted
         self.property_changed_event.fire('emission_f')
+        if not self.__status:
+            self.free_event.fire('all')
 
     @property
     def delay_f(self):

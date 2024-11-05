@@ -93,28 +93,36 @@ def init_ethernet_connection(name: str = 'EthernetPort1',
     # Create the Internet port
     addResult = pointToPointPortAdd(name,
                                     pointToPointPortData(ip_host, port, ip_laser, port, 0, 100))
-    print('Creating ethernet port', P2PPortResultTypes(addResult))
+    print('***NKT CH***: Creating ethernet port', P2PPortResultTypes(addResult))
 
     getResult, portdata = pointToPointPortGet('EthernetPort1')
-    print('Getting ethernet port', portdata, P2PPortResultTypes(getResult))
+    print('***NKT CH***: Getting ethernet port', portdata, P2PPortResultTypes(getResult))
 
     # Open the Internet port
     # Not nessesary, but would speed up the communication, since the functions does
     # not have to open and close the port on each call
     openResult = openPorts(name, 0, 0)
-    print('Opening the Ethernet port:', PortResultTypes(openResult))
+    print('***NKT CH***: Opening the Ethernet port:', PortResultTypes(openResult))
 
     _, status0 = registerReadU8('COM5', 14, 0x66, 0)
-    print('reading the status:', status0)
+    print('***NKT CH***: reading the status:', status0)
 
     # Example - Reading of the Firmware Revision register 0x64(regId) in ADJUSTIK at address 128(devId)
     # index = 2, because the str starts at byte index 2
-    rdResult, FWVersionStr = registerReadAscii(name, 14, 0x65, -1)  # ethernet (0x81)
-    print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
-    rdResult, FWVersionStr = registerReadAscii(name, 15, 0x65, -1)  # superK fianium (0x88)
-    print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
-    rdResult, FWVersionStr = registerReadAscii(name, 16, 0x65, -1)  # superK varia (0x68)
-    print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+    #rdResult, FWVersionStr = registerReadAscii(name, 14, 0x65, -1)  # ethernet (0x81)
+    #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+    #rdResult, FWVersionStr = registerReadAscii(name, 15, 0x65, -1)  # superK fianium (0x88)
+    #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+    #rdResult, FWVersionStr = registerReadAscii(name, 16, 0x65, -1)  # superK varia (0x68)
+    #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+
+class ConnectionHandler():
+    def __init__(self, connectionId):
+        if 'COM' in connectionId:
+            openResult = openPorts(connectionId, 0, 0)
+            print('***NKT CH***: Opening the comport:', PortResultTypes(openResult))
+        else:
+            init_ethernet_connection()
 
 class SuperFianium:
     def __init__(self, connectionId):
@@ -125,7 +133,10 @@ class SuperFianium:
     # Emission Property
     @property
     def emission(self):
-        return registerReadU8(self.connectionId, 15, 0x30, 0)
+        result, value = registerReadU8(self.connectionId, 15, 0x30, 0)
+        if result != 0:
+            logging.info('***LASER***: problem in reading emission.')
+        return value
 
     @emission.setter
     def emission(self, value: int):
@@ -136,7 +147,10 @@ class SuperFianium:
     # Interlock Property
     @property
     def interlock(self):
-        return bool(registerReadU8(self.connectionId, 15, 0x32, 0))
+        result, value = registerReadU8(self.connectionId, 15, 0x32, 0)
+        if result != 0:
+            logging.info('***LASER***: problem in reading interlock.')
+        return value
 
     @interlock.setter
     def interlock(self, value: bool):
@@ -149,37 +163,42 @@ class SuperFianium:
     def power(self):
         result, value = registerReadU16(self.connectionId, 15, 0x37, 0)
         if result != 0:
-            logging.info('***LASER***: problem in reading power')
+            logging.info('***LASER***: problem in reading power.')
         return int(value / 10)
 
     @power.setter
     def power(self, value: int):
         rdResult = registerWriteU16(self.connectionId, 15, 0x37, int(value) * 10, 0)
         if rdResult != 0:
-            logging.info('***LASER***: problem in setting power')
+            logging.info('***LASER***: problem in setting power.')
 
     # Pulse Picker Property
     @property
     def pulse_picker(self):
         result, value = registerReadU16(self.connectionId, 15, 0x34, 0)
+        if result != 0:
+            logging.info('***LASER***: problem in reading pulse picker.')
         return value
 
     @pulse_picker.setter
     def pulse_picker(self, value: int):
         rdResult = registerWriteU16(self.connectionId, 15, 0x34, int(value), 0)
         if rdResult != 0:
-            logging.info('***LASER***: problem in setting pulse picker')
+            logging.info('***LASER***: problem in setting pulse picker.')
 
     # NIM Delay Property
     @property
     def nim_delay(self):
-        return registerReadU16(self.connectionId, 15, 0x39, 0)
+        result, value = registerReadU16(self.connectionId, 15, 0x39, 0)
+        if result != 0:
+            logging.info('***LASER***: problem in reading NIM delay.')
+        return value
 
     @nim_delay.setter
     def nim_delay(self, value: int):
         rdResult = registerWriteU16(self.connectionId, 15, 0x39, int(value), 0)
         if rdResult != 0:
-            logging.info('***LASER***: problem in setting NIM delay')
+            logging.info('***LASER***: problem in setting NIM delay.')
 
 
 class Varia():

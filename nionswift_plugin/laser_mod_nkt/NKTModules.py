@@ -228,6 +228,23 @@ class Varia():
         if rdResult != 0:
             logging.info('***VARIA***: problem in setting setpoint 3.')
 
+    def read_status_bits(self):
+        result, value = registerReadU16(self.connectionId, 16, 0x66, 0)
+        if result != 0:
+            logging.info('***VARIA***: problem in reading status bits.')
+        return value
+
+    def given_status_bits(self, bit: int):
+        status = self.read_status_bits()
+        return (status >> bit) & 1
+
+    def filter_moving(self):
+        status = self.read_status_bits()
+        filter1_moving = (status >> 12) & 1
+        filter2_moving = (status >> 13) & 1
+        filter3_moving = (status >> 14) & 1
+        return filter1_moving or filter2_moving or filter3_moving
+
 
 
 # fianium = SuperFianium('EthernetPort1')

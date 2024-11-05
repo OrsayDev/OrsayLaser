@@ -7,20 +7,15 @@ __author__ = "Yves Auad"
 def _isPython3():
     return sys.version_info[0] >= 3
 
-def SENDMYMESSAGEFUNC(sendmessagefunc):
-    return sendmessagefunc
-
 class controlRoutine:
-
-    def __init__(self, sendmessage):
-        self.sendmessage=sendmessage
-
+    def __init__(self, callback):
+        self.callback = callback
 
     def pw_control_thread(self, interval):
         self.control_thread=threading.currentThread()
         while getattr(self.control_thread, "do_run", True):
             time.sleep(interval)
-            self.sendmessage(101)
+            self.callback()
 
     def pw_control_thread_check(self):
         try:

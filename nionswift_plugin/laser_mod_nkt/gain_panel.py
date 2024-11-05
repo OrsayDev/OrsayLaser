@@ -174,10 +174,6 @@ class gainhandler:
         self.end_data_monitor = self.instrument.end_data_monitor.listen(self.end_data_monitor)
         self.end_data_listener = self.instrument.end_data.listen(self.end_data)
 
-        self.server_shutdown_listener = self.instrument.server_shutdown.listen(self.server_shut)
-
-        self.det_acq_listener = self.instrument.det_acq.listen(self.show_det)
-
         self.__current_DI = None
         self.__current_DI_POW = None
         self.__current_DI_WAV = None
@@ -196,11 +192,6 @@ class gainhandler:
         self.event_loop.create_task(self.do_enable(False, ['init_pb', 'server_ping_push', 'host_value', 'port_value',
                                                            'server_value', 'server_choice', 'more_m1_pb', 'more_m2_pb',
                                                            'less_m1_pb', 'less_m2_pb']))  # not working as something is calling this guy
-
-    def server_shut(self):
-        self.init_pb.enabled = True
-        self.server_value.text = 'OFF'
-        self.init_handler() #this puts the GUI in the same position as the beginning
 
     def init_push(self, widget):
         ok = self.instrument.init()
@@ -227,10 +218,6 @@ class gainhandler:
 
     def server_ping_push(self, widget):
         self.instrument.server_instrument_ping()
-
-    def server_shutdown_push(self, widget):
-        self.instrument.server_instrument_shutdown()
-        self.server_shut()
 
     def upt_push(self, widget):
         self.instrument.upt()
@@ -442,8 +429,7 @@ class gainView:
         self.server_ping_pb = ui.create_push_button(text="Server Ping", name="server_ping_pb",
                                                     on_clicked="server_ping_push")
         self.init_pb = ui.create_push_button(text="Init All", name="init_pb", on_clicked="init_push")
-        self.server_shutdown = ui.create_push_button(name='server_shutdown', text='Shutdown', on_clicked='server_shutdown_push')
-        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, ui.create_stretch(), self.server_shutdown, spacing=12)
+        self.init_row = ui.create_row(self.server_ping_pb, self.init_pb, ui.create_stretch(), spacing=12)
 
         self.start_label = ui.create_label(text='Start/Central Wavelength (nm): ')
         self.start_line = ui.create_line_edit(text="@binding(instrument.start_wav_f)", name="start_line", width=75)
@@ -466,7 +452,10 @@ class gainView:
 
         self.step_label = ui.create_label(text='Step Wavelength (nm): ')
         self.step_line = ui.create_line_edit(text="@binding(instrument.step_wav_f)", name="step_line", width=75)
-        self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(), spacing=12)
+        self.intensity_label = ui.create_label(text='Intensity (%): ')
+        self.intensity_line = ui.create_line_edit(text="@binding(instrument.laser_intensity_f)", name="intensity_line", width=75)
+        self.ui_view3 = ui.create_row(self.step_label, self.step_line, ui.create_stretch(),
+                                      self.intensity_label, self.intensity_line,spacing=12)
 
         self.avg_label = ui.create_label(text='Averages: ')
         self.avg_line = ui.create_line_edit(text="@binding(instrument.avg_f)", name="avg_line", width=75)
@@ -475,8 +464,15 @@ class gainView:
         self.ui_view4 = ui.create_row(self.avg_label, self.avg_line, ui.create_stretch(), self.running_label,
                                       self.running_value_label, spacing=12)
 
+        self.emission_checkbox = ui.create_check_box(name='emission_checkbox',
+                                                          checked='@binding(instrument.emission_f)',
+                                                          text='Emission?')
+        self.delay_label = ui.create_label(text='Delay: ')
+        self.delay_line = ui.create_line_edit(text="@binding(instrument.delay_f)", name="delay_line", width=75)
+        self.ui_view5 = ui.create_row(self.delay_label, self.delay_line, ui.create_stretch(),
+                                      self.emission_checkbox, spacing=12)
         self.laser_group = ui.create_group(title='NKT Photonics', content=ui.create_column(
-            self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4)
+            self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5)
                                            )
 
         self.power_label = ui.create_label(text='Power (uW): ')

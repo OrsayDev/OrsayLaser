@@ -16,22 +16,30 @@ class LaserWrapper:
         #NKTModules.init_ethernet_connection()
         self.__Laser = NKTModules.SuperFianium('COM5')
         self.__Varia = NKTModules.Varia('COM5')
-        self.__bandwidth = 10.0
+        self.__Varia.filter_setpoint1 = 100
 
     def check(self):
         return True
 
-    def setWL(self, wl: int, cur_wl: int):
-        self.__Varia.filter_setpoint1 = 100
-        self.__Varia.filter_setpoint2 = wl + self.__bandwidth
-        self.__Varia.filter_setpoint3 = wl
-        return 1
+    def setWL(self, wl: float):
+        bd = self.getBandwidth()
+        print(bd)
+        self.__Varia.filter_setpoint2 = wl + bd / 2
+        self.__Varia.filter_setpoint3 = wl - bd / 2
 
     def getWL(self):
         return (self.__Varia.filter_setpoint2 + self.__Varia.filter_setpoint3) / 2
 
     def abort_control(self):
         pass
+
+    def setBandwidth(self, bandwidth: int):
+        wl = self.getWL()
+        self.__Varia.filter_setpoint2 = wl + bandwidth / 2
+        self.__Varia.filter_setpoint3 = wl - bandwidth / 2
+
+    def getBandwidth(self):
+        return (self.__Varia.filter_setpoint2 - self.__Varia.filter_setpoint3)
 
 
 
@@ -64,13 +72,12 @@ class gainDevice(Observable.Observable):
         # this is related to the images taken periodically
         self.det_acq = Event.Event()
 
-        self.__start_wav = 575.0
+
+
         self.__finish_wav = 595.0
-        self.__cur_wav = 575.0
+        #self.__cur_wav = 575.0
         self.__step_wav = 1.0
-        self.__pts = int((self.__finish_wav - self.__start_wav) / self.__step_wav + 1)
         self.__avg = 10
-        self.__tpts = int(self.__avg * self.__pts)
         self.__power = 0.
         self.__powermeter_avg = 10
 
@@ -134,6 +141,8 @@ class gainDevice(Observable.Observable):
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
         self.__Laser = LaserWrapper()
+        self.property_changed_event.fire("start_wav_f")
+        self.property_changed_event.fire("bandwidth_wav_f")
         self.run_status_f = False
         return True
 
@@ -341,8 +350,7 @@ class gainDevice(Observable.Observable):
 
         # Laser thread begins
 
-        if (self.__Laser.set_scan_thread_check() and abs(
-                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav):
+        if (self.__Laser.set_scan_thread_check() and self.__finish_wav > self.__start_wav):
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
         else:
@@ -362,7 +370,7 @@ class gainDevice(Observable.Observable):
             return False
 
         i = 0  # e-point counter
-        n = self.__pts #Number of points
+        n = self.pts_f #Number of points
         step = self.__step_wav
         while not self.__abort_force:
             for i in range(n):
@@ -383,8 +391,7 @@ class gainDevice(Observable.Observable):
         # Laser power resolved thread begins
         p = "acquistion_mode" in self.__camera.get_current_frame_parameters().as_dict()
         q = self.__camera.get_current_frame_parameters().as_dict()['acquisition_mode'] == 'Focus' if p else True
-        if (self.__Laser.set_scan_thread_check() and abs(
-                self.__start_wav - self.__cur_wav) <= 0.001 and self.__finish_wav > self.__start_wav and q):
+        if (self.__Laser.set_scan_thread_check() and self.__finish_wav > self.__start_wav and q):
             self.__acq_number += 1
             self.__camera.start_playing()
             last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
@@ -454,9 +461,9 @@ class gainDevice(Observable.Observable):
                                 transmission=self.__power_transmission,
                                 camera=last_cam_acq.metadata)
             #self.grab_det("init", self.__acq_number, 0, True)  # after call_data.fire
-            pics_array = numpy.linspace(0, self.__pts, min(self.__nper_pic + 2, self.__pts + 1), dtype=int)
+            pics_array = numpy.linspace(0, self.pts_f, min(self.__nper_pic + 2, self.pts_f + 1), dtype=int)
             pics_array = pics_array[1:]  # exclude zero
-            self.__Laser.set_scan(self.__cur_wav, self.__step_wav, self.__pts)
+            self.__Laser.set_scan(self.__cur_wav, self.__step_wav, self.pts_f)
             self.sht_f = True
             self.__controlRout.pw_control_thread_on(self.__powermeter_avg*0.003*4.0)
         else:
@@ -467,7 +474,7 @@ class gainDevice(Observable.Observable):
             #self.__abort_force = True
 
         i = 0  # e-point counter
-        i_max = self.__pts
+        i_max = self.pts_f
         j = 0  # each frame inside an specific e-point
         j_max = self.__avg  # dont put directly self.__avg because it will keep refreshing UI
 
@@ -524,39 +531,48 @@ class gainDevice(Observable.Observable):
 
     @property
     def start_wav_f(self) -> float:
-        return self.__start_wav
+        try:
+            return self.__Laser.getWL()
+        except AttributeError:
+            return 999
 
     @start_wav_f.setter
-    def start_wav_f(self, value: float) -> None:
-        self.__start_wav = float(value)
+    def start_wav_f(self, value: str) -> None:
+        #self.__start_wav = float(value)
         self.busy_event.fire("all")
         if not self.__status:
             self.property_changed_event.fire("pts_f")
             self.property_changed_event.fire("tpts_f")
             self.run_status_f = True
-            response = self.__Laser.setWL(self.__start_wav, self.__cur_wav)
-            if response == 1:
-                logging.info("***LASER***: start WL is current WL")
-                self.property_changed_event.fire("cur_wav_f")
-                self.run_status_f = False
-                #self.combo_data_f = False #when false, GUI is fre-ed by status
-            elif response == 2:
-                logging.info("***LASER***: Current WL being updated...")
-                self.property_changed_event.fire("cur_wav_f")
-                self.run_status_f = True
-                #self.combo_data_f = False #when false, GUI is fre-ed by status
-                threading.Timer(0.05, self.wavelength_ready, args=()).start()
+            self.__Laser.setWL(float(value))
+            logging.info("***LASER***: start WL is current WL")
+            self.property_changed_event.fire("start_wav_f")
+            self.run_status_f = False
+
 
     @property
     def finish_wav_f(self) -> float:
         return self.__finish_wav
 
     @finish_wav_f.setter
-    def finish_wav_f(self, value: float) -> None:
+    def finish_wav_f(self, value: str) -> None:
         self.__finish_wav = float(value)
         self.property_changed_event.fire("pts_f")
         self.property_changed_event.fire("tpts_f")
         self.free_event.fire("all")
+
+    @property
+    def bandwidth_wav_f(self) -> float:
+        try:
+            return self.__Laser.getBandwidth()
+        except AttributeError:
+            return 'None'
+
+    @bandwidth_wav_f.setter
+    def bandwidth_wav_f(self, value: float) -> None:
+        self.__Laser.setBandwidth(float(value))
+        self.free_event.fire("all")
+
 
     @property
     def step_wav_f(self) -> float:
@@ -581,25 +597,15 @@ class gainDevice(Observable.Observable):
 
     @property
     def tpts_f(self) -> int:
-        self.__tpts = int(int(self.__avg) * int(self.__pts))
-        return self.__tpts
+        return int(int(self.__avg) * int(self.pts_f))
 
     @property
     def pts_f(self) -> int:
-        self.__pts = int((float(self.__finish_wav) - float(self.__start_wav)) / float(self.__step_wav) + 1)
-        return self.__pts
+        return int((float(self.__finish_wav) - float(self.start_wav_f)) / float(self.__step_wav) + 1)
 
     @property
     def cur_point_lazy_f(self) -> int:
-        return int((float(self.__cur_wav) - float(self.__start_wav)) / float(self.__step_wav) + 1)
-
-    @property  # we dont set cur_wav but rather start wav.
-    def cur_wav_f(self) -> str:
-        if not self.__Laser:
-            return 'None'
-        else:
-            self.__cur_wav = self.__Laser.getWL()
-            return format(self.__cur_wav, '.4f')
+        return int((float(self.__cur_wav) - float(self.start_wav_f)) / float(self.__step_wav) + 1)
 
     @property
     def run_status_f(self):

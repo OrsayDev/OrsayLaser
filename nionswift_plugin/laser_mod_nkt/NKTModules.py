@@ -192,7 +192,7 @@ class Varia():
         result, value = registerReadU16(self.connectionId, 16, 0x32, 0)
         if result != 0:
             logging.info('***VARIA***: problem in reading setpoint 1.')
-        return int(value / 10)
+        return float(value / 10)
 
     @filter_setpoint1.setter
     def filter_setpoint1(self, value: int):
@@ -206,7 +206,7 @@ class Varia():
         result, value = registerReadU16(self.connectionId, 16, 0x33, 0)
         if result != 0:
             logging.info('***VARIA***: problem in reading setpoint 2.')
-        return int(value / 10)
+        return float(value / 10)
 
     @filter_setpoint2.setter
     def filter_setpoint2(self, value: int):
@@ -220,7 +220,7 @@ class Varia():
         result, value = registerReadU16(self.connectionId, 16, 0x34, 0)
         if result != 0:
             logging.info('***VARIA***: problem in reading setpoint 3.')
-        return int(value / 10)
+        return float(value / 10)
 
     @filter_setpoint3.setter
     def filter_setpoint3(self, value: int):

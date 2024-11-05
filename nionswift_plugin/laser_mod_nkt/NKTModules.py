@@ -1,5 +1,5 @@
 from .NKTP_DLL import *
-import logging
+import logging, time, threading
 
 '''
 print('Find modules on all existing and accessible ports - Might take a few seconds to complete.....')
@@ -93,19 +93,19 @@ def init_ethernet_connection(name: str = 'EthernetPort1',
     # Create the Internet port
     addResult = pointToPointPortAdd(name,
                                     pointToPointPortData(ip_host, port, ip_laser, port, 0, 100))
-    print('***NKT CH***: Creating ethernet port', P2PPortResultTypes(addResult))
+    logging.info(f'***NKT CH***: Creating ethernet port {P2PPortResultTypes(addResult)}.')
 
     getResult, portdata = pointToPointPortGet('EthernetPort1')
-    print('***NKT CH***: Getting ethernet port', portdata, P2PPortResultTypes(getResult))
+    logging.info(f'***NKT CH***: Getting ethernet port. {portdata} and {P2PPortResultTypes(getResult)}.')
 
     # Open the Internet port
     # Not nessesary, but would speed up the communication, since the functions does
     # not have to open and close the port on each call
     openResult = openPorts(name, 0, 0)
-    print('***NKT CH***: Opening the Ethernet port:', PortResultTypes(openResult))
+    logging.info(f'***NKT CH***: Opening the Ethernet port: {PortResultTypes(openResult)}.')
 
     _, status0 = registerReadU8('COM5', 14, 0x66, 0)
-    print('***NKT CH***: reading the status:', status0)
+    logging.info(f'***NKT CH***: reading the status: {status0}.')
 
     # Example - Reading of the Firmware Revision register 0x64(regId) in ADJUSTIK at address 128(devId)
     # index = 2, because the str starts at byte index 2
@@ -120,7 +120,7 @@ class ConnectionHandler():
     def __init__(self, connectionId):
         if 'COM' in connectionId:
             openResult = openPorts(connectionId, 0, 0)
-            print('***NKT CH***: Opening the comport:', PortResultTypes(openResult))
+            logging.info(f'***NKT CH***: Opening the comport: {PortResultTypes(openResult)}.')
         else:
             init_ethernet_connection()
 
@@ -130,127 +130,143 @@ class SuperFianium:
         self.interlock = True
         self.pulse_picker = 1
 
+    def ping(self):
+        result, value = registerReadAscii(self.connectionId, 15, 0x65, 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in reading emission. Error {RegisterResultTypes(result)}.')
+            return False
+        print(value)
+        return True
+
     # Emission Property
     @property
     def emission(self):
         result, value = registerReadU8(self.connectionId, 15, 0x30, 0)
         if result != 0:
-            logging.info('***LASER***: problem in reading emission.')
+            logging.info(f'***LASER***: problem in reading emission. Error {RegisterResultTypes(result)}.')
         return value
 
     @emission.setter
     def emission(self, value: int):
-        rdResult = registerWriteU8(self.connectionId, 15, 0x30, value, 0)
-        if rdResult != 0:
-            logging.info('***LASER***: problem in setting emission')
+        result = registerWriteU8(self.connectionId, 15, 0x30, value, 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in setting emission. Error {RegisterResultTypes(result)}.')
 
     # Interlock Property
     @property
     def interlock(self):
         result, value = registerReadU8(self.connectionId, 15, 0x32, 0)
         if result != 0:
-            logging.info('***LASER***: problem in reading interlock.')
+            logging.info(f'***LASER***: problem in reading interlock. Error {RegisterResultTypes(result)}.')
         return value
 
     @interlock.setter
     def interlock(self, value: bool):
-        rdResult = registerWriteU8(self.connectionId, 15, 0x32, int(value), 0)
-        if rdResult != 0:
-            logging.info('***LASER***: problem in setting interlock')
+        result = registerWriteU8(self.connectionId, 15, 0x32, int(value), 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in setting interlock. Error {RegisterResultTypes(result)}.')
 
     # Power Property
     @property
     def power(self):
         result, value = registerReadU16(self.connectionId, 15, 0x37, 0)
         if result != 0:
-            logging.info('***LASER***: problem in reading power.')
+            logging.info(f'***LASER***: problem in reading power. Error {RegisterResultTypes(result)}.')
         return int(value / 10)
 
     @power.setter
     def power(self, value: int):
-        rdResult = registerWriteU16(self.connectionId, 15, 0x37, int(value) * 10, 0)
-        if rdResult != 0:
-            logging.info('***LASER***: problem in setting power.')
+        result = registerWriteU16(self.connectionId, 15, 0x37, int(value) * 10, 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in setting power. Error {RegisterResultTypes(result)}.')
 
     # Pulse Picker Property
     @property
     def pulse_picker(self):
         result, value = registerReadU16(self.connectionId, 15, 0x34, 0)
         if result != 0:
-            logging.info('***LASER***: problem in reading pulse picker.')
+            logging.info(f'***LASER***: problem in reading pulse picker. Error {RegisterResultTypes(result)}.')
         return value
 
     @pulse_picker.setter
     def pulse_picker(self, value: int):
-        rdResult = registerWriteU16(self.connectionId, 15, 0x34, int(value), 0)
-        if rdResult != 0:
-            logging.info('***LASER***: problem in setting pulse picker.')
+        result = registerWriteU16(self.connectionId, 15, 0x34, int(value), 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in setting pulse picker. Error {RegisterResultTypes(result)}.')
 
     # NIM Delay Property
     @property
     def nim_delay(self):
         result, value = registerReadU16(self.connectionId, 15, 0x39, 0)
         if result != 0:
-            logging.info('***LASER***: problem in reading NIM delay.')
+            logging.info(f'***LASER***: problem in reading NIM delay. Error {RegisterResultTypes(result)}.')
         return value
 
     @nim_delay.setter
     def nim_delay(self, value: int):
-        rdResult = registerWriteU16(self.connectionId, 15, 0x39, int(value), 0)
-        if rdResult != 0:
-            logging.info('***LASER***: problem in setting NIM delay.')
+        result = registerWriteU16(self.connectionId, 15, 0x39, int(value), 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in setting NIM delay. Error {RegisterResultTypes(result)}.')
 
 
 class Varia():
     def __init__(self, connectionId):
         self.connectionId = connectionId
 
+    def ping(self):
+        result, value = registerReadAscii(self.connectionId, 16, 0x65, 0)
+        if result != 0:
+            logging.info(f'***LASER***: problem in reading emission. Error {RegisterResultTypes(result)}.')
+            return False
+        print(value)
+        return True
+
     # Filter setpoint 1. The neutral density filter
     @property
     def filter_setpoint1(self):
         result, value = registerReadU16(self.connectionId, 16, 0x32, 0)
         if result != 0:
-            logging.info('***VARIA***: problem in reading setpoint 1.')
+            logging.info(f'***VARIA***: problem in reading setpoint 1. Error {RegisterResultTypes(result)}.')
         return float(value / 10)
 
     @filter_setpoint1.setter
     def filter_setpoint1(self, value: int):
-        rdResult = registerWriteU16(self.connectionId, 16, 0x32, int(value) * 10, 0)
-        if rdResult != 0:
-            logging.info('***VARIA***: problem in setting setpoint 1.')
+        result = registerWriteU16(self.connectionId, 16, 0x32, int(value) * 10, 0)
+        if result != 0:
+            logging.info(f'***VARIA***: problem in setting setpoint 1. Error {RegisterResultTypes(result)}.')
 
     # Filter setpoint 2. This is SWP (short-wave-pass filter)
     @property
     def filter_setpoint2(self):
         result, value = registerReadU16(self.connectionId, 16, 0x33, 0)
         if result != 0:
-            logging.info('***VARIA***: problem in reading setpoint 2.')
+            logging.info(f'***VARIA***: problem in reading setpoint 2. Error {RegisterResultTypes(result)}.')
         return float(value / 10)
 
     @filter_setpoint2.setter
     def filter_setpoint2(self, value: int):
-        rdResult = registerWriteU16(self.connectionId, 16, 0x33, int(value) * 10, 0)
-        if rdResult != 0:
-            logging.info('***VARIA***: problem in setting setpoint 2.')
+        result = registerWriteU16(self.connectionId, 16, 0x33, int(value) * 10, 0)
+        if result != 0:
+            logging.info(f'***VARIA***: problem in setting setpoint 2. Error {RegisterResultTypes(result)}.')
 
     # Filter setpoint 3. This is the LWP (long-wave-pass filter)
     @property
     def filter_setpoint3(self):
         result, value = registerReadU16(self.connectionId, 16, 0x34, 0)
         if result != 0:
-            logging.info('***VARIA***: problem in reading setpoint 3.')
+            logging.info(f'***VARIA***: problem in reading setpoint 3. Error {RegisterResultTypes(result)}.')
         return float(value / 10)
 
     @filter_setpoint3.setter
     def filter_setpoint3(self, value: int):
-        rdResult = registerWriteU16(self.connectionId, 16, 0x34, int(value) * 10, 0)
-        if rdResult != 0:
-            logging.info('***VARIA***: problem in setting setpoint 3.')
+        result = registerWriteU16(self.connectionId, 16, 0x34, int(value) * 10, 0)
+        if result != 0:
+            logging.info(f'***VARIA***: problem in setting setpoint 3. Error {RegisterResultTypes(result)}.')
 
     def read_status_bits(self):
         result, value = registerReadU16(self.connectionId, 16, 0x66, 0)
         if result != 0:
-            logging.info('***VARIA***: problem in reading status bits.')
+            logging.info(f'***VARIA***: problem in reading status bits. Error {RegisterResultTypes(result)}.')
         return value
 
     def given_status_bits(self, bit: int):
@@ -263,15 +279,3 @@ class Varia():
         filter2_moving = (status >> 13) & 1
         filter3_moving = (status >> 14) & 1
         return filter1_moving or filter2_moving or filter3_moving
-
-
-
-# fianium = SuperFianium('EthernetPort1')
-# fianium.emission = 0
-# fianium.power = 50
-# print(fianium.power)
-#
-# # Close all ports
-# closeResult = closePorts('')
-# print('Close result: ', PortResultTypes(closeResult))
-

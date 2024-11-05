@@ -201,26 +201,14 @@ class gainhandler:
                 self.do_enable(True, ['init_pb']))  # not working as something is
         # calling this guy
 
-
-    def server_choice_pick(self, widget, current_index):
-        if current_index == 0:
-            self.host_value.text = '192.168.1.65'
-            self.port_value.text = '65432'
-        if current_index == 1:
-            self.host_value.text = '129.175.82.159'
-            self.port_value.text = '65432'
-        if current_index == 2:
-            self.host_value.text = '127.0.0.1'
-            self.port_value.text = '65432'
-
-        self.instrument.host_f = self.host_value.text
-        self.instrument.port_f = int(self.port_value.text)
-
     def server_ping_push(self, widget):
         self.instrument.server_instrument_ping()
 
     def upt_push(self, widget):
         self.instrument.upt()
+
+    def lock_push(self, widget):
+        self.instrument.lock()
 
     def acq_push(self, widget):
         self.instrument.acq()
@@ -228,63 +216,11 @@ class gainhandler:
     def mon_push(self, widget):
         self.instrument.acq_mon()
 
-    def power_sustain_push(self, widget):
-        self.instrument.acq_pwsustain()
-
-    def acq_trans_push(self, widget):
-        logging.info("***PANEL***: Transmission is disabled. This probably"
-                     " happened because we have a broken function.")
-        #self.instrument.acq_trans()
-
-    def raster_push(self, widget):
-        self.instrument.acq_raster()
-
-    def acq_pr_push(self, widget):
-        self.instrument.acq_pr()
-
     def abt_push(self, widget):
         self.instrument.abt()
 
-    def sht_push(self, widget):
-        self.instrument.sht()
-
-    def lock_push(self, widget):
-        self.instrument.lock()
-
     def pw_hard_reset(self, widget):
         self.instrument.hard_reset()
-
-    def more_push(self, widget):
-        self.instrument.cur_d_f += 5
-
-    def less_push(self, widget):
-        self.instrument.cur_d_f -= 5
-
-    def more_piezo_push(self, widget):
-        if widget == self.more_m1_pb:
-            self.instrument.piezo_m1_f += self.instrument.piezo_step_f
-        elif widget == self.more_m2_pb:
-            self.instrument.piezo_m2_f += self.instrument.piezo_step_f
-
-    def less_piezo_push(self, widget):
-        if widget == self.less_m1_pb:
-            self.instrument.piezo_m1_f -= self.instrument.piezo_step_f
-        elif widget == self.less_m2_pb:
-            self.instrument.piezo_m2_f -= self.instrument.piezo_step_f
-
-    def more_servo_push(self, widget):
-        self.instrument.servo_f += self.instrument.servo_step_f
-        self.instrument.property_changed_event.fire('servo_f')
-        self.instrument.free_event.fire("all")
-
-    def less_servo_push(self, widget):
-        self.instrument.servo_f -= self.instrument.servo_step_f
-        self.instrument.property_changed_event.fire('servo_f')
-        self.instrument.free_event.fire("all")
-
-    def change_periodic_pic(self, widget, check_state):
-        self.periodic_pics_value.enabled = (check_state == 'checked')
-        self.periodic_pics_label.enabled = (check_state == 'checked')
 
     async def data_item_show(self, DI):
         self.document_controller.document_model.append_data_item(DI)
@@ -512,28 +448,8 @@ class gainView:
 
         self.buttons_row00 = ui.create_row(self.upt_pb, self.acq_pb, self.mon_pb, self.abt_pb, ui.create_stretch(), spacing=12)
 
-        self.power_ramp_pb = ui.create_push_button(text='Servo Scan', name='pr_pb', on_clicked="acq_pr_push", width=125)
-        self.acq_trans_pb = ui.create_push_button(text="Acquire Transmission", name="acq_trans_pb", on_clicked="acq_trans_push", width=125)
-        self.acq_raster_pb = ui.create_push_button(text="Raster wavelength", name="acq_raster_pb",
-                                                  on_clicked="raster_push", width=125)
-        self.acq_powersustain_pb = ui.create_push_button(text="Power Sustain", name="acq_powersustain_pb",
-                                                   on_clicked="power_sustain_push", width=125)
-
-        """"
-        This is currently disabled. It acquires images images in-between measurements
-        self.periodic_pics_checkbox = ui.create_check_box(name='periodic_pics_checkbox',
-                                                          checked='@binding(instrument.per_pic_f)',
-                                                          on_check_state_changed='change_periodic_pic',
-                                                          text='Periodic DET?')
-        self.periodic_pics_label = ui.create_label(text='How many (per acq.): ')
-        self.periodic_pics_value = ui.create_line_edit(name='periodic_pics_value',
-                                                       text='@binding(instrument.many_per_pic_f)', width=100)
-        """
-        self.buttons_row01 = ui.create_row(self.power_ramp_pb, self.acq_trans_pb, self.acq_raster_pb, self.acq_powersustain_pb,
-                                           ui.create_stretch(), spacing=12)
-
         self.buttons_group = ui.create_group(title='Acquisition', content=ui.create_column(
-            self.buttons_row00, self.buttons_row01))
+            self.buttons_row00))
         ## END FIRST TAB
 
         self.ui_view = ui.create_column(

@@ -71,11 +71,14 @@ class LaserWrapperDebug:
 
 class LaserWrapper:
     def __init__(self, connectionId: str = 'COM5'):
-        #NKTModules.init_ethernet_connection()
         NKTModules.ConnectionHandler(connectionId)
         self.__Laser = NKTModules.SuperFianium(connectionId)
         self.__Varia = NKTModules.Varia(connectionId)
         self.__Varia.filter_setpoint1 = 100
+
+    def ping(self):
+        self.__Laser.ping()
+        self.__Varia.ping()
 
     def check(self):
         return True
@@ -167,9 +170,10 @@ class gainDevice(Observable.Observable):
 
     def power_callback(self):
         pass
+        #self.property_changed_event.fire("power_f")
 
     def server_instrument_ping(self):
-        self.__Laser.check()
+        self.__Laser.ping()
 
     def server_instrument_shutdown(self):
         for server in [self.__Laser, self.__PM]:
@@ -207,7 +211,7 @@ class gainDevice(Observable.Observable):
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
         #try:
-        self.__Laser = LaserWrapper()
+        self.__Laser = LaserWrapper('COM5')
         #except:
         #    self.__Laser = LaserWrapperDebug()
         #    logging.info("***NKT***: Error on launching the laser. Using the NKT debug instead.")
@@ -296,7 +300,7 @@ class gainDevice(Observable.Observable):
         if self.__Laser.check() and self.__finish_wav > self.start_wav_f and q:
             self.__acq_number += 1
             self.__camera.start_playing()
-            #self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
+            self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
             last_cam_acq = self.__camera.grab_next_to_finish()[0]  # get camera then check laser.
 
             self.call_data.fire(self.__acq_number, self.pts_f + 1, self.avg_f, self.start_wav_f, self.__finish_wav,
@@ -330,8 +334,8 @@ class gainDevice(Observable.Observable):
 
         logging.info("***LASER***: Finishing laser measurement. Acquiring conventional EELS for reference.")
         self.emission_f = False
-        #if self.__controlRout.pw_control_thread_check():
-        #    self.__controlRout.pw_control_thread_off()
+        if self.__controlRout.pw_control_thread_check():
+            self.__controlRout.pw_control_thread_off()
 
         while j < j_max and not self.__abort_force:
             last_cam_acq = self.__camera.grab_next_to_finish()[0]
@@ -352,12 +356,13 @@ class gainDevice(Observable.Observable):
     @start_wav_f.setter
     def start_wav_f(self, value: str) -> None:
         self.busy_event.fire("all")
-        self.__Laser.setWL(float(value))
-        self.property_changed_event.fire("start_wav_f")
-        if not self.__status:
-            self.property_changed_event.fire("pts_f")
-            self.property_changed_event.fire("tpts_f")
-            self.run_status_f = False
+        if self.start_wav_f != float(value):
+            self.__Laser.setWL(float(value))
+            self.property_changed_event.fire("start_wav_f")
+            if not self.__status:
+                self.property_changed_event.fire("pts_f")
+                self.property_changed_event.fire("tpts_f")
+                self.run_status_f = False
 
 
     @property

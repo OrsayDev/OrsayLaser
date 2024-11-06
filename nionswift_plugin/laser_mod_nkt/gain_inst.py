@@ -71,10 +71,13 @@ class LaserWrapperDebug:
 
 class LaserWrapper:
     def __init__(self, connectionId: str = 'COM5'):
-        NKTModules.ConnectionHandler(connectionId)
-        self.__Laser = NKTModules.SuperFianium(connectionId)
-        self.__Varia = NKTModules.Varia(connectionId)
+        handler = NKTModules.ConnectionHandler(connectionId)
+        self.__Laser = NKTModules.SuperFianium(handler)
+        self.__Varia = NKTModules.Varia(handler)
         self.__Varia.filter_setpoint1 = 100
+
+        self.__bandwidth = None
+        self.__centralWL = None
 
     def ping(self):
         self.__Laser.ping()
@@ -87,23 +90,25 @@ class LaserWrapper:
         return not self.__Varia.filter_moving()
 
     def setWL(self, wl: float):
-        bd = self.getBandwidth()
-        self.__Varia.filter_setpoint2 = wl + bd / 2
-        self.__Varia.filter_setpoint3 = wl - bd / 2
+        self.__centralWL = wl
+        self.__Varia.filter_setpoint2 = wl + self.__bandwidth / 2
+        self.__Varia.filter_setpoint3 = wl - self.__bandwidth / 2
 
     def getWL(self):
-        return (self.__Varia.filter_setpoint2 + self.__Varia.filter_setpoint3) / 2
+        self.__centralWL = (self.__Varia.filter_setpoint2 + self.__Varia.filter_setpoint3) / 2
+        return self.__centralWL
 
     def abort_control(self):
         pass
 
     def setBandwidth(self, bandwidth: int):
-        wl = self.getWL()
-        self.__Varia.filter_setpoint2 = wl + bandwidth / 2
-        self.__Varia.filter_setpoint3 = wl - bandwidth / 2
+        self.__bandwidth = bandwidth
+        self.__Varia.filter_setpoint2 = self.__centralWL + bandwidth / 2
+        self.__Varia.filter_setpoint3 = self.__centralWL - bandwidth / 2
 
     def getBandwidth(self):
-        return self.__Varia.filter_setpoint2 - self.__Varia.filter_setpoint3
+        self.__bandwidth = self.__Varia.filter_setpoint2 - self.__Varia.filter_setpoint3
+        return self.__bandwidth
 
     def setEmission(self, value: bool):
         self.__Laser.emission = 3 if value else 0
@@ -139,6 +144,7 @@ class gainDevice(Observable.Observable):
         self.end_data_monitor = Event.Event()
         self.end_data = Event.Event()
 
+        self.__lastWav = -1 #Used to control the start wav that calls twice in the GUI
         self.__finish_wav = 595.0
         self.__step_wav = 1.0
         self.__avg = 10
@@ -210,11 +216,7 @@ class gainDevice(Observable.Observable):
         else:
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
-        #try:
-        self.__Laser = LaserWrapper('COM5')
-        #except:
-        #    self.__Laser = LaserWrapperDebug()
-        #    logging.info("***NKT***: Error on launching the laser. Using the NKT debug instead.")
+        self.__Laser = LaserWrapper('EthernetConnection1')
         self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
 
         self.upt()
@@ -356,13 +358,14 @@ class gainDevice(Observable.Observable):
     @start_wav_f.setter
     def start_wav_f(self, value: str) -> None:
         self.busy_event.fire("all")
-        if self.start_wav_f != float(value):
+        if self.__lastWav != float(value):
+            self.__lastWav = float(value)
             self.__Laser.setWL(float(value))
             self.property_changed_event.fire("start_wav_f")
             if not self.__status:
                 self.property_changed_event.fire("pts_f")
                 self.property_changed_event.fire("tpts_f")
-                self.run_status_f = False
+                self.free_event.fire("all")
 
 
     @property

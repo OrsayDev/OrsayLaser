@@ -104,170 +104,175 @@ def init_ethernet_connection(name: str = 'EthernetPort1',
     openResult = openPorts(name, 0, 0)
     logging.info(f'***NKT CH***: Opening the Ethernet port: {PortResultTypes(openResult)}.')
 
-    _, status0 = registerReadU8('COM5', 14, 0x66, 0)
+    _, status0 = registerReadU8(name, 14, 0x66, 0)
     logging.info(f'***NKT CH***: reading the status: {status0}.')
 
     # Example - Reading of the Firmware Revision register 0x64(regId) in ADJUSTIK at address 128(devId)
     # index = 2, because the str starts at byte index 2
-    #rdResult, FWVersionStr = registerReadAscii(name, 14, 0x65, -1)  # ethernet (0x81)
-    #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+    rdResult, FWVersionStr = registerReadAscii(name, 14, 0x65, -1)  # ethernet (0x81)
+    print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
     #rdResult, FWVersionStr = registerReadAscii(name, 15, 0x65, -1)  # superK fianium (0x88)
     #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
     #rdResult, FWVersionStr = registerReadAscii(name, 16, 0x65, -1)  # superK varia (0x68)
     #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
 
 class ConnectionHandler():
-    def __init__(self, connectionId):
+    def __init__(self, connectionId, ip_host: str = '192.168.0.20',
+                 ip_laser: str = '192.168.0.21', port = 10001):
+        self.connectionId = connectionId
+        self.__lock = threading.Lock()
         if 'COM' in connectionId:
-            openResult = openPorts(connectionId, 0, 0)
+            openResult = openPorts(self.connectionId, 0, 0)
             logging.info(f'***NKT CH***: Opening the comport: {PortResultTypes(openResult)}.')
         else:
-            init_ethernet_connection()
+            # Create the Internet port
+            addResult = pointToPointPortAdd(self.connectionId,
+                                            pointToPointPortData(ip_host, port, ip_laser, port, 0, 100))
+            logging.info(f'***NKT CH***: Creating ethernet port {P2PPortResultTypes(addResult)}.')
+
+            getResult, portdata = pointToPointPortGet(self.connectionId)
+            logging.info(f'***NKT CH***: Getting ethernet port. {portdata} and {P2PPortResultTypes(getResult)}.')
+
+            # Open the Internet port
+            # Not nessesary, but would speed up the communication, since the functions does
+            # not have to open and close the port on each call
+            openResult = openPorts(self.connectionId, 0, 0)
+            logging.info(f'***NKT CH***: Opening the Ethernet port: {PortResultTypes(openResult)}.')
+
+            _, status0 = registerReadU8(self.connectionId, 14, 0x66, 0)
+            logging.info(f'***NKT CH***: reading the status: {status0}.')
+
+            # Example - Reading of the Firmware Revision register 0x64(regId) in ADJUSTIK at address 128(devId)
+            # index = 2, because the str starts at byte index 2
+            #rdResult, FWVersionStr = registerReadAscii(self.connectionId, 14, 0x65, -1)  # ethernet (0x81)
+            #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+
+
+    def readU16(self, which: str, instrument_id: int, register: int, offset: int = 0):
+        with self.__lock:
+            result, value = registerReadU16(self.connectionId, instrument_id, register, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in reading {which}. Error {RegisterResultTypes(result)}.')
+            return value
+
+    def writeU16(self, which: str, instrument_id: int, register: int, value: int, offset: int = 0):
+        with self.__lock:
+            result = registerWriteU16(self.connectionId, instrument_id, register, value, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in writing {which}. Error {RegisterResultTypes(result)}.')
+
+    def readU8(self, which: str, instrument_id: int, register: int, offset: int = 0):
+        with self.__lock:
+            result, value = registerReadU8(self.connectionId, instrument_id, register, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in reading {which}. Error {RegisterResultTypes(result)}.')
+            return value
+
+    def writeU8(self, which: str, instrument_id: int, register: int, value: int, offset: int = 0):
+        with self.__lock:
+            result = registerWriteU8(self.connectionId, instrument_id, register, value, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in writing {which}. Error {RegisterResultTypes(result)}.')
+
+    def readASCII(self, which: str, instrument_id: int, register: int, offset: int = 0):
+        with self.__lock:
+            result, value = registerReadAscii(self.connectionId, instrument_id, register, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in reading ASCII {which}. Error {RegisterResultTypes(result)}.')
+                return 'None'
+            return value
 
 class SuperFianium:
-    def __init__(self, connectionId):
-        self.connectionId = connectionId
+    def __init__(self, connetionHandler: ConnectionHandler):
+        self.connetionHandler = connetionHandler
         self.interlock = True
         self.pulse_picker = 1
 
     def ping(self):
-        result, value = registerReadAscii(self.connectionId, 15, 0x65, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading emission. Error {RegisterResultTypes(result)}.')
-            return False
-        print(value)
-        return True
+        return self.connetionHandler.readASCII('ping', 15, 0x65, 0)
 
     # Emission Property
     @property
     def emission(self):
-        result, value = registerReadU8(self.connectionId, 15, 0x30, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading emission. Error {RegisterResultTypes(result)}.')
-        return value
+        return self.connetionHandler.readU8('emission', 15, 0x30)
 
     @emission.setter
     def emission(self, value: int):
-        result = registerWriteU8(self.connectionId, 15, 0x30, value, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in setting emission. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU8('emission', 15, 0x30, value, 0)
 
     # Interlock Property
     @property
     def interlock(self):
-        result, value = registerReadU8(self.connectionId, 15, 0x32, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading interlock. Error {RegisterResultTypes(result)}.')
-        return value
+        return self.connetionHandler.readU8('interlock', 15, 0x32)
 
     @interlock.setter
     def interlock(self, value: bool):
-        result = registerWriteU8(self.connectionId, 15, 0x32, int(value), 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in setting interlock. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU8('interlock', 15, 0x32, int(value), 0)
 
     # Power Property
     @property
     def power(self):
-        result, value = registerReadU16(self.connectionId, 15, 0x37, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading power. Error {RegisterResultTypes(result)}.')
-        return int(value / 10)
+        return self.connetionHandler.readU16('power', 15, 0x37) / 10
 
     @power.setter
     def power(self, value: int):
-        result = registerWriteU16(self.connectionId, 15, 0x37, int(value) * 10, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in setting power. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU16('power', 15, 0x37, int(value) * 10, 0)
 
     # Pulse Picker Property
     @property
     def pulse_picker(self):
-        result, value = registerReadU16(self.connectionId, 15, 0x34, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading pulse picker. Error {RegisterResultTypes(result)}.')
-        return value
+        return self.connetionHandler.readU16('pulse picker', 15, 0x34)
 
     @pulse_picker.setter
     def pulse_picker(self, value: int):
-        result = registerWriteU16(self.connectionId, 15, 0x34, int(value), 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in setting pulse picker. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU16('pulse picker', 15, 0x34, int(value), 0)
 
     # NIM Delay Property
     @property
     def nim_delay(self):
-        result, value = registerReadU16(self.connectionId, 15, 0x39, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading NIM delay. Error {RegisterResultTypes(result)}.')
-        return value
+        return self.connetionHandler.readU16('nim delay', 15, 0x39)
 
     @nim_delay.setter
     def nim_delay(self, value: int):
-        result = registerWriteU16(self.connectionId, 15, 0x39, int(value), 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in setting NIM delay. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU16('nim delay', 15, 0x39, int(value), 0)
 
 
 class Varia():
-    def __init__(self, connectionId):
-        self.connectionId = connectionId
+    def __init__(self, connectionHandler: ConnectionHandler):
+        self.connetionHandler = connectionHandler
 
     def ping(self):
-        result, value = registerReadAscii(self.connectionId, 16, 0x65, 0)
-        if result != 0:
-            logging.info(f'***LASER***: problem in reading emission. Error {RegisterResultTypes(result)}.')
-            return False
-        print(value)
-        return True
+        return self.connetionHandler.readASCII('ping', 16, 0x65, 0)
 
     # Filter setpoint 1. The neutral density filter
     @property
     def filter_setpoint1(self):
-        result, value = registerReadU16(self.connectionId, 16, 0x32, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in reading setpoint 1. Error {RegisterResultTypes(result)}.')
-        return float(value / 10)
+        return self.connetionHandler.readU16('filter setpoint1', 16, 0x32) / 10
 
     @filter_setpoint1.setter
     def filter_setpoint1(self, value: int):
-        result = registerWriteU16(self.connectionId, 16, 0x32, int(value) * 10, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in setting setpoint 1. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU16('filter setpoint1', 16, 0x32, int(value) * 10, 0)
 
     # Filter setpoint 2. This is SWP (short-wave-pass filter)
     @property
     def filter_setpoint2(self):
-        result, value = registerReadU16(self.connectionId, 16, 0x33, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in reading setpoint 2. Error {RegisterResultTypes(result)}.')
-        return float(value / 10)
+        return self.connetionHandler.readU16('filter setpoint2', 16, 0x33) / 10
 
     @filter_setpoint2.setter
     def filter_setpoint2(self, value: int):
-        result = registerWriteU16(self.connectionId, 16, 0x33, int(value) * 10, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in setting setpoint 2. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU16('filter setpoint1', 16, 0x33, int(value) * 10, 0)
 
     # Filter setpoint 3. This is the LWP (long-wave-pass filter)
     @property
     def filter_setpoint3(self):
-        result, value = registerReadU16(self.connectionId, 16, 0x34, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in reading setpoint 3. Error {RegisterResultTypes(result)}.')
-        return float(value / 10)
+        return self.connetionHandler.readU16('filter setpoint3', 16, 0x34) / 10
 
     @filter_setpoint3.setter
     def filter_setpoint3(self, value: int):
-        result = registerWriteU16(self.connectionId, 16, 0x34, int(value) * 10, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in setting setpoint 3. Error {RegisterResultTypes(result)}.')
+        self.connetionHandler.writeU16('filter setpoint3', 16, 0x34, int(value) * 10, 0)
 
     def read_status_bits(self):
-        result, value = registerReadU16(self.connectionId, 16, 0x66, 0)
-        if result != 0:
-            logging.info(f'***VARIA***: problem in reading status bits. Error {RegisterResultTypes(result)}.')
-        return value
+        return self.connetionHandler.readU16('status bit', 16, 0x66)
 
     def given_status_bits(self, bit: int):
         status = self.read_status_bits()

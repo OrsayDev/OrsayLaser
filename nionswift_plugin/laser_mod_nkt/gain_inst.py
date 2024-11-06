@@ -357,8 +357,8 @@ class gainDevice(Observable.Observable):
 
     @start_wav_f.setter
     def start_wav_f(self, value: str) -> None:
-        self.busy_event.fire("all")
         if self.__lastWav != float(value):
+            self.busy_event.fire("all")
             self.__lastWav = float(value)
             self.__Laser.setWL(float(value))
             self.property_changed_event.fire("start_wav_f")

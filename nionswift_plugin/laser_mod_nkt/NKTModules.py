@@ -147,6 +147,30 @@ class ConnectionHandler():
             #rdResult, FWVersionStr = registerReadAscii(self.connectionId, 14, 0x65, -1)  # ethernet (0x81)
             #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
 
+    def check_instruments(self):
+        logging.info('Find modules on all existing and accessible ports - Might take a few seconds to complete.....')
+        if (getLegacyBusScanning()):
+            logging.info(f'Scanning following ports in legacy mode: {getAllPorts()}.')
+        else:
+            logging.info(f'Scanning following ports in normal mode: {getAllPorts()}.')
+
+        # Use the openPorts function with Auto & Live settings. This will scan and detect modules
+        # on all ports returned by the getAllPorts function.
+        # Please note that a port being in use by another application, will show up in this list but will
+        # not show any devices due to this port being inaccessible.
+        logging.info(openPorts(getAllPorts(), 1, 1))
+
+        # All ports returned by the getOpenPorts function has modules (ports with no modules will automatically be closed)
+        logging.info(f'Following ports has modules: {getOpenPorts()}.')
+
+        # Traverse the getOpenPorts list and retrieve found modules via the deviceGetAllTypesV2 function
+        portlist = getOpenPorts().split(',')
+        for portName in portlist:
+            result, devList = deviceGetAllTypesV2(portName)
+            for devId in range(0, len(devList)):
+                if devList[devId] != 0:
+                    logging.info(f'Comport: {portName}. Device type: {devList[devId]} at address: {devId}.')
+
 
     def readU16(self, which: str, instrument_id: int, register: int, offset: int = 0):
         with self.__lock:
@@ -284,3 +308,7 @@ class Varia():
         filter2_moving = (status >> 13) & 1
         filter3_moving = (status >> 14) & 1
         return filter1_moving or filter2_moving or filter3_moving
+
+class RFDriver():
+    def __init__(self, connection_handler: ConnectionHandler):
+        self.connection_handler = connection_handler

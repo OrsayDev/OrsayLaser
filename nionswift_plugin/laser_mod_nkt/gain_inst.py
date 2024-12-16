@@ -216,7 +216,8 @@ class gainDevice(Observable.Observable):
         else:
             logging.info(f'***LASER***: Camera {self.__camera.hardware_source_id} properly loaded. EELS/EEGS acquistion is good to go.')
 
-        self.__Laser = LaserWrapper('EthernetConnection1')
+        #self.__Laser = LaserWrapper('EthernetConnection1')
+        self.__Laser = LaserWrapper('COM5')
         self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
 
         self.upt()

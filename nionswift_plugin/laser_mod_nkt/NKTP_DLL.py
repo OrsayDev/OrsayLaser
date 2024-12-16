@@ -8,12 +8,19 @@ from collections import namedtuple
 # Alternatively copy the correct version into your script folder.
 
 dllFolder = os.environ.get('NKTP_SDK_PATH',r'C:\NKTP_SDK')
-if (ctypes.sizeof(ctypes.c_voidp) == 4):
+try:
+    if (ctypes.sizeof(ctypes.c_voidp) == 4):
         print('Loading x86 DLL from:', dllFolder + r'\NKTPDLL\x86\NKTPDLL.dll')
         NKTPDLL = ctypes.cdll.LoadLibrary( dllFolder + r'\NKTPDLL\x86\NKTPDLL.dll' )
-else:
+    else:
         print('Loading x64 DLL from:', dllFolder + r'\NKTPDLL\x64\NKTPDLL.dll')
         NKTPDLL = ctypes.cdll.LoadLibrary( dllFolder + r'\NKTPDLL\x64\NKTPDLL.dll')
+except FileNotFoundError:
+    libpath = os.path.dirname(__file__)
+    libname = os.path.join(libpath, "aux_files/")
+    dllFolder = os.path.join(libname, 'NKTPDLL.dll')
+    print('Loading x64 DLL locally from:', dllFolder)
+    NKTPDLL = ctypes.cdll.LoadLibrary(dllFolder)
 
 def PortResultTypes(result):
         return {

@@ -88,37 +88,37 @@ print('Reading gateway version str:', g0, g1, g2, g3)
 print('Reading subnet version str:', sn0, sn1, sn2, sn3)
 '''
 
-def init_ethernet_connection(name: str = 'EthernetPort1',
-                             ip_host: str = '192.168.0.20', ip_laser: str = '192.168.0.21', port = 10001):
-    # Create the Internet port
-    addResult = pointToPointPortAdd(name,
-                                    pointToPointPortData(ip_host, port, ip_laser, port, 0, 100))
-    logging.info(f'***NKT CH***: Creating ethernet port {P2PPortResultTypes(addResult)}.')
-
-    getResult, portdata = pointToPointPortGet('EthernetPort1')
-    logging.info(f'***NKT CH***: Getting ethernet port. {portdata} and {P2PPortResultTypes(getResult)}.')
-
-    # Open the Internet port
-    # Not nessesary, but would speed up the communication, since the functions does
-    # not have to open and close the port on each call
-    openResult = openPorts(name, 0, 0)
-    logging.info(f'***NKT CH***: Opening the Ethernet port: {PortResultTypes(openResult)}.')
-
-    _, status0 = registerReadU8(name, 14, 0x66, 0)
-    logging.info(f'***NKT CH***: reading the status: {status0}.')
-
-    # Example - Reading of the Firmware Revision register 0x64(regId) in ADJUSTIK at address 128(devId)
-    # index = 2, because the str starts at byte index 2
-    rdResult, FWVersionStr = registerReadAscii(name, 14, 0x65, -1)  # ethernet (0x81)
-    print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
-    #rdResult, FWVersionStr = registerReadAscii(name, 15, 0x65, -1)  # superK fianium (0x88)
-    #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
-    #rdResult, FWVersionStr = registerReadAscii(name, 16, 0x65, -1)  # superK varia (0x68)
-    #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+# def init_ethernet_connection(name: str = 'EthernetPort1',
+#                              ip_host: str = '192.168.0.20', ip_laser: str = '192.168.0.21', port = 10001):
+#     # Create the Internet port
+#     addResult = pointToPointPortAdd(name,
+#                                     pointToPointPortData(ip_host, port, ip_laser, port, 0, 100))
+#     logging.info(f'***NKT CH***: Creating ethernet port {P2PPortResultTypes(addResult)}.')
+#
+#     getResult, portdata = pointToPointPortGet('EthernetPort1')
+#     logging.info(f'***NKT CH***: Getting ethernet port. {portdata} and {P2PPortResultTypes(getResult)}.')
+#
+#     # Open the Internet port
+#     # Not nessesary, but would speed up the communication, since the functions does
+#     # not have to open and close the port on each call
+#     openResult = openPorts(name, 0, 0)
+#     logging.info(f'***NKT CH***: Opening the Ethernet port: {PortResultTypes(openResult)}.')
+#
+#     _, status0 = registerReadU8(name, 14, 0x66, 0)
+#     logging.info(f'***NKT CH***: reading the status: {status0}.')
+#
+#     # Example - Reading of the Firmware Revision register 0x64(regId) in ADJUSTIK at address 128(devId)
+#     # index = 2, because the str starts at byte index 2
+#     rdResult, FWVersionStr = registerReadAscii(name, 14, 0x65, -1)  # ethernet (0x81)
+#     print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+#     #rdResult, FWVersionStr = registerReadAscii(name, 15, 0x65, -1)  # superK fianium (0x88)
+#     #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
+#     #rdResult, FWVersionStr = registerReadAscii(name, 16, 0x65, -1)  # superK varia (0x68)
+#     #print('Reading firmware version str:', FWVersionStr, RegisterResultTypes(rdResult))
 
 class ConnectionHandler():
-    def __init__(self, connectionId, ip_host: str = '192.168.0.20',
-                 ip_laser: str = '192.168.0.21', port = 10001):
+    def __init__(self, connectionId, ip_host: str = '192.168.1.33',
+                 ip_laser: str = '192.168.1.45', port = 10001):
         self.connectionId = connectionId
         self.__lock = threading.Lock()
         if 'COM' in connectionId:
@@ -210,7 +210,7 @@ class SuperFianium:
     def __init__(self, connetionHandler: ConnectionHandler):
         self.connetionHandler = connetionHandler
         self.interlock = True
-        self.pulse_picker = 1
+        self.pulse_picker = 2
 
     def ping(self):
         return self.connetionHandler.readASCII('ping', 15, 0x65, 0)

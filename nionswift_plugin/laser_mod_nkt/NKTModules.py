@@ -171,6 +171,18 @@ class ConnectionHandler():
                 if devList[devId] != 0:
                     logging.info(f'Comport: {portName}. Device type: {devList[devId]} at address: {devId}.')
 
+    def readU32(self, which: str, instrument_id: int, register: int, offset: int = 0):
+        with self.__lock:
+            result, value = registerReadU32(self.connectionId, instrument_id, register, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in reading {which}. Error {RegisterResultTypes(result)}.')
+            return value
+
+    def writeU32(self, which: str, instrument_id: int, register: int, value: int, offset: int = 0):
+        with self.__lock:
+            result = registerWriteU32(self.connectionId, instrument_id, register, value, offset)
+            if result != 0:
+                logging.info(f'***LASER***: problem in writing {which}. Error {RegisterResultTypes(result)}.')
 
     def readU16(self, which: str, instrument_id: int, register: int, offset: int = 0):
         with self.__lock:
@@ -260,7 +272,7 @@ class SuperFianium:
     def nim_delay(self, value: int):
         self.connetionHandler.writeU16('nim delay', 15, 0x39, int(value), 0)
 
-
+#This one must select the position of the rotary switch at 0. The register reference is 0x68
 class Varia():
     def __init__(self, connectionHandler: ConnectionHandler):
         self.connetionHandler = connectionHandler
@@ -309,6 +321,103 @@ class Varia():
         filter3_moving = (status >> 14) & 1
         return filter1_moving or filter2_moving or filter3_moving
 
+#This one must select the position of the rotary switch at 1. The register reference is 0x67.
+#In our implementation, this does not need to be called generally.
+class Select():
+    def __init__(self, connectionHandler: ConnectionHandler):
+        self.connetionHandler = connectionHandler
+
+    def ping(self):
+        return self.connetionHandler.readASCII('ping', 17, 0x65, 0)
+
+
+#This one must select the position of the rotary switch at 2. The register reference is 0x66
 class RFDriver():
     def __init__(self, connection_handler: ConnectionHandler):
         self.connection_handler = connection_handler
+        self._create_wavelength_properties()
+        self._create_amplitude_properties()
+        self._create_modulation_properties()
+
+    def ping(self):
+        return self.connetionHandler.readASCII('ping', 18, 0x65, 0)
+
+    def _create_wavelength_properties(self):
+        for i in range(9):  # Creating properties for wavelength0 to wavelength8
+            reg_address = 0x90 + i  # Assuming the register address increments by 1
+
+            def getter(self, address=reg_address, index=i):
+                return self.connectionHandler.readU32(f'Wavelength {index}', 18, address) / 1000
+
+            def setter(self, value: int, address=reg_address, index=i):
+                self.connectionHandler.writeU32(f'Wavelength {index}', 18, address, int(value) * 1000, 0)
+
+            setattr(self, f'wavelength{i}', property(getter, setter))
+
+    def _create_amplitude_properties(self):
+        for i in range(9):  # Creating properties for wavelength0 to wavelength8
+            reg_address = 0xb0 + i  # Assuming the register address increments by 1
+
+            def getter(self, address=reg_address, index=i):
+                return self.connectionHandler.readU16(f'Amplitude {index}', 18, address) / 10
+
+            def setter(self, value: int, address=reg_address, index=i):
+                self.connectionHandler.writeU16(f'Amplitude {index}', 18, address, int(value) * 10, 0)
+
+            setattr(self, f'amplitude{i}', property(getter, setter))
+
+    def _create_modulation_properties(self):
+        for i in range(9):  # Creating properties for wavelength0 to wavelength8
+            reg_address = 0xc0 + i  # Assuming the register address increments by 1
+
+            def getter(self, address=reg_address, index=i):
+                return self.connectionHandler.readU16(f'ModulationGain {index}', 18, address) / 10
+
+            def setter(self, value: int, address=reg_address, index=i):
+                self.connectionHandler.writeU16(f'ModulationGain {index}', 18, address, int(value) * 10, 0)
+
+            setattr(self, f'modulation_gain{i}', property(getter, setter))
+
+
+    @property
+    def rf_power(self):
+        return self.connetionHandler.readU8('RF Power', 18, 0x30)
+
+    @rf_power.setter
+    def rf_power(self, value: int):
+        self.connetionHandler.writeU8('RF Power', 18, 0x30, int(value), 0)
+
+    @property
+    def setup_bits(self):
+        return self.connetionHandler.readU16('Setup bits', 18, 0x31)
+
+    @setup_bits.setter
+    def setup_bits(self, value: int):
+        self.connetionHandler.writeU16('Setup bits', 18, 0x31, int(value), 0)
+
+    @property
+    def minimum_wavelength(self):
+        return self.connetionHandler.readU32('Minimum wavelength', 18, 0x34) / 1000
+
+    @minimum_wavelength.setter
+    def minimum_wavelength(self, value: int):
+        self.connetionHandler.writeU32('Minimum wavelength', 18, 0x34, int(value) * 1000, 0)
+
+    @property
+    def maximum_wavelength(self):
+        return self.connetionHandler.readU32('Maximum wavelength', 18, 0x35) / 1000
+
+    @maximum_wavelength.setter
+    def maximum_wavelength(self, value: int):
+        self.connetionHandler.writeU32('Maximum wavelength', 18, 0x35, int(value) * 1000, 0)
+
+    @property
+    def fsk_mode(self):
+        return self.connetionHandler.readU8('FSK mode', 18, 0x3B)
+
+    @fsk_mode.setter
+    def fsk_mode(self, value: int):
+        self.connetionHandler.writeU8('FSK mode', 18, 0x3B, int(value), 0)
+
+    def read_status_bits(self):
+        return self.connetionHandler.readU16('status bit', 18, 0x66)

@@ -411,6 +411,71 @@ class gainView:
             self.ui_view1, self.ui_view2, self.ui_view3, self.ui_view4, self.ui_view5)
                                            )
 
+        # RF Driver and SuperK Select
+        self.rf_power_checkbox = ui.create_check_box(name='rf_power_checkbox',
+                                                     checked='@binding(instrument.rf_power_f)',
+                                                     text='RF Power?')
+
+        self.wav0_label = ui.create_label(text='Wavelength0 (nm): ')
+        self.wav0_line = ui.create_line_edit(text="@binding(instrument.wav0_f)", name="wav0_line", width=75)
+        self.wav1_label = ui.create_label(text='Wavelength1 (nm): ')
+        self.wav1_line = ui.create_line_edit(text="@binding(instrument.wav1_f)", name="wav1_line", width=75)
+        self.wav2_label = ui.create_label(text='Wavelength2 (nm): ')
+        self.wav2_line = ui.create_line_edit(text="@binding(instrument.wav2_f)", name="wav2_line", width=75)
+        self.wav3_label = ui.create_label(text='Wavelength3 (nm): ')
+        self.wav3_line = ui.create_line_edit(text="@binding(instrument.wav3_f)", name="wav3_line", width=75)
+        self.wav4_label = ui.create_label(text='Wavelength4 (nm): ')
+        self.wav4_line = ui.create_line_edit(text="@binding(instrument.wav4_f)", name="wav4_line", width=75)
+        self.wav5_label = ui.create_label(text='Wavelength5 (nm): ')
+        self.wav5_line = ui.create_line_edit(text="@binding(instrument.wav5_f)", name="wav5_line", width=75)
+        self.wav6_label = ui.create_label(text='Wavelength6 (nm): ')
+        self.wav6_line = ui.create_line_edit(text="@binding(instrument.wav6_f)", name="wav6_line", width=75)
+        self.wav7_label = ui.create_label(text='Wavelength7 (nm): ')
+        self.wav7_line = ui.create_line_edit(text="@binding(instrument.wav7_f)", name="wav7_line", width=75)
+
+        self.amp0_label = ui.create_label(text='Amplitude0 (nm): ')
+        self.amp0_line = ui.create_line_edit(text="@binding(instrument.amp0_f)", name="amp0_line", width=75)
+        self.amp1_label = ui.create_label(text='Amplitude1 (nm): ')
+        self.amp1_line = ui.create_line_edit(text="@binding(instrument.amp1_f)", name="amp1_line", width=75)
+        self.amp2_label = ui.create_label(text='Amplitude2 (nm): ')
+        self.amp2_line = ui.create_line_edit(text="@binding(instrument.amp2_f)", name="amp2_line", width=75)
+        self.amp3_label = ui.create_label(text='Amplitude3 (nm): ')
+        self.amp3_line = ui.create_line_edit(text="@binding(instrument.amp3_f)", name="amp3_line", width=75)
+        self.amp4_label = ui.create_label(text='Amplitude4 (nm): ')
+        self.amp4_line = ui.create_line_edit(text="@binding(instrument.amp4_f)", name="amp4_line", width=75)
+        self.amp5_label = ui.create_label(text='Amplitude5 (nm): ')
+        self.amp5_line = ui.create_line_edit(text="@binding(instrument.amp5_f)", name="amp5_line", width=75)
+        self.amp6_label = ui.create_label(text='Amplitude6 (nm): ')
+        self.amp6_line = ui.create_line_edit(text="@binding(instrument.amp6_f)", name="amp6_line", width=75)
+        self.amp7_label = ui.create_label(text='Amplitude7 (nm): ')
+        self.amp7_line = ui.create_line_edit(text="@binding(instrument.amp7_f)", name="amp7_line", width=75)
+
+
+        self.rf_power_row = ui.create_row(self.rf_power_checkbox, ui.create_stretch())
+        self.wav0_row = ui.create_row(self.wav0_label, self.wav0_line, ui.create_stretch(), self.amp0_label,
+                                        self.amp0_line)
+        self.wav1_row = ui.create_row(self.wav1_label, self.wav1_line, ui.create_stretch(), self.amp1_label,
+                                        self.amp1_line)
+        self.wav2_row = ui.create_row(self.wav2_label, self.wav2_line, ui.create_stretch(), self.amp2_label,
+                                        self.amp2_line)
+        self.wav3_row = ui.create_row(self.wav3_label, self.wav3_line, ui.create_stretch(), self.amp3_label,
+                                        self.amp3_line)
+        self.wav4_row = ui.create_row(self.wav4_label, self.wav4_line, ui.create_stretch(), self.amp4_label,
+                                        self.amp4_line)
+        self.wav5_row = ui.create_row(self.wav5_label, self.wav5_line, ui.create_stretch(), self.amp5_label,
+                                        self.amp5_line)
+        self.wav6_row = ui.create_row(self.wav6_label, self.wav6_line, ui.create_stretch(), self.amp6_label,
+                                        self.amp6_line)
+        self.wav7_row = ui.create_row(self.wav7_label, self.wav7_line, ui.create_stretch(), self.amp7_label,
+                                        self.amp7_line)
+
+        self.rf_group = ui.create_group(title='RF Driver', content= ui.create_column(
+            self.rf_power_row, self.wav0_row, self.wav1_row, self.wav2_row, self.wav3_row, self.wav4_row, self.wav5_row,
+            self.wav6_row, self.wav7_row
+        ))
+
+
+        # PowerMeter group
         self.power_label = ui.create_label(text='Power (uW): ')
         self.power_value_label = ui.create_label(text="@binding(instrument.power_f)")
         self.power_lock_button = ui.create_push_button(text='Lock Current Power', name='Lock_power',
@@ -453,7 +518,7 @@ class gainView:
         ## END FIRST TAB
 
         self.ui_view = ui.create_column(
-            self.init_row, self.laser_group, self.powermeter_group,
+            self.init_row, self.laser_group, self.rf_group, self.powermeter_group,
             self.defocus_group, self.buttons_group)
 
 def create_spectro_panel(document_controller, panel_id, properties):

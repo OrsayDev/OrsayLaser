@@ -74,6 +74,7 @@ class LaserWrapper:
         handler = NKTModules.ConnectionHandler(connectionId)
         self.__Laser = NKTModules.SuperFianium(handler)
         self.__Varia = NKTModules.Varia(handler)
+        self.__RF = NKTModules.RFDriver(handler)
         self.__Varia.filter_setpoint1 = 100
 
         self.__bandwidth = None
@@ -82,6 +83,7 @@ class LaserWrapper:
     def ping(self):
         self.__Laser.ping()
         self.__Varia.ping()
+        self.__RF.ping()
 
     def check(self):
         return True
@@ -127,6 +129,30 @@ class LaserWrapper:
 
     def setPower(self, value: int):
         self.__Laser.power = value
+
+    def setRFWavelength(self, channel: int, value: int):
+        self.__RF.set_wavelength_by_channel(channel, value)
+
+    def getRFWavelength(self, channel: int):
+        return self.__RF.get_wavelength_by_channel(channel)
+
+    def setRFAmplitude(self, channel: int, value: int):
+        self.__RF.set_amplitude_by_channel(channel, value)
+
+    def getRFAmplitude(self, channel: int):
+        return self.__RF.get_amplitude_by_channel(channel)
+
+    def setRFModulation(self, channel: int, value: int):
+        self.__RF.set_modulation_by_channel(channel, value)
+
+    def getRFModulation(self, channel: int):
+        return self.__RF.get_modulation_by_channel(channel)
+
+    def getRFPower(self):
+        return self.__RF.rf_power
+
+    def setRFPower(self, value: bool):
+        self.__RF.rf_power = value
 
 
 class gainDevice(Observable.Observable):
@@ -516,3 +542,226 @@ class gainDevice(Observable.Observable):
         self.__powermeter_avg = int(value)
         self.__PM.pw_set_avg(self.__powermeter_avg, '0')
 
+    #RF Driver values
+    @property
+    def rf_power_f(self):
+        try:
+            return self.__Laser.getRFPower()
+        except AttributeError:
+            return False
+
+    @rf_power_f.setter
+    def rf_power_f(self, value):
+        self.__Laser.setRFPower(value)
+        time.sleep(1.0) #Emission takes time to be accounted
+        self.property_changed_event.fire('rf_power_f')
+        if not self.__status:
+            self.free_event.fire('all')
+
+    @property
+    def wav0_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(0)
+        except AttributeError:
+            return 'None'
+
+    @wav0_f.setter
+    def wav0_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(0, float(value))
+        self.property_changed_event.fire("wav0_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav1_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(1)
+        except AttributeError:
+            return 'None'
+
+    @wav1_f.setter
+    def wav1_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(1, float(value))
+        self.property_changed_event.fire("wav1_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav2_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(2)
+        except AttributeError:
+            return 'None'
+
+    @wav2_f.setter
+    def wav2_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(2, float(value))
+        self.property_changed_event.fire("wav2_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav3_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(3)
+        except AttributeError:
+            return 'None'
+
+    @wav3_f.setter
+    def wav3_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(3, float(value))
+        self.property_changed_event.fire("wav3_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav4_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(4)
+        except AttributeError:
+            return 'None'
+
+    @wav4_f.setter
+    def wav4_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(4, float(value))
+        self.property_changed_event.fire("wav4_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav5_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(5)
+        except AttributeError:
+            return 'None'
+
+    @wav5_f.setter
+    def wav5_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(5, float(value))
+        self.property_changed_event.fire("wav5_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav6_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(6)
+        except AttributeError:
+            return 'None'
+
+    @wav6_f.setter
+    def wav6_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(6, float(value))
+        self.property_changed_event.fire("wav6_f")
+        self.free_event.fire("all")
+
+    @property
+    def wav7_f(self) -> float:
+        try:
+            return self.__Laser.getRFWavelength(7)
+        except AttributeError:
+            return 'None'
+
+    @wav7_f.setter
+    def wav7_f(self, value: float) -> None:
+        self.__Laser.setRFWavelength(7, float(value))
+        self.property_changed_event.fire("wav7_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp0_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(0)
+        except AttributeError:
+            return 'None'
+
+    @amp0_f.setter
+    def amp0_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(0, float(value))
+        self.property_changed_event.fire("amp0_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp1_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(1)
+        except AttributeError:
+            return 'None'
+
+    @amp1_f.setter
+    def amp1_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(1, float(value))
+        self.property_changed_event.fire("amp1_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp2_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(2)
+        except AttributeError:
+            return 'None'
+
+    @amp2_f.setter
+    def amp2_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(2, float(value))
+        self.property_changed_event.fire("amp2_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp3_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(3)
+        except AttributeError:
+            return 'None'
+
+    @amp3_f.setter
+    def amp3_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(3, float(value))
+        self.property_changed_event.fire("amp3_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp4_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(4)
+        except AttributeError:
+            return 'None'
+
+    @amp4_f.setter
+    def amp4_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(4, float(value))
+        self.property_changed_event.fire("amp4_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp5_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(5)
+        except AttributeError:
+            return 'None'
+
+    @amp5_f.setter
+    def amp5_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(5, float(value))
+        self.property_changed_event.fire("amp5_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp6_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(6)
+        except AttributeError:
+            return 'None'
+
+    @amp6_f.setter
+    def amp6_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(6, float(value))
+        self.property_changed_event.fire("amp6_f")
+        self.free_event.fire("all")
+
+    @property
+    def amp7_f(self) -> float:
+        try:
+            return self.__Laser.getRFAmplitude(7)
+        except AttributeError:
+            return 'None'
+
+    @amp7_f.setter
+    def amp7_f(self, value: float) -> None:
+        self.__Laser.setRFAmplitude(7, float(value))
+        self.property_changed_event.fire("amp7_f")
+        self.free_event.fire("all")

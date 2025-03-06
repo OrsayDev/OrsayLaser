@@ -334,13 +334,13 @@ class Select():
 #This one must select the position of the rotary switch at 2. The register reference is 0x66
 class RFDriver():
     def __init__(self, connection_handler: ConnectionHandler):
-        self.connection_handler = connection_handler
+        self.connectionHandler = connection_handler
         self._create_wavelength_properties()
         self._create_amplitude_properties()
         self._create_modulation_properties()
 
     def ping(self):
-        return self.connetionHandler.readASCII('ping', 18, 0x65, 0)
+        return self.connectionHandler.readASCII('ping', 18, 0x65, 0)
 
     def _create_wavelength_properties(self):
         for i in range(9):  # Creating properties for wavelength0 to wavelength8
@@ -378,46 +378,63 @@ class RFDriver():
 
             setattr(self, f'modulation_gain{i}', property(getter, setter))
 
+    def set_wavelength_by_channel(self, channel: int, value: int):
+        self.connectionHandler.writeU32(f'Wavelength {channel}', 18, 0x90 + channel, int(value) * 1000, 0)
+
+    def get_wavelength_by_channel(self, channel: int):
+        return self.connectionHandler.readU32(f'Wavelength {channel}', 18, 0x90 + 1) / 1000
+
+    def set_amplitude_by_channel(self, channel: int, value: int):
+        self.connectionHandler.writeU16(f'Amplitude {channel}', 18, 0xb0 + channel, int(value) * 10, 0)
+
+    def get_amplitude_by_channel(self, channel: int):
+        return self.connectionHandler.readU16(f'Amplitude {channel}', 18, 0xb0 + channel) / 10
+
+    def set_modulation_by_channel(self, channel: int, value: int):
+        self.connectionHandler.writeU16(f'ModulationGain {channel}', 18, 0xC0 + channel, int(value) * 10, 0)
+
+    def get_modulation_by_channel(self, channel: int):
+        return self.connectionHandler.readU16(f'ModulationGain {channel}', 18, 0xC0 + channel) / 10
 
     @property
     def rf_power(self):
-        return self.connetionHandler.readU8('RF Power', 18, 0x30)
+        return self.connectionHandler.readU8('RF Power', 18, 0x30)
 
     @rf_power.setter
     def rf_power(self, value: int):
-        self.connetionHandler.writeU8('RF Power', 18, 0x30, int(value), 0)
+        self.connectionHandler.writeU8('RF Power', 18, 0x30, int(value), 0)
 
     @property
     def setup_bits(self):
-        return self.connetionHandler.readU16('Setup bits', 18, 0x31)
+        return self.connectionHandler.readU16('Setup bits', 18, 0x31)
 
     @setup_bits.setter
     def setup_bits(self, value: int):
-        self.connetionHandler.writeU16('Setup bits', 18, 0x31, int(value), 0)
+        self.connectionHandler.writeU16('Setup bits', 18, 0x31, int(value), 0)
 
     @property
     def minimum_wavelength(self):
-        return self.connetionHandler.readU32('Minimum wavelength', 18, 0x34) / 1000
+        return self.connectionHandler.readU32('Minimum wavelength', 18, 0x34) / 1000
 
     @minimum_wavelength.setter
     def minimum_wavelength(self, value: int):
-        self.connetionHandler.writeU32('Minimum wavelength', 18, 0x34, int(value) * 1000, 0)
+        self.connectionHandler.writeU32('Minimum wavelength', 18, 0x34, int(value) * 1000, 0)
 
     @property
     def maximum_wavelength(self):
-        return self.connetionHandler.readU32('Maximum wavelength', 18, 0x35) / 1000
+        return self.connectionHandler.readU32('Maximum wavelength', 18, 0x35) / 1000
 
     @maximum_wavelength.setter
     def maximum_wavelength(self, value: int):
-        self.connetionHandler.writeU32('Maximum wavelength', 18, 0x35, int(value) * 1000, 0)
+        self.connectionHandler.writeU32('Maximum wavelength', 18, 0x35, int(value) * 1000, 0)
 
     @property
     def fsk_mode(self):
-        return self.connetionHandler.readU8('FSK mode', 18, 0x3B)
+        return self.connectionHandler.readU8('FSK mode', 18, 0x3B)
 
     @fsk_mode.setter
     def fsk_mode(self, value: int):
-        self.connetionHandler.writeU8('FSK mode', 18, 0x3B, int(value), 0)
+        self.connectionHandler.writeU8('FSK mode', 18, 0x3B, int(value), 0)
 
     def read_status_bits(self):
-        return self.connetionHandler.readU16('status bit', 18, 0x66)
+        return self.connectionHandler.readU16('status bit', 18, 0x66)

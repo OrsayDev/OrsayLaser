@@ -262,6 +262,16 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("tpts_f")
         self.property_changed_event.fire("power_f")
         self.property_changed_event.fire("laser_intensity_f")
+
+        self.property_changed_event.fire("wav0_f")
+        self.property_changed_event.fire("amp0_f")
+        self.property_changed_event.fire("wav1_f")
+        self.property_changed_event.fire("amp1_f")
+        self.property_changed_event.fire("wav2_f")
+        self.property_changed_event.fire("amp2_f")
+        self.property_changed_event.fire("wav3_f")
+        self.property_changed_event.fire("amp3_f")
+
         if not self.__status:
             self.free_event.fire("all")
 
@@ -569,7 +579,8 @@ class gainDevice(Observable.Observable):
     def wav0_f(self, value: float) -> None:
         self.__Laser.setRFWavelength(0, float(value))
         self.property_changed_event.fire("wav0_f")
-        self.free_event.fire("all")
+        if not self.__status:
+            self.free_event.fire('all')
 
     @property
     def wav1_f(self) -> float:

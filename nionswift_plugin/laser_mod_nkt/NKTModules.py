@@ -382,7 +382,7 @@ class RFDriver():
         self.connectionHandler.writeU32(f'Wavelength {channel}', 18, 0x90 + channel, int(value) * 1000, 0)
 
     def get_wavelength_by_channel(self, channel: int):
-        return self.connectionHandler.readU32(f'Wavelength {channel}', 18, 0x90 + 1) / 1000
+        return self.connectionHandler.readU32(f'Wavelength {channel}', 18, 0x90 + channel) / 1000
 
     def set_amplitude_by_channel(self, channel: int, value: int):
         self.connectionHandler.writeU16(f'Amplitude {channel}', 18, 0xb0 + channel, int(value) * 10, 0)

@@ -163,7 +163,6 @@ class gainhandler:
         self.document_controller = document_controller
         self.instrument = instrument
         self.enabled = False
-        self.busy_event_listener = self.instrument.busy_event.listen(self.prepare_widget_disable)
         self.property_changed_event_listener = self.instrument.property_changed_event.listen(self.prepare_widget_enable)
         self.free_event_listener = self.instrument.free_event.listen(self.prepare_free_widget_enable)
 
@@ -239,9 +238,6 @@ class gainhandler:
                     setattr(widg, "enabled", enabled)
 
     def prepare_widget_enable(self, value):
-        self.event_loop.create_task(self.do_enable(False, ["init_pb", 'host_value', 'port_value', 'abt_pb']))
-
-    def prepare_widget_disable(self, value):
         self.event_loop.create_task(self.do_enable(False, ["init_pb", 'host_value', 'port_value', 'abt_pb']))
 
     def prepare_free_widget_enable(self,

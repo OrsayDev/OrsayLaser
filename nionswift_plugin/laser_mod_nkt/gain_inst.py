@@ -263,7 +263,8 @@ class gainDevice(Observable.Observable):
         #self.__Laser = LaserWrapper('EthernetConnection1')
         self.__Laser = LaserWrapper('COM5')
         self.__Laser.ping_all()
-        self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
+        #self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
+        self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1907040::INSTR')
 
         self.upt()
         self.run_status_f = False

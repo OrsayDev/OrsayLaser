@@ -88,7 +88,7 @@ class LaserWrapper:
         self.__bandwidth = None
         self.__centralWL = None
 
-    def ping(self):
+    def ping_all(self):
         self.__Laser.ping()
         self.__Varia.ping()
         self.__RF.ping()
@@ -230,7 +230,6 @@ class gainDevice(Observable.Observable):
         for server in [self.__Laser, self.__PM]:
             server.shutdown()
 
-
     def init(self):
         #Looking for orsay_camera_eels. If not, check orsay_camera_tp3. If not, grab usim
         for hards in HardwareSource.HardwareSourceManager().hardware_sources:  # finding eels camera. If you don't
@@ -263,7 +262,7 @@ class gainDevice(Observable.Observable):
 
         #self.__Laser = LaserWrapper('EthernetConnection1')
         self.__Laser = LaserWrapper('COM5')
-        self.__Laser.ping()
+        self.__Laser.ping_all()
         self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
 
         self.upt()

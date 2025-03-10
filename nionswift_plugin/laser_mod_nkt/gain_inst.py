@@ -75,7 +75,15 @@ class LaserWrapper:
         self.__Laser = NKTModules.SuperFianium(handler)
         self.__Varia = NKTModules.Varia(handler)
         self.__RF = NKTModules.RFDriver(handler)
-        self.__Varia.filter_setpoint1 = 100
+
+        # Checking if the RF driver is present. It is either the Varia or the RF + Select
+        self.__isRF = False
+        if self.__RF.ping() != 'None':
+            self.__isRF = True
+
+        # Initial conditions for the experiment
+        if not self.__isRF:
+            self.__Varia.filter_setpoint1 = 100 #Starting with maximum neutral-density value
 
         self.__bandwidth = None
         self.__centralWL = None
@@ -89,28 +97,40 @@ class LaserWrapper:
         return True
 
     def check_status(self):
-        return not self.__Varia.filter_moving()
+        if not self.__isRF:
+            return not self.__Varia.filter_moving()
+        return True # Currently always True if the RF driver is present
 
     def setWL(self, wl: float):
-        self.__centralWL = wl
-        self.__Varia.filter_setpoint2 = wl + self.__bandwidth / 2
-        self.__Varia.filter_setpoint3 = wl - self.__bandwidth / 2
+        if not self.__isRF:
+            self.__centralWL = wl
+            self.__Varia.filter_setpoint2 = wl + self.__bandwidth / 2
+            self.__Varia.filter_setpoint3 = wl - self.__bandwidth / 2
+        else:
+            self.setRFWavelength(0, wl)
 
     def getWL(self):
-        self.__centralWL = (self.__Varia.filter_setpoint2 + self.__Varia.filter_setpoint3) / 2
-        return self.__centralWL
+        if not self.__isRF:
+            self.__centralWL = (self.__Varia.filter_setpoint2 + self.__Varia.filter_setpoint3) / 2
+            return self.__centralWL
+        else:
+            return self.getRFWavelength(0)
 
     def abort_control(self):
         pass
 
     def setBandwidth(self, bandwidth: int):
-        self.__bandwidth = bandwidth
-        self.__Varia.filter_setpoint2 = self.__centralWL + bandwidth / 2
-        self.__Varia.filter_setpoint3 = self.__centralWL - bandwidth / 2
+        if not self.__isRF:
+            self.__bandwidth = bandwidth
+            self.__Varia.filter_setpoint2 = self.__centralWL + bandwidth / 2
+            self.__Varia.filter_setpoint3 = self.__centralWL - bandwidth / 2
 
     def getBandwidth(self):
-        self.__bandwidth = self.__Varia.filter_setpoint2 - self.__Varia.filter_setpoint3
-        return self.__bandwidth
+        if not self.__isRF:
+            self.__bandwidth = self.__Varia.filter_setpoint2 - self.__Varia.filter_setpoint3
+            return self.__bandwidth
+        else:
+            return 1.0 #This is the bandwidth for the cavity
 
     def setEmission(self, value: bool):
         self.__Laser.emission = 3 if value else 0
@@ -243,6 +263,7 @@ class gainDevice(Observable.Observable):
 
         #self.__Laser = LaserWrapper('EthernetConnection1')
         self.__Laser = LaserWrapper('COM5')
+        self.__Laser.ping()
         self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
 
         self.upt()
@@ -262,6 +283,7 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("power_f")
         self.property_changed_event.fire("laser_intensity_f")
 
+        self.property_changed_event.fire("rf_power_f")
         self.property_changed_event.fire("wav0_f")
         self.property_changed_event.fire("amp0_f")
         self.property_changed_event.fire("wav1_f")
@@ -270,6 +292,14 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("amp2_f")
         self.property_changed_event.fire("wav3_f")
         self.property_changed_event.fire("amp3_f")
+        self.property_changed_event.fire("wav4_f")
+        self.property_changed_event.fire("amp4_f")
+        self.property_changed_event.fire("wav5_f")
+        self.property_changed_event.fire("amp5_f")
+        self.property_changed_event.fire("wav6_f")
+        self.property_changed_event.fire("amp6_f")
+        self.property_changed_event.fire("wav7_f")
+        self.property_changed_event.fire("amp7_f")
 
         if not self.__status:
             self.free_event.fire("all")

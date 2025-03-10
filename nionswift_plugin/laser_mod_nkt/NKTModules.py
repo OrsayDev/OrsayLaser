@@ -225,7 +225,7 @@ class SuperFianium:
         self.pulse_picker = 2
 
     def ping(self):
-        return self.connetionHandler.readASCII('ping', 15, 0x65, 0)
+        return self.connetionHandler.readASCII('Ping Super Fianium', 15, 0x65, 0)
 
     # Emission Property
     @property
@@ -278,7 +278,7 @@ class Varia():
         self.connetionHandler = connectionHandler
 
     def ping(self):
-        return self.connetionHandler.readASCII('ping', 16, 0x65, 0)
+        return self.connetionHandler.readASCII('Ping VARIA', 16, 0x65, 0)
 
     # Filter setpoint 1. The neutral density filter
     @property
@@ -328,7 +328,7 @@ class Select():
         self.connetionHandler = connectionHandler
 
     def ping(self):
-        return self.connetionHandler.readASCII('ping', 17, 0x65, 0)
+        return self.connetionHandler.readASCII('Ping Select', 17, 0x65, 0)
 
 
 #This one must select the position of the rotary switch at 2. The register reference is 0x66
@@ -340,7 +340,7 @@ class RFDriver():
         self._create_modulation_properties()
 
     def ping(self):
-        return self.connectionHandler.readASCII('ping', 18, 0x65, 0)
+        return self.connectionHandler.readASCII('Ping RF Driver', 18, 0x65, 0)
 
     def _create_wavelength_properties(self):
         for i in range(9):  # Creating properties for wavelength0 to wavelength8

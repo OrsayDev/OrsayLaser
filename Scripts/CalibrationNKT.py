@@ -52,8 +52,8 @@ def script_main(api_broker):
         for laser_index, laser_power in enumerate(power_list):
             if should_break: break
             should_break = interactive.cancelled
-            #nkt_laser.laser_intensity_f = laser_power
-            nkt_laser.amp0_f = laser_power
+            #nkt_laser.laser_intensity_f = laser_power #The supply
+            nkt_laser.amp0_f = laser_power #The RF amplitude
             nkt_laser.start_wav_f = wl
             time.sleep(0.01)
             powermeter_value = nkt_laser.power_f

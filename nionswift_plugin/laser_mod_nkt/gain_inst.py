@@ -84,6 +84,10 @@ class LaserWrapper:
         # Initial conditions for the experiment
         if not self.__isRF:
             self.__Varia.filter_setpoint1 = 100 #Starting with maximum neutral-density value
+        else:
+            self.__RF.setup_bits = 3 #Setup bits to 3 -> this uses the optimal power table & the temp. compens.
+            self.__RF.minimum_wavelength = 500 #Minimum WL
+            self.__RF.maximum_wavelength = 900 #Maximum WL
 
         self.__bandwidth = None
         self.__centralWL = None
@@ -224,7 +228,7 @@ class gainDevice(Observable.Observable):
         #self.property_changed_event.fire("power_f")
 
     def server_instrument_ping(self):
-        self.__Laser.ping()
+        self.__Laser.ping_all()
 
     def server_instrument_shutdown(self):
         for server in [self.__Laser, self.__PM]:

@@ -408,10 +408,6 @@ class gainView:
                                            )
 
         # RF Driver and SuperK Select
-        self.rf_power_checkbox = ui.create_check_box(name='rf_power_checkbox',
-                                                     checked='@binding(instrument.rf_power_f)',
-                                                     text='RF Power?')
-
         self.wav0_label = ui.create_label(text='Wavelength0 (nm): ')
         self.wav0_line = ui.create_line_edit(text="@binding(instrument.wav0_f)", name="wav0_line", width=75)
         self.wav1_label = ui.create_label(text='Wavelength1 (nm): ')
@@ -447,7 +443,6 @@ class gainView:
         self.amp7_line = ui.create_line_edit(text="@binding(instrument.amp7_f)", name="amp7_line", width=75)
 
 
-        self.rf_power_row = ui.create_row(self.rf_power_checkbox, ui.create_stretch())
         self.wav0_row = ui.create_row(self.wav0_label, self.wav0_line, ui.create_stretch(), self.amp0_label,
                                         self.amp0_line)
         self.wav1_row = ui.create_row(self.wav1_label, self.wav1_line, ui.create_stretch(), self.amp1_label,
@@ -466,7 +461,7 @@ class gainView:
                                         self.amp7_line)
 
         self.rf_group = ui.create_group(title='RF Driver', content= ui.create_column(
-            self.rf_power_row, self.wav0_row, self.wav1_row, self.wav2_row, self.wav3_row, self.wav4_row, self.wav5_row,
+            self.wav0_row, self.wav1_row, self.wav2_row, self.wav3_row, self.wav4_row, self.wav5_row,
             self.wav6_row, self.wav7_row
         ))
 
@@ -478,7 +473,8 @@ class gainView:
                                                        on_clicked='lock_push')
         self.power_row00 = ui.create_row(self.power_label, self.power_value_label, ui.create_stretch(), self.power_lock_button)
         self.power_lock_label = ui.create_label(text='Control Power (uW): ')
-        self.power_row01 = ui.create_row(self.power_lock_label, ui.create_stretch())
+        self.power_lock_value = ui.create_label(text='@binding(instrument.locked_power_f)')
+        self.power_row01 = ui.create_row(self.power_lock_label, self.power_lock_value, ui.create_stretch())
         self.power_avg_label = ui.create_label(text='Number of Averages: ')
         self.power_avg_value = ui.create_line_edit(name='power_avg_value', text='@binding(instrument.powermeter_avg_f)', width=100)
         self.power_reset_button = ui.create_push_button(text='Hard Reset', name='power_reset_button',

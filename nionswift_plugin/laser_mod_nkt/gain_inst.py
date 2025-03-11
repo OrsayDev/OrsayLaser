@@ -88,6 +88,8 @@ class LaserWrapper:
             self.__RF.setup_bits = 3 #Setup bits to 3 -> this uses the optimal power table & the temp. compens.
             self.__RF.minimum_wavelength = 500 #Minimum WL
             self.__RF.maximum_wavelength = 900 #Maximum WL
+            self.setRFAmplitude(0, 50)
+            self.setRFPower(0)
 
         self.__bandwidth = None
         self.__centralWL = None
@@ -138,8 +140,12 @@ class LaserWrapper:
 
     def setEmission(self, value: bool):
         self.__Laser.emission = 3 if value else 0
+        if self.__isRF:
+            self.setRFPower(value)
 
     def getEmission(self):
+        if self.__isRF:
+            return (self.__Laser.emission == 3) and self.getRFPower()
         return self.__Laser.emission == 3
 
     def setDelay(self, value: int):
@@ -194,8 +200,9 @@ class gainDevice(Observable.Observable):
         self.end_data = Event.Event()
 
         self.__lastWav = -1 #Used to control the start wav that calls twice in the GUI
-        self.__finish_wav = 595.0
-        self.__step_wav = 1.0
+        self.__lastAmps = 8 * [-1]
+        self.__finish_wav = 900.0
+        self.__step_wav = 2.0
         self.__avg = 10
         self.__power = 0.
         self.__powermeter_avg = 10
@@ -215,6 +222,8 @@ class gainDevice(Observable.Observable):
 
         #Control routine
         self.__controlRout = ctrlRout.controlRoutine(self.power_callback)
+        self.__controlPower = False
+        self.__controlPowerValue = None
 
         #Initial status of the Microscope
         self.__defocus_check = False
@@ -224,8 +233,12 @@ class gainDevice(Observable.Observable):
             self.__defocus = value
 
     def power_callback(self):
-        pass
-        #self.property_changed_event.fire("power_f")
+        self.property_changed_event.fire("power_f")
+        if self.__controlPower:
+            if self.__power > self.__controlPowerValue:
+                self.amp0_f -= 1
+            else:
+                self.amp0_f += 1
 
     def server_instrument_ping(self):
         self.__Laser.ping_all()
@@ -267,8 +280,10 @@ class gainDevice(Observable.Observable):
         #self.__Laser = LaserWrapper('EthernetConnection1')
         self.__Laser = LaserWrapper('COM5')
         self.__Laser.ping_all()
-        #self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
-        self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1907040::INSTR')
+
+        self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1908893::INSTR')
+        if not self.__PM.successful:
+            self.__PM = power.TLPowerMeter('USB0::0x1313::0x8072::1907040::INSTR')
 
         self.upt()
         self.run_status_f = False
@@ -285,9 +300,9 @@ class gainDevice(Observable.Observable):
         self.property_changed_event.fire("pts_f")
         self.property_changed_event.fire("tpts_f")
         self.property_changed_event.fire("power_f")
+        self.property_changed_event.fire("locked_power_f")
         self.property_changed_event.fire("laser_intensity_f")
 
-        self.property_changed_event.fire("rf_power_f")
         self.property_changed_event.fire("wav0_f")
         self.property_changed_event.fire("amp0_f")
         self.property_changed_event.fire("wav1_f")
@@ -346,25 +361,25 @@ class gainDevice(Observable.Observable):
         thread.
 
         '''
-        self.run_status_f = self.__power_ramp = self.__bothPM = True
+        self.run_status_f = True
         self.__abort_force = False
         loop_index = 0
         self.call_monitor.fire()
         self.__controlRout.pw_control_thread_on(self.__powermeter_avg * 0.003 * 4.0)
         while not self.__abort_force:
-            self.append_monitor_data.fire((self.__power, self.__power02), loop_index)
+            self.append_monitor_data.fire((self.__power, 0.0), loop_index)
             loop_index += 1
             if loop_index == 200: loop_index=0
         if self.__controlRout.pw_control_thread_check():
             self.__controlRout.pw_control_thread_off()
 
         self.end_data_monitor.fire()
-        self.__bothPM = self.__power_ramp = False
         self.run_status_f = False
 
     def acqThread(self):
         self.run_status_f = True
         self.__abort_force = False
+        self.__controlPower = True
 
         # Laser thread begins
         p = "acquistion_mode" in self.__camera.get_current_frame_parameters().as_dict()
@@ -415,6 +430,7 @@ class gainDevice(Observable.Observable):
             j += 1
 
         self.end_data.fire()
+        self.__controlPower = False
         self.run_status_f = False  # acquisition is over
 
 
@@ -520,6 +536,11 @@ class gainDevice(Observable.Observable):
             return 'None'
 
     @property
+    def locked_power_f(self):
+        self.__controlPowerValue = self.__power
+        return format(self.__controlPowerValue, '.3f')
+
+    @property
     def defocus_value_f(self):
         return int(self.__defocus * 1e9)
 
@@ -583,22 +604,6 @@ class gainDevice(Observable.Observable):
     def powermeter_avg_f(self, value):
         self.__powermeter_avg = int(value)
         self.__PM.pw_set_avg(self.__powermeter_avg, '0')
-
-    #RF Driver values
-    @property
-    def rf_power_f(self):
-        try:
-            return self.__Laser.getRFPower()
-        except AttributeError:
-            return False
-
-    @rf_power_f.setter
-    def rf_power_f(self, value):
-        self.__Laser.setRFPower(value)
-        time.sleep(1.0) #Emission takes time to be accounted
-        self.property_changed_event.fire('rf_power_f')
-        if not self.__status:
-            self.free_event.fire('all')
 
     @property
     def wav0_f(self) -> float:
@@ -729,8 +734,12 @@ class gainDevice(Observable.Observable):
 
     @amp0_f.setter
     def amp0_f(self, value: float) -> None:
-        self.__Laser.setRFAmplitude(0, float(value))
-        self.free_event.fire("all")
+        if self.__lastAmps[0] != float(value):
+            self.__lastAmps[0] = float(value)
+            self.__Laser.setRFAmplitude(0, float(value))
+            self.property_changed_event.fire("amp0_f")
+            if not self.__status: #Not playing
+                self.free_event.fire('all')
 
     @property
     def amp1_f(self) -> float:
@@ -742,7 +751,6 @@ class gainDevice(Observable.Observable):
     @amp1_f.setter
     def amp1_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(1, float(value))
-        self.free_event.fire("all")
 
     @property
     def amp2_f(self) -> float:
@@ -754,7 +762,6 @@ class gainDevice(Observable.Observable):
     @amp2_f.setter
     def amp2_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(2, float(value))
-        self.free_event.fire("all")
 
     @property
     def amp3_f(self) -> float:
@@ -766,7 +773,6 @@ class gainDevice(Observable.Observable):
     @amp3_f.setter
     def amp3_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(3, float(value))
-        self.free_event.fire("all")
 
     @property
     def amp4_f(self) -> float:
@@ -778,7 +784,6 @@ class gainDevice(Observable.Observable):
     @amp4_f.setter
     def amp4_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(4, float(value))
-        self.free_event.fire("all")
 
     @property
     def amp5_f(self) -> float:
@@ -790,7 +795,6 @@ class gainDevice(Observable.Observable):
     @amp5_f.setter
     def amp5_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(5, float(value))
-        self.free_event.fire("all")
 
     @property
     def amp6_f(self) -> float:
@@ -802,7 +806,6 @@ class gainDevice(Observable.Observable):
     @amp6_f.setter
     def amp6_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(6, float(value))
-        self.free_event.fire("all")
 
     @property
     def amp7_f(self) -> float:
@@ -814,4 +817,3 @@ class gainDevice(Observable.Observable):
     @amp7_f.setter
     def amp7_f(self, value: float) -> None:
         self.__Laser.setRFAmplitude(7, float(value))
-        self.free_event.fire("all")

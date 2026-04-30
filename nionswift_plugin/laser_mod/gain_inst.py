@@ -326,6 +326,7 @@ class ExperimentController:
         return self.exists
     def set_top_blanking(self, value: bool, width: int, delay: int, frequency: int):
         if not self.is_open_scan:
+            #OrsayScan
             if value:
                 self.scan_instrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=width, delay=delay)
                 self.scan_instrument.scan_device.orsayscan.SetLaser(frequency, 0, False, -1)
@@ -334,47 +335,32 @@ class ExperimentController:
                 self.scan_instrument.scan_device.orsayscan.CancelLaser()
                 self.scan_instrument.scan_device.orsayscan.SetTopBlanking(0, -1, width, True, 0, delay)
         else:
+            #Open Scan
             if value:
-                # V+
-                self.scan_instrument.scan_device.scan_engine.output1_mux_freq = frequency
-                self.scan_instrument.scan_device.scan_engine.output1_mux_type = 7
-                self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 100 + delay * 1e9 / 10.0
-                self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
-                self.scan_instrument.scan_device.scan_engine.output1_mux_pol = True
-
                 # Laser
-                self.scan_instrument.scan_device.scan_engine.output2_mux_freq = frequency
-                self.scan_instrument.scan_device.scan_engine.output2_mux_type = 7
-                self.scan_instrument.scan_device.scan_engine.output2_mux_delay = 0
-                self.scan_instrument.scan_device.scan_engine.output2_mux_freq_duty = 1.
-                self.scan_instrument.scan_device.scan_engine.output2_mux_pol = False
-
-                # V-
-                self.scan_instrument.scan_device.scan_engine.output4_mux_freq = frequency
-                self.scan_instrument.scan_device.scan_engine.output4_mux_type = 7
-                self.scan_instrument.scan_device.scan_engine.output4_mux_delay = 100 + (delay + width) * 1e9 / 10.0
-                self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
-                self.scan_instrument.scan_device.scan_engine.output4_mux_pol = True
+                openscan.scan_device.scan_engine.mux_output_freq4 = frequency
+                openscan.scan_device.scan_engine.mux_output_type4 = 7
+                openscan.scan_device.scan_engine.mux_output_delay4 = 0
+                openscan.scan_device.scan_engine.mux_output_freq_duty4 = 1.
+                openscan.scan_device.scan_engine.mux_output_pol4 = False
             else:
-                self.scan_instrument.scan_device.scan_engine.output1_mux_type = 9
-                self.scan_instrument.scan_device.scan_engine.output2_mux_type = 9
-                self.scan_instrument.scan_device.scan_engine.output4_mux_type = 9
-                self.scan_instrument.scan_device.scan_engine.output1_mux_pol = False
-                self.scan_instrument.scan_device.scan_engine.output4_mux_pol = True
+                self.scan_instrument.scan_device.scan_engine.mux_output_type4 = 10
 
 
     def set_width_and_delay(self, width: int, delay: int):
         if not self.is_open_scan:
             self.scan_instrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=width, delay=delay)
         else:
-            self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
-            self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 100 + delay * 1e9 / 10.0
+            pass
+            #Do nothing for OpenScan
+            #self.scan_instrument.scan_device.scan_engine.output1_mux_freq_duty = 1. + width * 1e6
+            #self.scan_instrument.scan_device.scan_engine.output1_mux_delay = 100 + delay * 1e9 / 10.0
 
-            self.scan_instrument.scan_device.scan_engine.output2_mux_freq_duty = 1.
-            self.scan_instrument.scan_device.scan_engine.output2_mux_delay = 0
+            #self.scan_instrument.scan_device.scan_engine.output2_mux_freq_duty = 1.
+            #self.scan_instrument.scan_device.scan_engine.output2_mux_delay = 0
 
-            self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
-            self.scan_instrument.scan_device.scan_engine.output4_mux_delay = 100 + (delay + width) * 1e9 / 10.0
+            #self.scan_instrument.scan_device.scan_engine.output4_mux_freq_duty = 1.
+            #self.scan_instrument.scan_device.scan_engine.output4_mux_delay = 100 + (delay + width) * 1e9 / 10.0
 
 
     def set_line_for_inspection(self, value: bool):
@@ -1013,13 +999,6 @@ class gainDevice(Observable.Observable):
             self.power_wav_f = self.__cur_wav
             self.run_status_f = False  # this already frees GUI
 
-    # def prepare_spim_TP3(self):
-    #     self.sht_f = False
-    #     self.laser_frequency_f = 12000
-    #     self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
-    #     self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(3, 5)
-    #     logging.info('***LASER***: Please open shutter.')
-
     def over_spim_TP3(self):
         self.sht_f = False
         self.laser_frequency_f = 10000
@@ -1361,14 +1340,6 @@ class gainDevice(Observable.Observable):
     def fast_blanker_status_f(self, value):
         self.__fb_status = value
         self.experiment_controller.set_top_blanking(value, self.__width, self.__delay, self.__frequency)
-        # if value:
-        #     self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(4, -1, beamontime=self.__width,
-        #                                                                     delay=self.__delay)
-        #     self.__OrsayScanInstrument.scan_device.orsayscan.SetLaser(self.__frequency, 0, False, -1)
-        #     self.__OrsayScanInstrument.scan_device.orsayscan.StartLaser(7)
-        # else:
-        #     self.__OrsayScanInstrument.scan_device.orsayscan.CancelLaser()
-        #     self.__OrsayScanInstrument.scan_device.orsayscan.SetTopBlanking(0, -1, self.__width, True, 0, self.__delay)
         self.property_changed_event.fire('fast_blanker_status_f')
         if not self.__status: self.free_event.fire('all')
 

@@ -338,11 +338,11 @@ class ExperimentController:
             #Open Scan
             if value:
                 # Laser
-                openscan.scan_device.scan_engine.mux_output_freq4 = frequency
-                openscan.scan_device.scan_engine.mux_output_type4 = 7
-                openscan.scan_device.scan_engine.mux_output_delay4 = 0
-                openscan.scan_device.scan_engine.mux_output_freq_duty4 = 1.
-                openscan.scan_device.scan_engine.mux_output_pol4 = False
+                self.scan_instrument.scan_device.scan_engine.mux_output_freq4 = frequency
+                self.scan_instrument.scan_device.scan_engine.mux_output_type4 = 7
+                self.scan_instrument.scan_device.scan_engine.mux_output_delay4 = 0
+                self.scan_instrument.scan_device.scan_engine.mux_output_freq_duty4 = 1.
+                self.scan_instrument.scan_device.scan_engine.mux_output_pol4 = True
             else:
                 self.scan_instrument.scan_device.scan_engine.mux_output_type4 = 10
 
